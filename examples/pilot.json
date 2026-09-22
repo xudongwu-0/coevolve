@@ -1,0 +1,11 @@
+{
+  "solver_checkpoint": "assets/solver/checkpoint",
+  "editor_checkpoint": "assets/editor/checkpoint",
+  "data_manifest": "assets/math/manifest.json",
+  "initial_harness": "examples/initial_harness.py",
+  "pool_gpus": ["1"],
+  "training_gpu": "0",
+  "arms": ["fixed_editor", "trained_editor"],
+  "solver_rsft_lr": 1e-7,
+  "proposer_port": 18542
+}

@@ -1,0 +1,2 @@
+# Matplotlib SVG path formatting contains intentional trailing whitespace.
+docs/figures/*.svg -whitespace

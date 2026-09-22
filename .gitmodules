@@ -1,0 +1,3 @@
+[submodule "WHALE"]
+	path = WHALE
+	url = https://github.com/krafton-ai/WHALE.git

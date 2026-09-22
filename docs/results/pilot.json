@@ -1,0 +1,86 @@
+{
+  "source_run": "whale_three_arm_hwh_20260918",
+  "metric": "single_sample_accuracy",
+  "draw": 0,
+  "tasks": 128,
+  "seed": 42,
+  "temperature": 1.0,
+  "stages": [
+    "start",
+    "H1",
+    "W1",
+    "H2"
+  ],
+  "upstream_commit": "fbe125eb7abea7f760c99ab9acc1a6261e708fc6",
+  "arms": {
+    "external": {
+      "scores": [
+        78,
+        90,
+        92,
+        92
+      ],
+      "stage_deltas": [
+        12,
+        2,
+        0
+      ],
+      "search_rollouts_distinct_within_arm": 1056,
+      "solver_rollouts": 32,
+      "successful_sft_trajectories": 22,
+      "solver_updates": 9,
+      "editor_updates": 0
+    },
+    "fixed_editor": {
+      "scores": [
+        78,
+        69,
+        71,
+        84
+      ],
+      "stage_deltas": [
+        -9,
+        2,
+        13
+      ],
+      "search_rollouts_distinct_within_arm": 432,
+      "solver_rollouts": 32,
+      "successful_sft_trajectories": 21,
+      "solver_updates": 9,
+      "editor_updates": 0
+    },
+    "trained_editor": {
+      "scores": [
+        78,
+        69,
+        71,
+        93
+      ],
+      "stage_deltas": [
+        -9,
+        2,
+        22
+      ],
+      "search_rollouts_distinct_within_arm": 480,
+      "solver_rollouts": 32,
+      "successful_sft_trajectories": 21,
+      "solver_updates": 9,
+      "editor_updates": 8
+    }
+  },
+  "historical_draw0": {
+    "W0_H0": 54,
+    "W1_H0": 78,
+    "W0_Hf": 73,
+    "W1_Hf": 89
+  },
+  "limitations": [
+    "One solver sampling seed, one draw per test question; historically used test128.",
+    "Equal proposal slots and target-rollout ceiling, not necessarily equal actual rollouts after duplicate caching.",
+    "External proposer is the active conversation via localhost FastAPI; its reasoning/tokens/cost are unmetered.",
+    "Internal E initialization includes 132 historical SFT updates, zero prior RL updates; fixed means no NEW E updates in this comparison.",
+    "External proposals must not read internal candidates or this run test outcomes.",
+    "Same source/weights/data/schedule may reuse exact trajectories or a training checkpoint; cache reuse is not algorithmic efficiency.",
+    "No retry for invalid proposals or zero reward variance. No monotonicity claim."
+  ]
+}
