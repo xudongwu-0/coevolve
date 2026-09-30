@@ -62,6 +62,8 @@ def main() -> None:
     parser.add_argument("--workers", type=int)
     parser.add_argument("--monitor-seconds", type=float, default=5)
     args = parser.parse_args()
+    if args.workers is not None and args.workers < 1:
+        parser.error("--workers must be positive")
     planned = packet_jobs(
         args.prefix, comma_ints(args.starts), args.size, args.concurrency,
         comma_ints(args.target_ports), comma_ints(args.engineer_ports),
@@ -79,7 +81,8 @@ def main() -> None:
     monitor.start()
     started = time.time()
     try:
-        with ThreadPoolExecutor(max_workers=args.workers or len(planned)) as pool:
+        workers = args.workers or min(len(planned), 8)
+        with ThreadPoolExecutor(max_workers=workers) as pool:
             futures = {
                 pool.submit(
                     run_job, job, root, args.attempts, args.timeout_seconds,

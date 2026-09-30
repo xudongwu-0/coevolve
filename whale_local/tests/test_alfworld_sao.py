@@ -27,9 +27,34 @@ from sao_bridge.alfworld_solver_selection import paired_solver_report
 from sao_bridge.budget import model_weight_digest
 from sao_bridge.common import ensure_model_runtime_metadata, file_sha, write_json
 from sao_bridge.gpu_report import LAYOUTS
+from harness_r1_alfworld.matrix_probe import command as packet_command
+from harness_r1_alfworld.packet_probe import packet_jobs
 
 
 class AlfworldSaoTest(unittest.TestCase):
+    def test_packet_retry_ports_do_not_overlap_full_train_first_attempt(self):
+        jobs = packet_jobs(
+            "phase", list(range(0, 240, 10)), 10, 4,
+            [19701, 19702, 19703, 19704],
+            [19601, 19602, 19603, 19604],
+            Path("/target.json"), "w0", Path("/engineer.json"), Path("/runs"),
+        )
+        first_attempt_ports = {
+            int(packet_command(job, 1)[
+                packet_command(job, 1).index(flag) + 1
+            ])
+            for job in jobs
+            for flag in ("--controller-port", "--worker-port")
+        }
+        retry_ports = {
+            int(packet_command(job, 2)[
+                packet_command(job, 2).index(flag) + 1
+            ])
+            for job in jobs
+            for flag in ("--controller-port", "--worker-port")
+        }
+        self.assertTrue(first_attempt_ports.isdisjoint(retry_ports))
+
     def test_global_harness_requires_declared_gain_and_positive_lcb(self):
         threshold = 0.01
         report = {"gain": 0.009, "one_sided_95pct_lower_bound": 0.001}

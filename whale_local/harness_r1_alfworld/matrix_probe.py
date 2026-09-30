@@ -89,7 +89,7 @@ def jobs(prefix: str, starts: list[int], size: int, concurrency: int) -> list[di
 
 
 def command(job: dict, attempt: int) -> list[str]:
-    port_offset = 1000 * (attempt - 1)
+    port_offset = 10000 * (attempt - 1)
     run_id = job["run_id"] + f"_attempt{attempt}"
     return [
         sys.executable, "-B", "-m", "whale_local.harness_r1_alfworld.driver", "paired",

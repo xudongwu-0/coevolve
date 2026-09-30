@@ -59,6 +59,9 @@ def main() -> None:
                 for url in solver_urls.split(",")
             ]
             starts = config.get("starts", list(range(0, 240, 10)))
+            packet_workers = int(config.get("packet_workers", min(len(starts), 8)))
+            if not 1 <= packet_workers <= len(starts):
+                raise ValueError("packet_workers must fit the declared packet count")
             process = launch.module(
                 "whale_local.harness_r1_alfworld.packet_probe",
                 [
@@ -75,6 +78,7 @@ def main() -> None:
                     "--engineer-record", config["engineer_receipt"],
                     "--attempts", config.get("attempts", 2),
                     "--timeout-seconds", config.get("job_timeout_seconds", 10800),
+                    "--workers", packet_workers,
                 ],
                 gpus="", name=f"{config['phase']}_probe",
             )
