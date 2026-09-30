@@ -352,6 +352,18 @@ duplicate consumed IDs before claiming GPUs. The sequential H2 dataset was
 regenerated with 64 unique sample IDs at offsets 64--127 instead of allowing
 the old eight-row batch4 file to repeat across epochs.
 
+H1-r4 subsequently completed on both nodes. Each run contains exactly two
+native metric rows, two successful actor updates, four critic updates, actor
+and critic checkpoints at global step 1, and a changed actor safetensors
+digest. Wall time was 1,197.7 seconds on node4 and 1,197.4 seconds on node3.
+The longest observed trajectories were 21,918 and 21,958 tokens, respectively,
+so the 23,040-token capacity passed with 1,082 tokens of observed headroom.
+The asynchronously prefetched second reward batch reduced measured step-1
+rollout wait to about 1 ms on both nodes; final actor+critic serialization
+still cost 190--207 seconds and is reported separately from optimization.
+The two 100-task dev refresh/global-harness gates are now running; training
+reward is not being used as an acceptance decision.
+
 ## Environment and official assets
 
 `/dev/shm/harness-r1-alfworld-venv` is node3-local and intentionally isolated.

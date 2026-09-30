@@ -1842,3 +1842,34 @@ It is exploratory validation, not held-out AIME. AIME test stays sealed until a 
     are distinct); its SHA256 is
     `b6285ab0058aec4b3d756d3c60d5a7b211cecb06b995686c411d6670a132a7c2`.
     Sealed test400--499 remains unread.
+
+73. **First complete formal H1 optimizer rounds (2026-09-30).** Protocol v8
+    H1-r4 completed on node4 sequential SAO and node3 MA-SAO in1,197.7s and
+    1,197.4s wall time. Each has exactly two metric rows, two successful actor
+    updates, four critic updates, final actor/critic global-step1 checkpoints,
+    runtime-metadata receipts, and distinct initial/final safetensors weight
+    digests. Native trainer time was954.5s/964.7s. The maximum trajectory was
+    21,918/21,958 tokens, below the23,040 capacity; there were no capacity,
+    divisibility, permission, HTTP502, or OOM failures.
+
+    Node4 step rewards averaged0.000 and-0.0333; node3 averaged0.0167 and
+    0.1167. These are reward-split PPO observations, not acceptance claims.
+    Actor updates reported finite gradients and `update_successful=1`; critic
+    loss decreased from3.79 to1.24 on node4 and3.44 to1.78 on node3. The
+    asynchronous rollout window fully hid the second reward batch behind the
+    first update: measured rollout wait fell from162.2s/149.6s to roughly
+    1ms. Final actor+critic serialization remained190--207s.
+
+    Filler-excluded resident-window telemetry covered about1,200s per node.
+    Actor-group mean utilization was41.4% on node4 and45.6% on node3;
+    rollout was8.2%/6.8%, frozen Solver replicas8.9%/9.1%, and at least one
+    GPU exceeded10% utilization in71.4%/70.9% of samples. All-GPU simultaneous
+    utilization is intentionally0% because reward inference, actor/critic
+    optimization, and synchronous checkpoint serialization are phased; all
+    eight cards were nevertheless allocated to the declared3+1+4 layout.
+    These figures exclude filler and do not represent algorithm quality.
+
+    Both automatic dev chains then started on IDs300--399. Acceptance remains
+    gated by at least+1pp paired gain and a positive one-sided95% LCB; H1
+    training reward cannot select a checkpoint. Sealed test400--499 remains
+    unread.

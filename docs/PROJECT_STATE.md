@@ -300,7 +300,8 @@ target必须返回真正的OpenAI `tool_calls`，文本看似XML不是等价证�
 1. H-SAO与W-SAO真实optimizer smoke已完成；正式checkpoint均不从smoke继承。
    E0/W0 dev为no-patch79/100、packet-transductive76/100。packet370基础设施
    失败已仅重跑该packet。r1/r2/r3均为零optimizer更新且已隔离；protocol v8下
-   两臂H1-r4正从原始E0/W0运行。
+   两臂H1-r4均已完成2个actor/4个critic更新并产生权重变化；100-task dev
+   refresh/global Harness门控正在运行。
 2. node4按H至平台→W至平台执行顺序SAO；node3按H1-W1-H2-W2执行MA-SAO。
    每个角色至少两轮、patience=2、最多八轮，基础设施失败不算模型0分。
 3. 每轮只用dev 300–399停止/接受；要求≥1pp、paired gain>0且one-sided
@@ -326,7 +327,7 @@ target必须返回真正的OpenAI `tool_calls`，文本看似XML不是等价证�
 - 首先读本文件，再读对应方法README和实际JSON receipt；启动日志不是完成receipt。
 - 当前服务器仅授权node3/node4。CPU测试显式`CUDA_VISIBLE_DEVICES=''`，
   每节点GPU进程由单个ownership supervisor管理，不杀未知/其他用户进程。
-- 目前两节点运行正式H1-r4；开始新任务前仍须重新核验实际service、PID、端口和
+- 目前两节点运行H1-r4的正式dev门控；开始新任务前仍须重新核验实际service、PID、端口和
   GPU占用，不能只依赖本文判断运行状态。
 - 保存已有权重、算法和分析；清理中间产物必须先有经过验证的保留清单。
   旧约826.5GB checkpoint inventory仅做过盘点，不能声称已安全清理。
