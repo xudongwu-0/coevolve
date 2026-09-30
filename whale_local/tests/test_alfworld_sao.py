@@ -9,7 +9,8 @@ from sao_bridge.alfworld_domain import (
 from sao_bridge.alfworld_env_service import task_definition
 from sao_bridge.alfworld_global_harness import (
     accepted_candidate, complete_without_candidates, packet_metadata,
-    paired_patch_improvement, receipt_candidates,
+    normalize_patched_rewards, paired_patch_improvement, receipt_candidates,
+    seed_reward_cache,
 )
 from sao_bridge.alfworld_phase_data import (
     TRAINING_VALIDATOR_REMINDER, assignments_from_matrix, editor_dataset,
@@ -176,6 +177,57 @@ class AlfworldSaoTest(unittest.TestCase):
             str(task_id) for task_id in range(300, 310)
         })
         self.assertEqual(packets[0]["solver_version"], "w1")
+
+    def test_global_rewards_map_exact_packet_local_ids_to_protocol_ids(self):
+        metadata = {"start": 390, "end": 400, "batch_size": 10}
+        local = {str(task_id): float(task_id % 2) for task_id in range(10)}
+        normalized = normalize_patched_rewards(local, metadata)
+        self.assertEqual(set(normalized), set(range(390, 400)))
+        self.assertEqual(normalized[393], 1.0)
+        global_ids = {str(task_id): 1.0 for task_id in range(390, 400)}
+        self.assertEqual(
+            normalize_patched_rewards(global_ids, metadata),
+            {task_id: 1.0 for task_id in range(390, 400)},
+        )
+        with self.assertRaisesRegex(ValueError, "neither global task IDs"):
+            normalize_patched_rewards({"1": 1.0, "10": 0.0}, metadata)
+
+    def test_global_reward_cache_seed_requires_matching_evaluation_identity(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            previous = root / "previous"
+            cache = previous / "reward_cache"
+            cache.mkdir(parents=True)
+            (cache / "result.json").write_text("{}", encoding="utf-8")
+            identity = {
+                "packet_refresh": "/packets",
+                "candidate_receipt_roots": ["/receipts"],
+                "maximum_behavior_version": 0,
+                "no_patch": "/no-patch.json",
+                "solver_model": "/solver",
+                "solver_version": "w0",
+            }
+            (previous / "config.json").write_text(
+                json.dumps(identity), encoding="utf-8",
+            )
+            run = root / "retry"
+            run.mkdir()
+            seed_reward_cache(run, {
+                **identity, "seed_reward_cache": str(cache),
+            })
+            self.assertEqual(
+                (run / "reward_cache/result.json").read_text(encoding="utf-8"),
+                "{}",
+            )
+            manifest = json.loads(
+                (run / "reward_cache_seed.json").read_text(encoding="utf-8")
+            )
+            self.assertEqual(manifest["files"], 1)
+            with self.assertRaisesRegex(ValueError, "identity changed"):
+                seed_reward_cache(root / "other", {
+                    **identity, "solver_version": "w1",
+                    "seed_reward_cache": str(cache),
+                })
 
     def test_runtime_metadata_supplements_do_not_replace_weights(self):
         with tempfile.TemporaryDirectory() as temporary:

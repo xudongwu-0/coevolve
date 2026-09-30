@@ -7,6 +7,7 @@ import hashlib
 import json
 from pathlib import Path
 import random
+import shutil
 import subprocess
 import threading
 import time
@@ -250,8 +251,9 @@ async def evaluate_candidates(url: str, candidates: list[dict], packets: list[di
             evaluation = results[candidate["sha256"], metadata["start"]]["evaluation"]
             baseline = {int(key): float(value)
                         for key, value in metadata["baseline_rewards"].items()}
-            patched = {int(key): float(value)
-                       for key, value in evaluation["patched_rewards"].items()}
+            patched = normalize_patched_rewards(
+                evaluation["patched_rewards"], metadata,
+            )
             if set(baseline) != set(patched):
                 raise ValueError("global harness evaluation changed task identity")
             rows.extend({
@@ -261,6 +263,54 @@ async def evaluate_candidates(url: str, candidates: list[dict], packets: list[di
             } for task_id in sorted(baseline))
         reports.append({**candidate, "task_rows": rows})
     return reports
+
+
+def normalize_patched_rewards(values: dict, metadata: dict) -> dict[int, float]:
+    patched = {int(key): float(value) for key, value in values.items()}
+    start, end = metadata["start"], metadata["end"]
+    expected = set(range(start, end))
+    if set(patched) == expected:
+        return patched
+    local = set(range(metadata["batch_size"]))
+    if set(patched) == local and end - start == metadata["batch_size"]:
+        return {start + task_id: reward for task_id, reward in patched.items()}
+    raise ValueError(
+        "official patched rewards are neither global task IDs nor an exact "
+        "packet-local 0..batch_size-1 identity"
+    )
+
+
+def seed_reward_cache(run: Path, config: dict) -> None:
+    source_value = config.get("seed_reward_cache")
+    if not source_value:
+        return
+    source = Path(source_value).resolve()
+    previous_config_path = source.parent / "config.json"
+    if not source.is_dir() or not previous_config_path.is_file():
+        raise ValueError("seed_reward_cache must be a prior global run reward_cache")
+    previous = read_json(previous_config_path)
+    identity_keys = (
+        "packet_refresh", "candidate_refreshes", "candidate_receipt_roots",
+        "maximum_behavior_version", "patch", "incumbent_patch", "no_patch",
+        "solver_model", "solver_version",
+    )
+    mismatched = [
+        key for key in identity_keys
+        if previous.get(key) != config.get(key)
+    ]
+    if mismatched:
+        raise ValueError(
+            f"seed reward cache evaluation identity changed: {mismatched}"
+        )
+    destination = run / "reward_cache"
+    shutil.copytree(source, destination)
+    files = [path for path in destination.rglob("*") if path.is_file()]
+    write_json(run / "reward_cache_seed.json", {
+        "source": str(source),
+        "files": len(files),
+        "bytes": sum(path.stat().st_size for path in files),
+        "identity_keys": list(identity_keys),
+    })
 
 
 def main() -> None:
@@ -306,6 +356,7 @@ def main() -> None:
         minimum_absolute_gain = float(config["minimum_absolute_gain"])
         if not 0 < minimum_absolute_gain <= 1:
             raise ValueError("minimum_absolute_gain must be in (0, 1]")
+        seed_reward_cache(run, config)
     except BaseException as exc:
         write_json(run / "FAILED.json", {
             "status": "failed", "phase": config.get("phase"),
