@@ -232,6 +232,28 @@ protocol v8把H microbatch冻结为23,040（可容纳任一单轨迹但不能打
 `d952ef63f49f83dbb2c1bc730115cdcbfc870043e30253984e3541bed2d5a643`；
 两臂已从原始E0/W0同步启动H1-r4。
 
+两臂H1-r4随后均完成2个actor/4个critic更新。dev refresh在node4得到
+no-patch79/100、packet-transductive80/100，在node3得到78/100与81/100；
+transductive数字只作诊断。正式global候选仅来自optimizer实际消费的
+behavior-version-0 train receipts（node4 10个、node3 11个合法唯一候选），
+不使用dev生成patch。node4正式接受一个+8pp、one-sided95% LCB+2pp的H1
+candidate（79→87）；node3接受+11pp、LCB+5pp（78→89）。这是本项目首次
+通过clean train-candidate→dev gate的global Harness提升。
+
+首次global pass还暴露官方packet evaluator返回局部reward ID0–9，而协议任务
+ID为300–399。selector在作出决定前停止；修复后只接受精确global集合或完整
+packet-local连续集合，并将后者按packet start映射回协议ID。中断cache retry
+现在只复制评测身份完全一致的结果，排除`.lock`并丢弃缓存的infra-failure
+`reward.json`。node3 retry3复用了109个成功评测，只重算1个失败key，
+253秒完成。完整`whale_local/tests`为135 passed，后续失败cache过滤定向回归为
+18 passed。
+
+node4 H2又完成2个actor/4个critic更新（1,320.9秒），但没有超过H1 incumbent，
+因此拒绝H2 checkpoint。该轮重测H1 incumbent为88/100，而首次为87/100；
+这一个task的运行波动不能记作H2收益。node4已从接受的H1 actor/critic重新采样
+H3（新sample offsets128–191）。node3正在用接受的E1/W0刷新24个train packets，
+随后训练MA W1。
+
 正式MA分支不是虚构完整MAPPO：采用去中心actor、pre-action joint-state critic、
 W版本隔离reward cache、W变化后的H reward refresh，以及25%真实Engineer
 behavior-token/logprob replay+interaction credit。官方ALFWorld reward没有提供精确
@@ -284,6 +306,9 @@ ALFWorld模型/环境就绪后的首轮8题基线+RL patch重跑约几分钟；
 | H batch4无法3-way dispatch | AReaL balanced partition要求consumer batch可被DP整除 | protocol v7 H batch6；领取GPU前显式整除校验 |
 | H单轨迹超过20k microbatch | 4096输出下实际轨迹为20.3k–21.1k；旧512-token smoke未覆盖 | 全64行模板审计上界22,702；v8容量23,040并在GPU分配前校验 |
 | 双节点AgentBench写权限冲突 | 同名用户在node3/node4分别为UID1009/1008，共享generated目录为0775 | 每个H/W run建立独立可写runtime/scratch；固定源码和数据只读链接 |
+| dev packet仍写共享cohort | 旧driver把generated config/cohort留在共享asset目录 | AgentBench、config、cohort、task ID和scratch全部run-local；exit0 summary仍检查infra failure并有界重试 |
+| global reward返回packet局部ID | 官方子评测输出0–9，selector基线使用300–399 | 只接受精确global集合或完整局部集合；后者按packet start显式映射，其他形状失败 |
+| 中断cache retry等待7200秒 | SIGKILL遗留`.lock`，失败`reward.json`又会成为cache hit | resume排除锁并丢弃infra-failure entry，只复用评测身份一致的成功结果 |
 | W并发出现HTTP 406 | 连续task IDs共用同一单会话packet worker | 跨24 workers round-robin；启动前审计完整异步active window |
 | AReaL导出缺preprocessor metadata | 权重checkpoint不一定复制全部Qwen runtime文件 | 从输入checkpoint补齐并单独记录；权重变化使用纯safetensors digest |
 | H训练提示漏掉执行上限 | 多hook提示未声明每个code的helper/AST硬限制 | 零更新停止；显式声明已有validator契约并从E0/W0同步重启 |
@@ -298,10 +323,11 @@ target必须返回真正的OpenAI `tool_calls`，文本看似XML不是等价证�
 ## 6. 下一步与停止条件
 
 1. H-SAO与W-SAO真实optimizer smoke已完成；正式checkpoint均不从smoke继承。
-   E0/W0 dev为no-patch79/100、packet-transductive76/100。packet370基础设施
-   失败已仅重跑该packet。r1/r2/r3均为零optimizer更新且已隔离；protocol v8下
-   两臂H1-r4均已完成2个actor/4个critic更新并产生权重变化；100-task dev
-   refresh/global Harness门控正在运行。
+   r1/r2/r3均为零optimizer更新且已隔离；protocol v8下两臂H1-r4均完成
+   2个actor/4个critic更新。node4 H1在dev从79/100升至87/100
+   （+8pp，LCB+2pp），node3从78/100升至89/100（+11pp，LCB+5pp），
+   两者均被接受。node4 H2未超过H1 incumbent，当前运行H3；node3当前进行
+   E1/W0 train refresh，随后启动MA W1。
 2. node4按H至平台→W至平台执行顺序SAO；node3按H1-W1-H2-W2执行MA-SAO。
    每个角色至少两轮、patience=2、最多八轮，基础设施失败不算模型0分。
 3. 每轮只用dev 300–399停止/接受；要求≥1pp、paired gain>0且one-sided
@@ -327,8 +353,9 @@ target必须返回真正的OpenAI `tool_calls`，文本看似XML不是等价证�
 - 首先读本文件，再读对应方法README和实际JSON receipt；启动日志不是完成receipt。
 - 当前服务器仅授权node3/node4。CPU测试显式`CUDA_VISIBLE_DEVICES=''`，
   每节点GPU进程由单个ownership supervisor管理，不杀未知/其他用户进程。
-- 目前两节点运行H1-r4的正式dev门控；开始新任务前仍须重新核验实际service、PID、端口和
-  GPU占用，不能只依赖本文判断运行状态。
+- 截至2026-09-30 19:40 UTC，node4运行顺序H3，node3运行MA W1的train
+  packet refresh；开始新任务前仍须重新核验实际service、PID、端口和GPU占用，
+  不能只依赖本文判断运行状态。
 - 保存已有权重、算法和分析；清理中间产物必须先有经过验证的保留清单。
   旧约826.5GB checkpoint inventory仅做过盘点，不能声称已安全清理。
 - 使用既有测试；仓库导出不是新的GPU实验。提交前禁止带入任何模型文件或凭据。
@@ -340,6 +367,8 @@ target必须返回真正的OpenAI `tool_calls`，文本看似XML不是等价证�
 ## 8. 本次代码导出验证
 
 提交范围的CPU回归：**448 passed、5 skipped、843 subtests passed**。
+本轮global-selector/cache恢复改动另通过完整`whale_local/tests`：
+**135 passed**；其后失败cache过滤的定向回归为**18 passed**。
 跳过项不代表通过GPU训练测试；本次没有重新训练模型。存在上游依赖的弃用警告。
 服务器Python环境为torch 2.10、transformers 5.7、vLLM 0.19.1；
 旧发布环境的requirements不能静默视为当前环境完全相同。

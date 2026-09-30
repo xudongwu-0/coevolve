@@ -361,8 +361,32 @@ so the 23,040-token capacity passed with 1,082 tokens of observed headroom.
 The asynchronously prefetched second reward batch reduced measured step-1
 rollout wait to about 1 ms on both nodes; final actor+critic serialization
 still cost 190--207 seconds and is reported separately from optimization.
-The two 100-task dev refresh/global-harness gates are now running; training
-reward is not being used as an acceptance decision.
+
+The dev refreshes produced no-patch/packet-transductive scores of 79/80 on
+node4 and 78/81 on node3. Packet-transductive scores remain diagnostics, not
+Harness acceptance evidence. The formal candidate sets contained only unique
+valid patches from optimizer-consumed behavior-version-0 train receipts:
+10 on node4 and 11 on node3. No dev-generated patch entered either pool.
+Node4 accepted an H1 global patch at +8pp paired gain with a +2pp one-sided
+95% lower bound (79 to 87); node3 accepted one at +11pp with a +5pp lower
+bound (78 to 89).
+
+The initial global pass was stopped before selection when the official
+evaluator exposed packet-local reward keys 0--9 while the protocol metadata
+used global IDs 300--399. `alfworld_global_harness.py` now accepts only the
+exact global set or an exact local `0..batch_size-1` set and maps the latter
+through the declared packet start. Interrupted retries may seed only from a
+prior run with identical evaluation inputs; they exclude stale `.lock` files
+and cached infrastructure-failure results. Node3 retry3 consequently reused
+109 successful evaluations and recomputed one failed key in 253 seconds.
+
+Node4 H2 completed two more actor and four critic updates in 1,320.9 seconds
+but did not improve over the H1 incumbent. The incumbent itself re-evaluated
+at 88 rather than 87 passes, so the one-task run-level fluctuation is recorded
+but not attributed to H2. H2 was rejected, and H3 restarted from the accepted
+H1 actor/critic using fresh sample offsets 128--191. Node3 is refreshing all
+24 train packets under accepted E1/W0 before MA-SAO W1. Sealed test 400--499
+remains unread.
 
 ## Environment and official assets
 

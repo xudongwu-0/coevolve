@@ -1873,3 +1873,66 @@ It is exploratory validation, not held-out AIME. AIME test stays sealed until a 
     gated by at least+1pp paired gain and a positive one-sided95% LCB; H1
     training reward cannot select a checkpoint. Sealed test400--499 remains
     unread.
+
+74. **Leakage-free H1 development gates and bounded recovery
+    (2026-09-30).** Node4's first dev refresh attempt failed before model
+    scoring because the legacy packet driver still wrote generated cohorts
+    under a shared UID1009-owned asset directory. The driver now creates its
+    AgentBench tree, generated config, cohort, task-ID file and scratch
+    directory under each packet run. The bounded node4 retry completed all10
+    packets; start350 returned exit0 with an infrastructure-failure summary on
+    its first attempt and was correctly retried. Final no-patch and
+    packet-transductive diagnostics were79/80 on node4 and78/81 on node3.
+    Packet-transductive patches were excluded from formal selection.
+
+    Formal pools were reconstructed only from H1 optimizer receipts actually
+    consumed at behavior version0. Node4 had10 valid unique candidates and
+    node3 had11; six asynchronously prefetched behavior-version1 receipts per
+    arm were excluded. During the first global pass, official evaluation
+    results exposed local task keys0--9 while baseline metadata used global
+    IDs300--399. Both selectors were stopped before producing a decision.
+    The selector now accepts either the exact declared global set or the exact
+    local contiguous set and explicitly maps the latter by packet start.
+
+    Node3 retry2 copied51 successful cache entries but also inherited seven
+    `.lock` files from the interrupted run; upstream's `O_EXCL` cache lock
+    would wait7200s for those files. Removing only the verified stale locks
+    released the blocked evaluations. One remaining official evaluation then
+    exhausted its internal retries with
+    `eval_failed_treated_as_no_patch`; the run failed rather than turning that
+    infrastructure error into model reward. Cache resume now excludes all
+    `.lock` files and removes cached infrastructure-failure `reward.json`
+    entries. Retry3 reused109 successful results, recomputed only that failed
+    key and completed in253.2s. Commits `306c438`, `eac5e2b` and `7125452`
+    implement these protections. The complete `whale_local/tests` suite passed
+    135 tests; the final focused cache regression passed18.
+
+    Node4 accepted candidate
+    `60b43b8fd5f64852bd20234dbd4e50e71b46253a6f604adba86bc53f5f49a680`
+    at87/100 versus79/100: paired gain+8pp and one-sided95% LCB+2pp.
+    Node3 accepted
+    `6e6750643c1b451c65c9be1db61f73db7e88d3ab9150ca005ec00e37d36a0234`
+    at89/100 versus78/100: gain+11pp and LCB+5pp. These are clean
+    train-candidate-to-dev global Harness results, not training rewards or
+    same-packet rescue rates. Sealed test400--499 remains unread.
+
+75. **Sequential H2 decision and next dual-node phases (2026-09-30).**
+    Node4 continued from the accepted H1 actor/critic and completed H2's two
+    actor/four critic updates in1,320.9s. Actor safetensors changed from
+    `b0d656daddb0211678bb354ff234159e618f5de2244808cb15c55a92a30943e7`
+    to
+    `f203a239dde49069c69121cba1e3a4ce90170fd3da3f54c5385746179dca40f7`.
+    Eleven consumed-version0 candidates were evaluated relative to the H1
+    incumbent; none passed the incremental +1pp/positive-LCB gate. The
+    incumbent re-evaluated at88/100 (+9pp versus no-patch, LCB+3pp), one pass
+    above its first H1 evaluation. This run-level fluctuation is retained as
+    measurement evidence and is not credited to H2. H2 was rejected.
+
+    Sequential patience is therefore one of two non-improving H rounds after
+    the accepted H1. H3 restarts from accepted H1, not rejected H2, using64
+    unique rows at sample offsets128--191; the data SHA256 is
+    `bb54c24f69d14ccccbbb26f51ac5ac05b0e648fd94cce7f885dbeb17e84349f9`.
+    In parallel, node3 uses accepted E1/W0 to refresh all24 train packets and
+    generate512 assignment-aligned W1 rows. W1's centralized critic context
+    is frozen before action and records E1, selected harness identity and
+    89/100 dev calibration. Solver cross-role replay remains disabled.
