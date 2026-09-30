@@ -11,7 +11,7 @@ import time
 
 from .budget import model_digests
 from .common import ensure_model_runtime_metadata, read_json, write_json
-from .large_train import training_capacity_audit
+from .large_train import training_capacity_audit, validate_training_rows
 from .launch import Launcher
 from .resources import stop_known
 
@@ -77,14 +77,14 @@ def main() -> None:
         preflight_spec = training_spec(
             config, run, f"http://127.0.0.1:{config.get('reward_service_port', 28600)}"
         )
-        capacity_audit = training_capacity_audit(
-            preflight_spec, read_json(Path(config["data"]))
-        )
+        rows = read_json(Path(config["data"]))
+        validate_training_rows(preflight_spec, rows)
+        capacity_audit = training_capacity_audit(preflight_spec, rows)
         write_json(run / "capacity_audit.json", capacity_audit)
     except BaseException as exc:
         write_json(run / "FAILED.json", {
             "status": "failed", "phase": config.get("phase"),
-            "stage": "pre_gpu_capacity_audit",
+            "stage": "pre_gpu_training_audit",
             "elapsed_seconds": time.time() - started,
             "error": repr(exc),
         })

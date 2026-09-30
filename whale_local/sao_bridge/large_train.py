@@ -28,7 +28,21 @@ def validate_capacity_audit(spec: dict, audit: dict) -> None:
             f"trajectory ({required})"
         )
     if required > spec.get("context_tokens", 8192):
-        raise ValueError("Longest possible trajectory exceeds the training context")
+        raise ValueError("Longest possible trajectory exceeds the training context"        )
+
+
+def validate_training_rows(spec: dict, rows: list[dict]) -> None:
+    required = spec["steps"] * spec["batch_size"]
+    if len(rows) < required:
+        raise ValueError(
+            f"Training data has {len(rows)} rows but {required} distinct rows "
+            "are required for the declared step budget"
+        )
+    sample_ids = [row.get("id") for row in rows[:required]]
+    if any(not isinstance(sample_id, str) or not sample_id for sample_id in sample_ids):
+        raise ValueError("Every consumed training row must have a nonempty string ID")
+    if len(sample_ids) != len(set(sample_ids)):
+        raise ValueError("The declared step budget would consume duplicate training IDs")
 
 
 def training_capacity_audit(spec: dict, rows: list[dict]) -> dict:
@@ -198,6 +212,7 @@ def main():
     else:
         os.environ.pop("MA_SAO_CONTEXT_FILE", None)
     rows = read_json(Path(spec["data"]))
+    validate_training_rows(spec, rows)
     capacity_audit = spec.get("capacity_audit")
     if capacity_audit is None:
         capacity_audit = training_capacity_audit(spec, rows)

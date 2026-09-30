@@ -342,6 +342,12 @@ or claiming GPUs. Protocol v8 manifest SHA256 is
 `d952ef63f49f83dbb2c1bc730115cdcbfc870043e30253984e3541bed2d5a643`.
 Both H1-r4 arms restarted from untouched E0/W0.
 
+Because batch6 consumes 12 distinct rows over a two-step H round, the H
+launcher also rejects datasets shorter than `steps * batch_size` or with
+duplicate consumed IDs before claiming GPUs. The sequential H2 dataset was
+regenerated with 64 unique sample IDs at offsets 64--127 instead of allowing
+the old eight-row batch4 file to repeat across epochs.
+
 ## Environment and official assets
 
 `/dev/shm/harness-r1-alfworld-venv` is node3-local and intentionally isolated.

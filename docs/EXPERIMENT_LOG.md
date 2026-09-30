@@ -1835,4 +1835,10 @@ It is exploratory validation, not held-out AIME. AIME test stays sealed until a 
     fabricating scores. Before those chains ran, the selector was corrected to
     enforce the protocol's declared `minimum_dev_gain=0.01` in addition to a
     positive one-sided95% LCB; a regression test prevents sub-1pp noise from
-    being accepted. Sealed test400--499 remains unread.
+    being accepted. The batch6 change also made the earlier eight-row H2 file
+    insufficient for two distinct batches. A generic pre-GPU row audit now
+    requires `steps * batch_size` unique consumed IDs, and
+    `h2_train_v3.json` contains64 rows at sample offsets64--127 (the first12
+    are distinct); its SHA256 is
+    `b6285ab0058aec4b3d756d3c60d5a7b211cecb06b995686c411d6670a132a7c2`.
+    Sealed test400--499 remains unread.

@@ -11,7 +11,9 @@ import httpx
 from sao_bridge.domain_api import get_domain
 from sao_bridge.evaluation import create_app, evaluate
 from sao_bridge.experiment import propose
-from sao_bridge.large_train import configure, validate_capacity_audit
+from sao_bridge.large_train import (
+    configure, validate_capacity_audit, validate_training_rows,
+)
 from sao_bridge.phase_data import editor_dataset
 from sao_bridge import retool
 
@@ -182,6 +184,17 @@ class DomainIntegrationTests(unittest.TestCase):
                 validate_capacity_audit(
                     {**spec, "microbatch_tokens": 12000},
                     {**audit, "microbatch_tokens": 12000},
+                )
+            validate_training_rows(
+                spec,
+                [{"id": "one"}, {"id": "two"}],
+            )
+            with self.assertRaisesRegex(ValueError, "distinct rows"):
+                validate_training_rows(spec, [{"id": "one"}])
+            with self.assertRaisesRegex(ValueError, "duplicate training IDs"):
+                validate_training_rows(
+                    spec,
+                    [{"id": "one"}, {"id": "one"}],
                 )
 
 
