@@ -146,17 +146,28 @@ class DomainIntegrationTests(unittest.TestCase):
             "lr": 2e-6, "tokens": 4096, "context_tokens": 16384,
         }
         with tempfile.TemporaryDirectory() as temporary, patch.dict(
-            os.environ, {"SAO_SEARCHQA_RETRIEVAL_URL": "http://127.0.0.1:19631"}
+            os.environ, {
+                "PYTORCH_ALLOC_CONF": "expandable_segments:True",
+                "SAO_SEARCHQA_RETRIEVAL_URL": "http://127.0.0.1:19631",
+            }
         ):
             config = configure(spec, Path(temporary))
             self.assertEqual(config["gconfig"]["max_tokens"], 16384)
             self.assertEqual(config["vllm"]["max_model_len"], 16384)
+            self.assertEqual(config["actor"]["mb_spec"]["max_tokens_per_mb"], 16384)
+            limited = configure({**spec, "microbatch_tokens": 8192}, Path(temporary))
+            self.assertEqual(limited["actor"]["mb_spec"]["max_tokens_per_mb"], 8192)
+            self.assertEqual(limited["critic"]["mb_spec"]["max_tokens_per_mb"], 10240)
             self.assertEqual(config["actor"]["scheduling_spec"][0]["env_vars"][
                 "SAO_SEARCHQA_RETRIEVAL_URL"], "http://127.0.0.1:19631")
+            self.assertEqual(config["actor"]["scheduling_spec"][0]["env_vars"][
+                "PYTORCH_ALLOC_CONF"], "expandable_segments:True")
             self.assertTrue(config["actor"]["use_decoupled_loss"])
             self.assertEqual(config["gconfig"]["n_samples"], 1)
             with self.assertRaisesRegex(ValueError, "leave room"):
                 configure({**spec, "context_tokens": 4096}, Path(temporary))
+            with self.assertRaisesRegex(ValueError, "data-parallel size"):
+                configure({**spec, "batch_size": 1}, Path(temporary))
 
 
 if __name__ == "__main__":

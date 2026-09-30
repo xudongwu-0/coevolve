@@ -40,7 +40,7 @@ def replay_rows(directory: Path, count: int, editor_step_offset: int) -> list[di
             raise ValueError(f"Editor replay is missing an exact policy call: {path}")
         call = calls[0]
         validate_call(call)
-        rows.append({
+        row = {
             "id": "replay-" + record["id"], "messages": record["input_messages"],
             "replay": {
                 "call": call, "source": record["action_text"],
@@ -49,7 +49,10 @@ def replay_rows(directory: Path, count: int, editor_step_offset: int) -> list[di
                 "old_partner_version": record["partner_version"],
                 "reference_source": record["harness_source"],
             },
-        })
+        }
+        if record.get("metadata") is not None:
+            row["metadata"] = record["metadata"]
+        rows.append(row)
         if len(rows) == count:
             break
     if len(rows) < count:

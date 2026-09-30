@@ -160,6 +160,73 @@ DBBench 61.0%→61.3%，平均44.3%→46.4%。平均收益不代表ALFWorld收�
 - Agent-SFT：`assets/alfworld_harness_r1/runs/diagnostic8_targetagentsft_20260930_1414_r2/`
   及独立核验 `runs/harness_r1_alfworld_20260930/node3/solver_sft8_20260930_1418/`。
 
+### 3.5 ALFWorld双节点SAO/MA-SAO起点
+
+正式协议固定在
+`examples/alfworld_sao_masao_campaign_20260930_v6.json`。两臂共同从官方RL
+Engineer `harness-r1`和Agent-SFT Solver `target-agent-sft`开始；node4为
+顺序SAO（H收敛后W），node3为H/W交替MA-SAO。官方500题mixed列表在本地固定为
+train 0–239、reward 240–299、dev 300–399、sealed test 400–499。
+这是本地研究划分，不是论文原始untouched test。
+
+0–239已完成六轮2×2匹配矩阵，共96 jobs、全部首尝试成功：
+
+| Engineer + Solver | baseline | 同packet patched | 净变化 |
+|---|---:|---:|---:|
+| RL + Agent-SFT（正式共同起点） | 166/240 | 184/240 | **+18/+7.50pp** |
+| Cold-SFT + Agent-SFT | 167/240 | 157/240 | −10/−4.17pp |
+| RL + Original | 93/240 | 132/240 | **+39/+16.25pp** |
+| Cold-SFT + Original | 97/240 | 103/240 | +6/+2.50pp |
+
+共同起点有23个合法patch、1个非法patch，救回27题、回归9题。它证明官方
+reward非零且有优化信号，但Engineer看过同十题失败，因此只能称
+**train packet transductive diagnostic**。Agent-SFT在两种Engineer并发配对下
+仅task134出现baseline不一致；Original有10题不一致，均已在task-level receipt保留。
+
+两节点16卡完成1,750个真实target episodes与96个Engineer proposals，
+六轮合计1,432.49秒、约1.22 target episodes/s。node3/node4全时段平均GPU利用率
+分别28.06%/29.93%；Solver约30–50%，Engineer约11–24%。这是“十题baseline+
+patched围绕一次Engineer生成”的采集结构，不是optimizer阶段上限。正式H布局为
+3 actor FSDP+1 rollout+4 frozen Solver，W为4 actor FSDP+4 rollout。
+
+正式更新前的真实optimizer smoke已经通过。Qwen3.5原先被AReaL按VLM
+language-model分支加载，critic输出`[batch,seq,248320]`词表logits；
+专用token-value head修复后严格输出`[batch,seq]`并通过save/reload测试。
+H的2-way FSDP随后在一条约18k-token轨迹的critic backward OOM；3-way
+FSDP完成1次actor和2次critic更新，actor/critic grad norm分别9.37/226.21，
+actor权重SHA256从发布权重`7d16d5...`变为`cb06bf...`，峰值仍有约23 GiB
+余量。正式H训练另用20k-token microbatch上限避免同rank打包两条长轨迹。
+
+W smoke完成1次actor和2次critic更新：139条action trajectories、
+1,386,174 tokens，actor/critic grad norm为1.06/348.28。总耗时
+2,713秒；其中actor更新10分32秒、两次critic更新21分47秒。
+旧连续task顺序使并发首批都落到同一个单会话packet worker，产生3,870次
+HTTP 406工作流失败；数据现按24个packet assignment round-robin，运行前还会
+审计整个异步active window，碰撞直接失败而不是进入训练。旧smoke只用于通路
+与计时，不作为正式checkpoint。基于这些实测，protocol v6在任何正式更新前
+冻结为每轮`2 steps × batch 4`；H训练生成上限4096（23个历史合法提案均
+≤3014 tokens，唯一12288-token样本是非法runaway），正式评测仍保留12288。
+首个正式H1 rollout随后暴露提示/验证器契约缺口：提示要求多hook，却未声明
+每个hook code最多5个helper和1200 AST nodes；node4前4个候选全因此无reward
+被拒，node3尚未产生候选。两臂均在`metrics=0/checkpoints=0`时按精确unit停止，
+原attempt不计正式更新。训练提示现只补充已有验证器限制，任务、reward、seed、
+模型、优化器均不变；两臂已从原始E0/W0同步以`h1_train_v2`重启。
+
+正式MA分支不是虚构完整MAPPO：采用去中心actor、pre-action joint-state critic、
+W版本隔离reward cache、W变化后的H reward refresh，以及25%真实Engineer
+behavior-token/logprob replay+interaction credit。官方ALFWorld reward没有提供精确
+Solver behavior logprob，所以Solver cross-role replay明确关闭。最终同时报告：
+packet-transductive、Solver no-patch、reward区选择后原样用于未见题的global harness。
+
+关键索引：
+
+- `runs/alfworld_sao_masao_20260930/matrix_train_000_239.json`
+- `runs/alfworld_sao_masao_20260930/matrix_infra_report.json`
+- `assets/alfworld_sao_masao_20260930/protocol_v3/manifest.json`
+- `assets/alfworld_sao_masao_20260930/protocol_v6/manifest.json`
+- `assets/alfworld_sao_masao_20260930/data/manifest.json`
+- `whale_local/harness_r1_alfworld/README.md`
+
 ## 4. 性能优化：测量而不是利用率印象
 
 | 实际小工作负载测量 | 结果 |
@@ -168,6 +235,9 @@ DBBench 61.0%→61.3%，平均44.3%→46.4%。平均收益不代表ALFWorld收�
 | 活跃Solver卡平均利用率 | 33.68%→65.68%；释放4卡给Engineer |
 | Shared dev baseline复用 | 140.04→74.32秒，1.884倍；首次baseline另需71.68秒 |
 | SFT loss chunk128→1024 | 端到端261.46→255.99秒，约2.09%缩短 |
+| ALFWorld双节点矩阵 | 1,750 target episodes/1,432.49秒；96/96 jobs首尝试成功 |
+| H-SAO 3-way FSDP smoke | 1 actor+2 critic更新；765.73秒；峰值约116.7/139.8 GiB |
+| W-SAO单更新smoke | 139 action trajectories/1.386M tokens；2,713秒 |
 
 以上是单次小测，不是复现稳定的全规模加速率。SFT平均利用率没有提高；
 盲目增大并发反而减速。NCCL等待可能显示GPU100%，不能冒充有效计算。
@@ -183,8 +253,15 @@ ALFWorld模型/环境就绪后的首轮8题基线+RL patch重跑约几分钟；
 | Health通过，生成HTTP500 | FlashInfer GDN JIT需要缺失的nvcc | 显式Triton backend；做真实请求/工具调用probe |
 | CPU episode全task error却进程exit0 | FastDownward把库复制到满盘/tmp | 独立TMPDIR放/dev/shm或3FS；审计overall.validation，不接受伪0分 |
 | ALFWorld sparse ID丢失 | 官方builder用连续range推断size | 完整baseline校验后添加真实IDs；同任务身份配对 |
+| ALFWorld packet metadata HTTP422 | Arrow把不同task-id字典并成含None的稀疏struct | optimizer数据把metadata存为稳定JSON列，workflow边界严格解码 |
+| node3 Git dubious ownership | 两节点UID不同、共享submodule所有者不同 | 每个固定仓库命令显式使用对应`safe.directory`，不修改全局Git配置 |
 | Python venv逃逸 | 官方脚本resolve了symlink解释器 | 用copied interpreter，不把系统python当已装环境 |
 | Packed-SDPA跨序列污染 | 上游SDPA忽略packed边界 | 受控block-diagonal mask补丁；旧受污染实验无效 |
+| Qwen3.5 critic变成词表logits | VLM分支无条件加载生成模型 | 专用token-value head；shape guard与save/reload回归 |
+| H 2-way FSDP OOM | 单条约18k token不能再切；critic backward仅余82 MiB | 3-way actor FSDP+1 rollout；20k microbatch防止双长序列打包 |
+| W并发出现HTTP 406 | 连续task IDs共用同一单会话packet worker | 跨24 workers round-robin；启动前审计完整异步active window |
+| AReaL导出缺preprocessor metadata | 权重checkpoint不一定复制全部Qwen runtime文件 | 从输入checkpoint补齐并单独记录；权重变化使用纯safetensors digest |
+| H训练提示漏掉执行上限 | 多hook提示未声明每个code的helper/AST硬限制 | 零更新停止；显式声明已有validator契约并从E0/W0同步重启 |
 | 异步receipt重复/缺失 | 消费序号与真实task身份不一致 | exact multiset审计，隔离无效attempt并计物理成本 |
 | 接口/预算/判分不一致 | 本地proxy和论文协议不同 | 显式披露，不宣称同起点或绝对分数复现 |
 
@@ -195,12 +272,14 @@ target必须返回真正的OpenAI `tool_calls`，文本看似XML不是等价证�
 
 ## 6. 下一步与停止条件
 
-1. 先冻结一个SFT起点与提案预算，在更多failure packets上确认有效reward的多样性。
-2. 固定候选选择规则，使用未参与packet的32/128题作分级筛选；
-   screening是triage，不是最终acceptance。不得把当前8题再称为盲测。
-3. 小规模官方目标RL与SFT等预算对照：有效reward组、gradient、重载权重、
-   可执行提案和独立dev收益全部报告。
-4. 稳定后才scale，或以同cold-start初始化/奖励/预算比较SAO与MA-SAO。
+1. H-SAO与W-SAO真实optimizer smoke已完成；正式checkpoint均不从smoke继承。
+   E0/W0 dev为no-patch79/100、packet-transductive76/100。packet370基础设施
+   失败已仅重跑该packet。首个零更新H1提示契约attempt已隔离，两臂r2正在运行。
+2. node4按H至平台→W至平台执行顺序SAO；node3按H1-W1-H2-W2执行MA-SAO。
+   每个角色至少两轮、patience=2、最多八轮，基础设施失败不算模型0分。
+3. 每轮只用dev 300–399停止/接受；要求≥1pp、paired gain>0且one-sided
+   bootstrap 95% LCB>0。两臂冻结前禁止读取test 400–499结果。
+4. 只有MA-SAO在sealed test比顺序SAO至少+5pp且LCB>0，才搜索交替频率。
 5. WebShop尚未准备；小商品库预览与论文配置须区分，Java/JNI/检索索引和
    `webshop_goal_seed=233`/task manifest匹配后才能报告。
 6. WHALE同起点复现须恢复原始Solver/h0/检索器/判分/数据协议；

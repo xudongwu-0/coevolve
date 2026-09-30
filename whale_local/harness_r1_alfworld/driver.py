@@ -47,7 +47,7 @@ def select_cohort(paths: list[str], size: int) -> list[int]:
     return selected
 
 
-def prepare_runtime(size: int = 32) -> dict:
+def prepare_runtime(size: int = 32, task_start: int | None = None) -> dict:
     head = subprocess.check_output(
         ["git", "-c", f"safe.directory={UPSTREAM}", "-C", str(UPSTREAM),
          "rev-parse", "HEAD"], text=True
@@ -84,15 +84,25 @@ def prepare_runtime(size: int = 32) -> dict:
         raise RuntimeError("runtime official split has changed")
     if not destination.exists():
         destination.write_bytes(split.read_bytes())
-    ids = select_cohort(paths, size)
+    if task_start is None:
+        ids = select_cohort(paths, size)
+        label = "transductive_diagnostic_not_untouched_test"
+        selection = "six-type round-robin, first occurrence in official split"
+    else:
+        if not 0 <= task_start < len(paths) or task_start + size > len(paths):
+            raise ValueError("contiguous cohort must fit the official split")
+        ids = list(range(task_start, task_start + size))
+        label = "protocol_partition_transductive_training_or_development"
+        selection = f"contiguous official split indices [{task_start},{task_start + size})"
     cohort = {
-        "label": "transductive_diagnostic_not_untouched_test",
+        "label": label,
         "upstream_commit": PIN, "split": "test_set", "split_sha256": digest(split),
-        "selection": "six-type round-robin, first occurrence in official split",
+        "selection": selection,
         "task_ids": ids, "task_paths": [paths[i] for i in ids],
     }
-    (ASSETS / f"cohort{size}.json").write_text(json.dumps(cohort, indent=2) + "\n")
-    (ASSETS / f"task_ids{size}.json").write_text(json.dumps(ids) + "\n")
+    suffix = f"{size}" if task_start is None else f"{size}_start{task_start}"
+    (ASSETS / f"cohort{suffix}.json").write_text(json.dumps(cohort, indent=2) + "\n")
+    (ASSETS / f"task_ids{suffix}.json").write_text(json.dumps(ids) + "\n")
     return cohort
 
 
@@ -133,7 +143,7 @@ def baseline_command(args, out: Path) -> list[str]:
         "--worker-port-base", str(args.worker_port),
         "--skip-adb", "--auto-retry",
         "--rollout-base-url", args.target_url, "--rollout-model", args.target_model,
-        "--agent-name", "qwen35-9b-nothink",
+        "--agent-name", args.target_agent_name,
         "--rollout-temperature", "0.0", "--rollout-max-tokens", "4096",
         "--rollout-tool-choice", "auto",
         "--rollout-chat-template-kwargs", '{"enable_thinking":false}',
@@ -215,8 +225,8 @@ def paired(args) -> None:
     if args.python.is_symlink():
         raise RuntimeError("official evaluator resolves Python symlinks; use an isolated venv "
                            "created with virtualenv --copies, not a symlink interpreter")
-    cohort = prepare_runtime(args.size)
-    out = ASSETS / "runs" / args.run_id
+    cohort = prepare_runtime(args.size, args.task_start)
+    out = args.run_root.resolve() / args.run_id
     out.mkdir(parents=True, exist_ok=False)
     (out / "task_ids.json").write_text(json.dumps(cohort["task_ids"]))
     source_identity = {}
@@ -228,7 +238,7 @@ def paired(args) -> None:
             if path.is_file() and path.suffix in {".py", ".yaml", ".json"}:
                 source_identity[str(path.relative_to(UPSTREAM))] = digest(path)
     manifest = dict(cohort, target={"base_url": args.target_url, "model": args.target_model,
-                    "checkpoint_model": "Qwen3.5-9B",
+                    "checkpoint_model": args.target_checkpoint_label,
                     "checkpoint_record": args.target_checkpoint_record,
                     "temperature": 0, "enable_thinking": False, "tool_choice": "auto",
                     "max_tokens": 4096,
@@ -252,7 +262,7 @@ def paired(args) -> None:
     packets = out / "failure_packets.jsonl"
     run([str(args.python), str(examples / "build_alfworld_dataset.py"),
          "--source-root", str(out / "baseline"), "--output", str(packets),
-         "--alfworld-split", "test_set", "--target-agent-name", "qwen35-9b-nothink",
+         "--alfworld-split", "test_set", "--target-agent-name", args.target_agent_name,
          "--target-model", args.target_model, "--response-protocol", "prefill_think_patch",
          "--schema-style", "alfworld_life_multihook_v1", "--max-traces", str(args.size),
          "--include-incomplete"],
@@ -275,7 +285,7 @@ def paired(args) -> None:
            "--engineer-assistant-prefill", "<think>\n",
            "--response-protocol", "prefill_think_patch",
            "--target-base-url", args.target_url, "--target-model", args.target_model,
-           "--target-agent-name", "qwen35-9b-nothink", "--alfworld-split", "test_set",
+           "--target-agent-name", args.target_agent_name, "--alfworld-split", "test_set",
            "--alfworld-worker-python", str(args.python), "--alfworld-max-step", "50",
            "--rollout-concurrency", str(args.concurrency), "--rollout-max-tokens", "4096",
            "--rollout-tool-choice", "auto", "--rollout-auto-retry",
@@ -329,11 +339,16 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=["prepare", "paired"])
     parser.add_argument("--size", type=int, default=12)
+    parser.add_argument("--task-start", type=int,
+                        help="Use a contiguous cohort beginning at this official split index")
     parser.add_argument("--python", type=Path, default=PYTHON)
     parser.add_argument("--run-id", default="diagnostic12")
+    parser.add_argument("--run-root", type=Path, default=ASSETS / "runs")
     parser.add_argument("--target-url", default="http://127.0.0.1:8110/v1")
     parser.add_argument("--target-model", default="Qwen3.5-9B", choices=["Qwen3.5-9B", "policy"],
-                        help="Wire alias only; underlying target must be original Qwen3.5-9B")
+                        help="Wire alias only; checkpoint identity is recorded separately")
+    parser.add_argument("--target-agent-name", default="qwen35-9b-nothink")
+    parser.add_argument("--target-checkpoint-label", default="original-qwen3.5-9b")
     parser.add_argument("--target-checkpoint-record", default="assets/Qwen3.5-9B/download_receipt.json")
     parser.add_argument("--engineer-url", default="http://127.0.0.1:8142/v1")
     parser.add_argument("--engineer-model", default="harness-engineer")
@@ -343,9 +358,9 @@ def main() -> None:
     parser.add_argument("--worker-port", type=int, default=15340)
     args = parser.parse_args()
     if args.command == "prepare":
-        print(json.dumps(prepare_runtime(args.size), indent=2))
+        print(json.dumps(prepare_runtime(args.size, args.task_start), indent=2))
     else:
-        output = ASSETS / "runs" / args.run_id
+        output = args.run_root.resolve() / args.run_id
         existed = output.exists()
         try:
             paired(args)

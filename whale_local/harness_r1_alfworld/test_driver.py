@@ -7,7 +7,8 @@ import unittest
 import uuid
 
 from .driver import (TYPES, baseline_command, checked_rows, classify_results,
-                     freeze_baseline, patch_is_no_op, select_cohort, ASSETS, PYTHON)
+                     freeze_baseline, patch_is_no_op, prepare_runtime, select_cohort,
+                     ASSETS, PYTHON)
 from .driver import official_paths, preserve_paired_ids
 
 
@@ -24,10 +25,19 @@ class ControlsTest(unittest.TestCase):
             self.assertEqual(len(small), size)
             self.assertEqual({paths[i].split("/")[2].split("-")[0] for i in small}, set(TYPES))
 
+    def test_contiguous_protocol_cohort(self):
+        cohort = prepare_runtime(10, 240)
+        self.assertEqual(cohort["task_ids"], list(range(240, 250)))
+        self.assertEqual(cohort["selection"],
+                         "contiguous official split indices [240,250)")
+        with self.assertRaises(ValueError):
+            prepare_runtime(10, 495)
+
     def test_target_exact_and_cpu_cli(self):
         args = argparse.Namespace(python=PYTHON, run_id="test", size=32,
             concurrency=4, controller_port=15240, worker_port=15340,
-            target_url="http://localhost:8110/v1", target_model="Qwen3.5-9B")
+            target_url="http://localhost:8110/v1", target_model="Qwen3.5-9B",
+            target_agent_name="qwen35-9b-nothink")
         cmd = baseline_command(args, ASSETS / "runs/test")
         self.assertEqual(cmd[cmd.index("--rollout-temperature") + 1], "0.0")
         self.assertEqual(cmd[cmd.index("--rollout-tool-choice") + 1], "auto")

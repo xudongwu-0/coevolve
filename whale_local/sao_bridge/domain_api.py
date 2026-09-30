@@ -7,6 +7,7 @@ DOMAIN_MODULES = {
     "math": ".retool",
     "searchqa": ".searchqa_domain",
     "chess": ".chess_domain",
+    "alfworld": ".alfworld_domain",
 }
 
 

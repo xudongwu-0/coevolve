@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 import subprocess
+import tempfile
 import time
 import sys
 import unittest
@@ -13,6 +14,16 @@ from sao_bridge.launch import Launcher
 
 
 class OwnershipTests(unittest.TestCase):
+    def test_default_cuda_allocator_uses_expandable_segments(self):
+        with tempfile.TemporaryDirectory() as temporary, patch.dict(
+            os.environ, {}, clear=False
+        ):
+            os.environ.pop("PYTORCH_ALLOC_CONF", None)
+            launcher = Launcher(Path(temporary))
+            self.assertEqual(
+                launcher.env["PYTORCH_ALLOC_CONF"], "expandable_segments:True"
+            )
+
     def test_reparented_worker_remains_owned_but_reused_pid_does_not(self):
         launcher = object.__new__(Launcher)
         launcher.owned_identities = {42: 100.0}

@@ -40,6 +40,11 @@ def configure(spec: dict, run: Path) -> dict:
     cfg["experiment_name"] = spec["experiment"]
     cfg["seed"] = spec["seed"]
     actor_gpus, rollout_gpus = spec.get("actor_gpus", 2), spec.get("rollout_gpus", 2)
+    if spec["batch_size"] < actor_gpus:
+        raise ValueError(
+            f"Training batch size ({spec['batch_size']}) must be at least the "
+            f"actor data-parallel size ({actor_gpus})"
+        )
     cfg["cluster"]["n_gpus_per_node"] = actor_gpus + rollout_gpus
     cfg["actor"]["backend"] = f"fsdp:d{actor_gpus}p1t1"
     cfg["actor"]["weight_update_mode"] = spec.get("weight_update_mode", "disk")
@@ -52,8 +57,11 @@ def configure(spec: dict, run: Path) -> dict:
         max_new_tokens=spec["tokens"], max_tokens=context_tokens,
         temperature=spec.get("temperature", 0.7 if role == "editor" else 1.0),
     )
-    cfg["actor"]["mb_spec"]["max_tokens_per_mb"] = context_tokens
-    cfg["critic"]["mb_spec"]["max_tokens_per_mb"] = context_tokens + 2048
+    microbatch_tokens = spec.get("microbatch_tokens", context_tokens)
+    if type(microbatch_tokens) is not int or microbatch_tokens <= 0:
+        raise ValueError("Microbatch token limit must be a positive integer")
+    cfg["actor"]["mb_spec"]["max_tokens_per_mb"] = microbatch_tokens
+    cfg["critic"]["mb_spec"]["max_tokens_per_mb"] = microbatch_tokens + 2048
     cfg["rollout"].update(
         max_head_offpolicyness=spec.get("staleness", 4),
         # One extra batch may be generated while the previous batch trains.
@@ -63,7 +71,7 @@ def configure(spec: dict, run: Path) -> dict:
     cfg["vllm"].update(
         # Rollout GPUs are dedicated (separation strategy), so use them for KV cache.
         max_model_len=context_tokens, max_num_seqs=spec["batch_size"] * 2, gpu_memory_utilization=0.7,
-        enforce_eager=False,
+        enforce_eager=False, gdn_prefill_backend=spec.get("gdn_prefill_backend"),
     )
     # A single final save per phase; periodic 8 GB saves dominated short phases.
     cfg["saver"].update(freq_steps=spec["steps"])
@@ -74,7 +82,9 @@ def configure(spec: dict, run: Path) -> dict:
     for name in ("TMPDIR", "TRITON_CACHE_DIR", "TORCHINDUCTOR_CACHE_DIR",
                  "VLLM_CACHE_ROOT", "CUDA_CACHE_PATH", "PYTHONDONTWRITEBYTECODE",
                  "AREAL_CACHE_DIR", "FLASHINFER_WORKSPACE_BASE", "HOME", "AREAL_HOST_IP",
-                 "SAO_SEARCHQA_RETRIEVAL_URL"):
+                 "PYTORCH_ALLOC_CONF",
+                 "SAO_SEARCHQA_RETRIEVAL_URL", "SAO_ALFWORLD_CONTROLLER_URL",
+                 "SAO_ALFWORLD_TASK_NAME", "SAO_ALFWORLD_HTTP_TIMEOUT"):
         if name in os.environ:
             env[name] = os.environ[name]
     context = spec.get("central_context")

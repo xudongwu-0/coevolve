@@ -64,27 +64,66 @@ def file_sha(path: Path) -> str:
     return digest.hexdigest()
 
 
+def ensure_model_runtime_metadata(checkpoint: Path, source: Path) -> dict:
+    if not checkpoint.is_dir() or not source.is_dir():
+        raise FileNotFoundError("Model checkpoint and metadata source must be directories")
+    files = {}
+    for name in ("preprocessor_config.json", "processor_config.json"):
+        origin = source / name
+        destination = checkpoint / name
+        if not origin.is_file():
+            raise FileNotFoundError(f"Missing required runtime metadata: {origin}")
+        origin_sha = file_sha(origin)
+        if destination.is_file():
+            status = "already_present"
+        else:
+            temporary = destination.with_name(destination.name + ".tmp")
+            temporary.write_bytes(origin.read_bytes())
+            temporary.replace(destination)
+            status = "copied"
+        files[name] = {
+            "source_sha256": origin_sha,
+            "checkpoint_sha256": file_sha(destination),
+            "status": status,
+        }
+    receipt = {
+        "source": str(source.resolve()),
+        "weights_unchanged": True,
+        "files": files,
+    }
+    write_json(checkpoint / "runtime_supplements.json", receipt)
+    return receipt
+
+
 def verify_upstreams() -> dict[str, str]:
     result = {}
     for name, path, revision in (
         ("sao", SAO, SAO_REVISION), ("areal", AREAL, AREAL_REVISION)
     ):
         actual = subprocess.check_output(
-            ["git", "-C", str(path), "rev-parse", "HEAD"], text=True
+            ["git", "-c", f"safe.directory={path}", "-C", str(path),
+             "rev-parse", "HEAD"], text=True,
         ).strip()
         if actual != revision:
             raise RuntimeError(f"{name} revision is {actual}, expected {revision}")
         result[name] = actual
     subprocess.run(
-        ["git", "-C", str(AREAL), "apply", "--reverse", "--check",
+        ["git", "-c", f"safe.directory={AREAL}", "-C", str(AREAL),
+         "apply", "--reverse", "--check",
          str(SAO / "patches/areal-sao.patch")],
         check=True, capture_output=True,
     )
     result["sao_patch_sha256"] = file_sha(SAO / "patches/areal-sao.patch")
-    for name in ("areal-local-network.patch", "areal-packed-sdpa.patch"):
+    for name in (
+        "areal-local-network.patch",
+        "areal-packed-sdpa.patch",
+        "areal-assistant-prefill.patch",
+        "areal-qwen35-critic.patch",
+    ):
         runtime_patch = Path(__file__).with_name(name)
         subprocess.run(
-            ["git", "-C", str(AREAL), "apply", "--reverse", "--check", str(runtime_patch)],
+            ["git", "-c", f"safe.directory={AREAL}", "-C", str(AREAL),
+             "apply", "--reverse", "--check", str(runtime_patch)],
             check=True, capture_output=True,
         )
         result[name.removesuffix(".patch").replace("-", "_") + "_sha256"] = file_sha(runtime_patch)

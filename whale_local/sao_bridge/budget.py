@@ -79,13 +79,25 @@ def claim_formal_baseline(contract_path: Path, run: Path, seed: int) -> Path:
     return claim
 
 
-def initial_model_digest(model: Path) -> str:
+def model_digests(model: Path) -> tuple[str, str]:
     files = sorted(p for p in model.iterdir() if p.is_file() and p.suffix in {
         ".safetensors", ".json", ".txt", ".jinja",
     } and p.name != "provenance.json")
-    if not any(p.suffix == ".safetensors" for p in files):
+    hashes = {path.name: file_sha(path) for path in files}
+    weight_hashes = {
+        path.name: hashes[path.name] for path in files if path.suffix == ".safetensors"
+    }
+    if not weight_hashes:
         raise ValueError("Initial model has no safetensors weights")
-    return contract_digest({p.name: file_sha(p) for p in files})
+    return contract_digest(hashes), contract_digest(weight_hashes)
+
+
+def initial_model_digest(model: Path) -> str:
+    return model_digests(model)[0]
+
+
+def model_weight_digest(model: Path) -> str:
+    return model_digests(model)[1]
 
 
 def validate_trial(contract_path: Path, spec: dict) -> str:

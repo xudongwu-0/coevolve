@@ -177,6 +177,138 @@ All eight episodes completed without infrastructure failures, taking about
 53 seconds. Evidence:
 `runs/harness_r1_alfworld_20260930/node3/solver_sft8_20260930_1418/solver_comparison.json`.
 
+## Two-node ALFWorld SAO/MA-SAO campaign
+
+The frozen protocol is
+`examples/alfworld_sao_masao_campaign_20260930.json`. Both arms start from the
+same released RL Engineer (`harness-r1`) and Agent-SFT Solver
+(`target-agent-sft`). The official 500-task mixed list is locally partitioned
+before training:
+
+| Local split | Official IDs | Use |
+|---|---:|---|
+| train | 0–239 | optimizer packets and W episodes |
+| reward | 240–299 | global-harness candidate selection |
+| dev | 300–399 | stopping and candidate acceptance |
+| sealed test | 400–499 | one final comparison after both arms freeze |
+
+This is a local repartition of the official mixed list, not the paper's
+untouched test protocol. Every Engineer reward packet remains a contiguous
+10-task cohort because the pinned official reward assumes a continuous
+`start:end` range. Formal protocol v2, split hashes, checkpoint-receipt hashes,
+and task-type counts are frozen under
+`assets/alfworld_sao_masao_20260930/protocol_v6/`. Earlier pre-optimizer
+protocol receipts are retained with explicit supersession records.
+
+### Full train-packet starting matrix
+
+Six matched waves cover all 240 training IDs. Each wave ran sixteen jobs:
+four contiguous packets for each of the 2×2 released checkpoint pairings.
+All 96 jobs completed on the first infrastructure attempt.
+
+| Engineer + Solver | Baseline | Same-packet patched | Net |
+|---|---:|---:|---:|
+| RL Engineer + Agent-SFT Solver (campaign start) | 166/240 (69.17%) | 184/240 (76.67%) | **+18 / +7.50 pp** |
+| Cold-SFT Engineer + Agent-SFT Solver | 167/240 (69.58%) | 157/240 (65.42%) | −10 / −4.17 pp |
+| RL Engineer + original Solver | 93/240 (38.75%) | 132/240 (55.00%) | **+39 / +16.25 pp** |
+| Cold-SFT Engineer + original Solver | 97/240 (40.42%) | 103/240 (42.92%) | +6 / +2.50 pp |
+
+The campaign-start pairing produced 23 valid patches and one invalid patch,
+rescuing 27 task outcomes and regressing 9. These are **same-packet
+transductive diagnostics**: the Engineer saw failures from the same ten tasks
+that were rerun. They demonstrate a useful nonzero reward distribution and
+justify optimization, but are not held-out harness gains. Deterministic
+temperature-zero baselines still differed on one Agent-SFT task (ID 134) and
+ten original-Solver tasks across independently concurrent pairings; the
+task-level report preserves those mismatches rather than silently picking one.
+
+Collection executed 1,750 physical target episodes and 96 Engineer proposals
+in 1,432.49 seconds across the six sequential waves (about 1.22 target
+episodes/s), with bounded-retry distribution `{1: 96}`. All sixteen GPUs held
+real model replicas. Mean utilization was 28.06% on node3 and 29.93% on node4;
+Solver replicas averaged roughly 30–50%, while Engineer replicas averaged
+11–24%. This imbalance is expected for ten baseline plus patched Solver
+episodes around only one Engineer proposal. It is collection telemetry, not
+the expected optimizer layout or an algorithm-quality metric.
+
+Primary receipts:
+
+* `runs/alfworld_sao_masao_20260930/matrix_train_000_239.json`
+* `runs/alfworld_sao_masao_20260930/matrix_infra_report.json`
+* `runs/alfworld_sao_masao_20260930/w0_e0_train_packet_report.json`
+* `assets/alfworld_sao_masao_20260930/data/manifest.json`
+
+### Training and evaluation implementation
+
+Engineer SAO uses three FSDP actor/critic GPUs, one vLLM rollout GPU, and four
+frozen-Solver replicas. Solver SAO uses four FSDP actor/critic GPUs plus four
+rollout GPUs and one official AgentBench worker per packet harness. Both paths
+use the pinned SAO/AReaL PPO and critic losses; infrastructure fallback is
+raised, never converted to model reward. The released Engineer's literal
+assistant continuation (`<think>\n`) is preserved token-for-token.
+
+The sequential arm on node4 trains H to its declared stopping rule, freezes H,
+then trains W. The MA-SAO arm on node3 alternates H/W. Its critic receives only
+pre-action joint state (role, partner checkpoint/version, harness identity, and
+dev calibration); the actor stays decentralized. After W changes, H reward
+caches are namespaced by W checkpoint and 25% of later H rows may reuse exact
+Engineer behavior tokens/log-probabilities with refreshed counterpart reward
+and interaction credit. Solver cross-role replay is deliberately disabled:
+the official ALFWorld reward path does not expose exact Solver behavior
+log-probabilities, so claiming full MAPPO replay would be unsupported.
+
+Evaluation reports three distinct quantities rather than conflating them:
+packet-transductive Engineer+Solver performance, Solver no-patch performance,
+and one global harness selected only on reward IDs then applied unchanged to
+unseen dev/test IDs. Dev acceptance requires positive paired gain, at least
+one percentage point, and a positive one-sided 95% bootstrap lower bound.
+Sealed test remains unused until both arm states are frozen.
+
+### Optimizer qualification and scheduling fixes
+
+AReaL originally treated Qwen3.5 as a vision-language generation model even
+when `is_critic=true`, so the critic returned 248,320 vocabulary logits per
+token instead of one value. The pinned local patch adds a Qwen3.5 token-value
+head, preserves it across checkpoint save/reload, and rejects any value/mask
+shape mismatch. A real H smoke then reached critic backward but 2-way FSDP
+OOMed with only 82 MiB free. The frozen layout is therefore 3 actor FSDP
+ranks plus 1 rollout rank; it completed one actor and two critic updates with
+about 23 GiB peak headroom. A 20k-token microbatch bound prevents two long H
+trajectories from being packed on one rank.
+
+The real W smoke consumed 139 action trajectories and 1,386,174 tokens from
+one four-episode update. Actor update took 10m32s and two critic updates took
+21m47s; the full supervised phase, including model startup, export and hashes,
+took 2,713 seconds. Actor GPUs averaged 77.74% utilization in the resident
+window (median 100%); rollout GPUs averaged 0.55% because the one-step smoke
+spent most of its lifetime in the long optimizer pass. This is an honest
+single-step pipeline measurement, not eight-card simultaneous compute.
+
+The first W smoke also exposed an environment scheduler bug: consecutive task
+IDs shared one single-session packet worker, causing 3,870 HTTP 406 workflow
+failures and repeated sampling. Solver rows are now round-robin interleaved
+across all 24 packet assignments. Before any W process claims GPUs, it audits
+every asynchronous active window (`batch × (staleness+1)`) and fails if a
+worker repeats. The colliding smoke checkpoint is never a formal initializer.
+
+Protocol v6 was frozen before formal optimization at `2 steps × batch 4` per
+staged role round. H training uses at most 4,096 generated tokens: all 23 valid
+released-Engineer train-matrix responses were at most 3,014 tokens, while the
+only response reaching 12,288 was invalid. Evaluation retains the official
+12,288-token cap. Checkpoint export also restores missing Qwen processor
+metadata with a separate receipt, while parameter-change checks hash only
+the safetensors weights.
+
+The first formal H1 rollout attempt revealed one more contract mismatch before
+any optimizer update: the official multi-hook prompt did not state the existing
+per-code limits of five helper functions and 1,200 AST nodes. Node4's first
+four candidates were rejected only for those undeclared limits; node3 had not
+generated a candidate. Both exact units were stopped with zero metric rows and
+zero checkpoint files. Fresh training rows now append the literal existing
+validator limits (they do not relax validation or add format reward), and both
+arms restarted from untouched E0/W0. The invalid attempts and four physical
+rollouts remain archived and are not formal checkpoints.
+
 ## Environment and official assets
 
 `/dev/shm/harness-r1-alfworld-venv` is node3-local and intentionally isolated.

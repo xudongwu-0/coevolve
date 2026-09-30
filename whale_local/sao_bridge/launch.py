@@ -56,6 +56,9 @@ class Launcher:
             FLASHINFER_WORKSPACE_BASE=str(cache / "flashinfer"),
             HOME=str(cache / "home"),
             PYTHONDONTWRITEBYTECODE="1",
+            PYTORCH_ALLOC_CONF=os.environ.get(
+                "PYTORCH_ALLOC_CONF", "expandable_segments:True"
+            ),
             GLOO_SOCKET_IFNAME="lo", NCCL_SOCKET_IFNAME="lo",
             AREAL_HOST_IP="127.0.0.1",
         )
@@ -244,7 +247,11 @@ class Launcher:
     @contextmanager
     def vllm(self, model: str, *, port: int, gpus: str, name: str,
              tensor_parallel: int = 1, data_parallel: int = 1,
-             max_model_len: int = 8192, server_args: list[str] | None = None):
+             max_model_len: int = 8192, tool_call_parser: str = "hermes",
+             gdn_prefill_backend: str | None = None,
+             language_model_only: bool = False,
+             max_num_seqs: int = 256,
+             server_args: list[str] | None = None):
         devices = gpus.split(",")
         if len(devices) != tensor_parallel * data_parallel:
             raise ValueError("Server allocation does not match parallel replica count")
@@ -260,10 +267,15 @@ class Launcher:
                     ["--model", model, "--host", "127.0.0.1", "--port", replica_port,
                      "--served-model-name", "policy", "--dtype", "bfloat16",
                      "--max-model-len", str(max_model_len), "--gpu-memory-utilization", "0.85",
-                     "--tensor-parallel-size", tensor_parallel, "--max-num-seqs", "256",
+                     "--tensor-parallel-size", tensor_parallel,
+                     "--max-num-seqs", max_num_seqs,
                      "--distributed-executor-backend", "mp",
-                     "--enable-auto-tool-choice", "--tool-call-parser", "hermes",
-                     "--generation-config", "vllm", *(server_args or [])],
+                     "--enable-auto-tool-choice", "--tool-call-parser", tool_call_parser,
+                     "--generation-config", "vllm"]
+                    + (["--gdn-prefill-backend", gdn_prefill_backend]
+                       if gdn_prefill_backend else [])
+                    + (["--language-model-only"] if language_model_only else [])
+                    + list(server_args or []),
                     gpus=assigned, name=name + f"_replica{index}",
                 )
                 processes.append(process)

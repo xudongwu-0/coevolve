@@ -1688,3 +1688,75 @@ It is exploratory validation, not held-out AIME. AIME test stays sealed until a 
     Runtime evidence remains in excluded assets/runs directories. Publication
     regression covers448 passing tests,5 skips and843 subtests; no new GPU
     optimizer run is attributed to that CPU validation.
+
+70. **ALFWorld SAO/MA-SAO optimizer qualification and formal launch
+    (2026-09-30).** The 0--239 2×2 starting matrix completed all96 jobs on
+    first infrastructure attempt. The shared RL-Engineer/Agent-SFT start moved
+    166/240 to184/240 (+18/+7.50pp), with23 valid and1 invalid patch,
+    27 rescues and9 regressions. This remains same-packet transductive train
+    evidence, not held-out gain.
+
+    The first native H optimizer attempts found a real model-interface bug:
+    AReaL's Qwen3.5 VLM path ignored critic mode and returned
+    `[batch,seq,248320]` vocabulary logits. A dedicated token-value model now
+    returns exactly `[batch,seq]`, persists its scalar head on save/reload,
+    and has a fail-fast value/mask shape guard. The next 2-way FSDP run reached
+    real critic backward and OOMed on an approximately18k-token trajectory
+    with82 MiB free. It produced no metric, checkpoint or optimizer update.
+    The archived process group required one exact-unit stop after distributed
+    ranks failed to self-terminate.
+
+    The corrected 3-way actor FSDP plus1 rollout layout completed one actor
+    and two critic updates. It trained3 sequences/47,687 tokens; actor loss
+    was0.00399, policy-gradient loss0.00423, actor grad norm9.366 and critic
+    grad norm226.206. Both checkpoints exist and the actor safetensors SHA256
+    changed from released `7d16d5...` to `cb06bf...`. End-to-end elapsed time
+    was765.73 seconds; peak coordinator evidence was116.67/139.80 GiB,
+    leaving about23 GiB. Its512-token outputs were intentionally only a shape
+    smoke and all had zero task reward; they are not efficacy evidence.
+
+    The real W smoke completed one actor and two critic updates over139 action
+    trajectories,1,386,174 total tokens and82,518 valid action tokens.
+    Mean task reward was0.6403, actor/critic grad norms were1.063/348.279,
+    and the actor checkpoint identity changed. Actor update took10m32s and
+    two critic passes21m47s; the full phase took2,713.00 seconds. Resident
+    actor-GPU utilization averaged77.74% with100% median, while rollout GPUs
+    averaged0.55% because a one-step run cannot overlap the long optimizer
+    pass. Filler is not included.
+
+    The W rollout log contained3,870 HTTP406 workflow failures. Consecutive
+    IDs0/1/2/3 all targeted one single-session packet assignment, so only
+    repeated tasks0/2 supplied useful episodes. Solver data now interleaves
+    `0,10,20,30,...` across24 assignments, and a pre-GPU audit rejects repeats
+    anywhere in the full asynchronous active window. The old smoke validates
+    model/tool/value/update/checkpoint plumbing only and is not a formal
+    initializer or throughput estimate for the corrected schedule.
+
+    Protocol v6 was frozen before any formal optimizer update. Both roles use
+    staged `2 steps × batch4` rounds, minimum two role rounds and the existing
+    dev patience/gain/one-sided-bootstrap gates. H uses3+1+4 GPUs, a20k-token
+    microbatch bound and4096 training output tokens; all23 valid released
+    proposals were≤3014 tokens, while the sole12288-token response was an
+    invalid runaway. Evaluation remains at12288. Missing Qwen processor files
+    are restored after export with a receipt, and weight-change checks hash
+    safetensors separately from metadata.
+
+    Node3's 100-task E0/W0 dev calibration completed model work, but postprocessing
+    rejected an empty all-pass failure-packet file and one patched-evaluation
+    infrastructure failure at packet370. Empty all-pass files are now handled
+    explicitly, infrastructure summaries trigger bounded retry, and only
+    packet370 was rerun before MA H1; no optimizer update or model score is
+    attributed to that failed evaluation. The recovered common dev reference
+    is79/100 no-patch and76/100 packet-transductive (5 rescues,8 regressions,
+    6 valid and4 invalid packet patches).
+
+    The first formal H1 rollout attempt then exposed a prompt/validator mismatch.
+    The multi-hook prompt omitted the existing per-code maximums of5 helper
+    functions and1200 AST nodes. Node4's first4 candidates were all rejected
+    for those two undeclared limits; node3 had not produced a candidate.
+    Both exact units were stopped at zero metric rows, zero checkpoint files
+    and zero optimizer updates. The task rows, reward, seed, checkpoints and
+    optimizer are unchanged; regenerated fresh rows only append the literal
+    existing validator limits. Both arms restarted from untouched E0/W0 as
+    H1-r2. The four physical invalid rollouts remain counted and cannot become
+    formal checkpoints. Sealed test IDs400--499 remain unread.
