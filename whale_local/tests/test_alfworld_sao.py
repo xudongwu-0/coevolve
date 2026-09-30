@@ -8,7 +8,8 @@ from sao_bridge.alfworld_domain import (
 )
 from sao_bridge.alfworld_env_service import task_definition
 from sao_bridge.alfworld_global_harness import (
-    accepted_candidate, complete_without_candidates, receipt_candidates,
+    accepted_candidate, complete_without_candidates, packet_metadata,
+    receipt_candidates,
 )
 from sao_bridge.alfworld_phase_data import (
     TRAINING_VALIDATOR_REMINDER, assignments_from_matrix, editor_dataset,
@@ -104,6 +105,60 @@ class AlfworldSaoTest(unittest.TestCase):
         self.assertEqual(candidates[0]["patch"], patch_value)
         self.assertEqual(candidates[0]["candidate_source"], "optimizer_receipt")
         self.assertEqual(candidates[0]["maximum_behavior_version"], 0)
+
+    def test_global_metadata_normalizes_an_empty_all_pass_packet(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            probe = root / "probe"
+            all_pass = root / "all-pass"
+            failed = root / "failed"
+            probe.mkdir()
+            all_pass.mkdir()
+            failed.mkdir()
+            (all_pass / "failure_packets.jsonl").write_text("")
+            (failed / "failure_packets.jsonl").write_text(json.dumps({
+                "metadata": {
+                    "start": 310,
+                    "end": 320,
+                    "batch_size": 10,
+                    "baseline_pass": 9,
+                    "baseline_rewards": {
+                        str(task_id): float(task_id != 311)
+                        for task_id in range(310, 320)
+                    },
+                },
+            }) + "\n")
+            write_json(probe / "COMPLETE.json", {
+                "results": [
+                    {
+                        "start": 300,
+                        "size": 10,
+                        "selected_attempt": 1,
+                        "attempts": [{
+                            "output": str(all_pass),
+                            "summary": {
+                                "status": "baseline_all_pass_no_failures",
+                            },
+                        }],
+                    },
+                    {
+                        "start": 310,
+                        "size": 10,
+                        "selected_attempt": 1,
+                        "attempts": [{
+                            "output": str(failed),
+                            "summary": {"categories": {"valid_evaluated": 1}},
+                        }],
+                    },
+                ],
+            })
+            packets = packet_metadata(root, "w1")
+        self.assertEqual(len(packets), 2)
+        self.assertEqual(packets[0]["baseline_pass"], 10)
+        self.assertEqual(set(packets[0]["baseline_rewards"]), {
+            str(task_id) for task_id in range(300, 310)
+        })
+        self.assertEqual(packets[0]["solver_version"], "w1")
 
     def test_runtime_metadata_supplements_do_not_replace_weights(self):
         with tempfile.TemporaryDirectory() as temporary:

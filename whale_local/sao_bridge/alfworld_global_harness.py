@@ -26,17 +26,17 @@ def packet_metadata(refresh_root: Path, solver_version: str) -> list[dict]:
     for result in complete["results"]:
         attempt = result["attempts"][result["selected_attempt"] - 1]
         path = Path(attempt["output"]) / "failure_packets.jsonl"
-        if path.is_file():
+        summary = attempt["summary"]
+        if summary.get("status") == "baseline_all_pass_no_failures":
+            row = None
+        elif path.is_file():
             rows = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
             if len(rows) != 1:
                 raise ValueError(f"expected one failure packet: {path}")
             row = dict(rows[0]["metadata"], solver_version=solver_version)
             template = template or row
         else:
-            if template is None:
-                metadata.append((result, None))
-                continue
-            row = None
+            raise FileNotFoundError(f"failure packet is missing: {path}")
         metadata.append((result, row))
     if template is None:
         raise ValueError("all-pass probe has no metadata template")
