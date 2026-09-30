@@ -304,11 +304,18 @@ def seed_reward_cache(run: Path, config: dict) -> None:
         )
     destination = run / "reward_cache"
     shutil.copytree(source, destination, ignore=shutil.ignore_patterns(".lock"))
+    from .alfworld_reward_service import infrastructure_failure
+    discarded = []
+    for reward_path in sorted(destination.rglob("reward.json")):
+        if infrastructure_failure(read_json(reward_path)):
+            discarded.append(str(reward_path.parent.relative_to(destination)))
+            shutil.rmtree(reward_path.parent)
     files = [path for path in destination.rglob("*") if path.is_file()]
     write_json(run / "reward_cache_seed.json", {
         "source": str(source),
         "files": len(files),
         "bytes": sum(path.stat().st_size for path in files),
+        "discarded_infrastructure_entries": discarded,
         "identity_keys": list(identity_keys),
     })
 

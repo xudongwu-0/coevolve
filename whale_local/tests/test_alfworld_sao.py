@@ -200,6 +200,11 @@ class AlfworldSaoTest(unittest.TestCase):
             cache.mkdir(parents=True)
             (cache / "result.json").write_text("{}", encoding="utf-8")
             (cache / ".lock").write_text("", encoding="utf-8")
+            failed = cache / "failed"
+            failed.mkdir()
+            (failed / "reward.json").write_text(json.dumps({
+                "eval_status": "eval_failed_treated_as_no_patch",
+            }), encoding="utf-8")
             identity = {
                 "packet_refresh": "/packets",
                 "candidate_receipt_roots": ["/receipts"],
@@ -221,10 +226,14 @@ class AlfworldSaoTest(unittest.TestCase):
                 "{}",
             )
             self.assertFalse((run / "reward_cache/.lock").exists())
+            self.assertFalse((run / "reward_cache/failed").exists())
             manifest = json.loads(
                 (run / "reward_cache_seed.json").read_text(encoding="utf-8")
             )
             self.assertEqual(manifest["files"], 1)
+            self.assertEqual(
+                manifest["discarded_infrastructure_entries"], ["failed"],
+            )
             with self.assertRaisesRegex(ValueError, "identity changed"):
                 seed_reward_cache(root / "other", {
                     **identity, "solver_version": "w1",
