@@ -97,6 +97,8 @@ def receipt_candidates(receipt_roots: list[Path],
     for root in receipt_roots:
         for path in sorted(root.glob("*.json")):
             receipt = read_json(path)
+            if receipt.get("replayed"):
+                continue
             if not (receipt.get("evaluation") or {}).get("valid"):
                 continue
             versions = [

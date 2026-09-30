@@ -173,6 +173,10 @@ class AlfworldSaoTest(unittest.TestCase):
                 root / "invalid.json",
                 {**base, "evaluation": {"valid": False}},
             )
+            write_json(
+                root / "replayed.json",
+                {**base, "replayed": True},
+            )
             candidates = receipt_candidates([root], 0)
         self.assertEqual(len(candidates), 1)
         self.assertEqual(candidates[0]["patch"], patch_value)
