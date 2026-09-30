@@ -1,0 +1,35 @@
+{
+  "run": "/mnt/3fs/xudong/coevolve/runs/qwen35_9b_first_h1_full_node3_20260929/probe",
+  "first_h1": true,
+  "frozen_run": "/mnt/3fs/xudong/coevolve/runs/sft1152_hwh_ma_node3_20260929/hwh",
+  "solver": "/mnt/3fs/xudong/coevolve/runs/rewrite_timebox_20260929T0745Z/round_01/training/checkpoint",
+  "incumbent": "/mnt/3fs/xudong/coevolve/runs/sft1152_hwh_ma_node3_20260929/hwh/h0.py",
+  "data": "/mnt/3fs/xudong/coevolve/assets/dapo_aime_protocol",
+  "new_model_provenance": "/mnt/3fs/xudong/coevolve/assets/Qwen3.5-9B/download_receipt.json",
+  "seed": 42,
+  "proposal_seed": 1042,
+  "proposals": 1,
+  "editor_temperature": 0.5,
+  "solver_tokens": 2048,
+  "select_questions": 128,
+  "select_samples": 2,
+  "report_questions": 128,
+  "report_train_tail": 384,
+  "report_samples": 8,
+  "arms": [
+    {
+      "name": "qwen35_9b_first_full",
+      "model": "/mnt/3fs/xudong/coevolve/assets/Qwen3.5-9B",
+      "thinking": true,
+      "tokens": null,
+      "max_model_len": 262144,
+      "request_timeout": 5400,
+      "server_args": [
+        "--reasoning-parser", "qwen3",
+        "--language-model-only",
+        "--gdn-prefill-backend", "triton",
+        "--max-num-seqs", "1"
+      ]
+    }
+  ]
+}

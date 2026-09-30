@@ -1,5 +1,21 @@
 # Running the local WHALE extension
 
+Start with [the current project state and agent handoff](PROJECT_STATE.md).
+It separates historical algorithms, measured gains, invalid attempts and
+current experiment gates. Official ALFWorld checkpoint reproduction is documented
+in [its CPU runner](../whale_local/harness_r1_alfworld/README.md).
+
+## Current Harness-R1 fast pilot
+
+The current frozen-solver Engineer experiment is documented in
+[the fast-4B README](../runs/searchqa_harness_r1_20260930/fast4b/README.md).
+It records real infra timings, native 4B versus 9B distinctions, direct pinned
+Harness-R1 objective reuse, backend adaptations, datasets, checkpoint receipts
+and live pipeline status. The
+[adapter method index](../whale_local/harness_r1_searchqa/README.md) links the
+training, evaluation and performance implementation. These are preliminary
+small-scale experiments, not the historical publication entry point below.
+
 ## What this release contains
 
 The repository contains research source, a pinned upstream submodule, aggregate results and a new configuration entry point. It does not include model checkpoints, optimizer states, rollout records, benchmark data or prebuilt environments. Historical experiments ran on the original server. The publication entry point is checked separately; exporting the code is not another full GPU experiment.

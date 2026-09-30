@@ -1,0 +1,21 @@
+{
+  "base_model": "assets/Qwen3.5-9B",
+  "base_receipt_sha256": "e5b41d3fcd2d0211d7c7bb27ca0170352a0de5e5c2417fee9b9d29b82bfbb3ae",
+  "learning_rate": 0.00001,
+  "epochs": 2,
+  "world_size": 8,
+  "micro_batch_size_per_gpu": 1,
+  "gradient_accumulation": 3,
+  "global_batch_size": 24,
+  "max_length": 32768,
+  "compute_dtype": "bfloat16",
+  "optimizer_master_dtype": "float32",
+  "optimizer": "AdamW",
+  "weight_decay": 0.0,
+  "max_grad_norm": 1.0,
+  "loss_chunk_size": 128,
+  "activation_checkpointing": "non-reentrant decoder layers and output projection",
+  "sharding": "FSDP FULL_SHARD",
+  "loss": "assistant continuation plus conversation EOS, global token mean",
+  "require_verified_dataset": true
+}

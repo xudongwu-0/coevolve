@@ -1,3 +1,12 @@
 [submodule "WHALE"]
 	path = WHALE
 	url = https://github.com/krafton-ai/WHALE.git
+[submodule "third_party/sao"]
+	path = third_party/sao
+	url = https://github.com/fooSynaptic/Single-rollout-async-Optimization.git
+[submodule "third_party/mappo-reference"]
+	path = third_party/mappo-reference
+	url = https://github.com/marlbenchmark/on-policy.git
+[submodule "third_party/harness-r1-upstream"]
+	path = third_party/harness-r1-upstream
+	url = https://github.com/DeepExperience/Harness-R1.git

@@ -2,6 +2,10 @@
 
 **基于 [WHALE](https://github.com/krafton-ai/WHALE) 的双模型交替改进：不仅训练求解器，也训练负责改写 harness 的小模型。**
 
+**当前主线与 Agent 接手入口：[项目状态、主要结果和失败门槛](docs/PROJECT_STATE.md)。**
+下面的双2B配置和第一版结果是历史试验；当前研究在官方9B Harness-R1复现、
+4B编辑能力和SAO/MA-SAO之间推进。尚未证明稳定、可泛化的RL harness改写收益。
+
 WHALE 把求解器权重更新与可执行 harness 搜索交替进行。Coevolve 在这一框架上，将外部 harness 提案模型替换为一个可以继续训练的 2B 改写器：它读取当前 harness 和开发集失败反馈，生成 Python 代码；候选在当前求解器上的实际收益，反过来用于更新改写器自身的权重。
 
 我们维护两个独立 checkpoint，均使用 Qwen3.5-2B：
@@ -78,6 +82,8 @@ export PYTHONPATH="$PWD/whale_local:$PWD/WHALE/domains/math_reasoning:$PWD/WHALE
 ```
 
 示例默认比较固定/可训练内部改写器，两个阶段均不需要外部提案服务。加入 `external` 分支后，必须有实际外部模型或人工代理消费 FastAPI 提案队列；该队列本身不会生成代码。历史外部对照由活跃 Codex 会话处理，未提供无人值守的 Codex 模型 API。
+
+另提供隔离的[双 SAO 集成测试入口](docs/SAO_BASELINE.md)：直接调用固定版本的开源 SAO/AReaL 训练器，分别更新改写器与执行模型。它采用受限 harness 属性空间和独立 critic，不是 MAPPO，也不替代本文已有的 RSFT/GRPO 实验结果。
 
 | 文件 | 作用 |
 |---|---|

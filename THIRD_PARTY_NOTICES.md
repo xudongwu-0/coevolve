@@ -7,3 +7,41 @@ WHALE is distributed under Apache-2.0. Copies of its [license](licenses/WHALE-AP
 The editor update is inspired by Harness-R1's group-relative outcome optimization; the local implementation and its differences are described in [METHOD.md](docs/METHOD.md). Model weights (Qwen3.5-2B), MATH source data, and other datasets are not redistributed in this repository and remain subject to their providers' terms.
 
 This private research repository does not add a license grant for the original Coevolve extensions. Third-party license files apply to their respective components.
+
+## Optional independent SAO baseline
+
+`third_party/sao` pins the Apache-2.0 **unofficial** SAO implementation by
+fooSynaptic at `ac2728149041b5f15ceb75413f467ce0659179cf`, from
+https://github.com/fooSynaptic/Single-rollout-async-Optimization. Its original
+license and attribution remain in the submodule. It is not endorsed by the
+authors of *Single-Rollout Asynchronous Optimization for Agentic Reinforcement
+Learning* (arXiv:2607.07508).
+
+Its bootstrap script downloads Apache-2.0 AReaL at
+`3cf0dfbd2b0fbeabd6977184980e189d1567747a` and applies the submodule's published
+SAO integration patch. The optional `whale_local/sao_bridge` task adapters call
+that trainer; they do not implement a replacement PPO/SAO optimizer. This
+baseline does not change the original RSFT/GRPO experiment.
+# MAPPO design reference
+
+The optional `third_party/mappo-reference` submodule is the official
+`marlbenchmark/on-policy` repository, pinned at
+`de66d7a4b23fac2513f56f96f73b3f5cb96695ac`. It is retained as a design reference
+for centralized training/decentralized execution; its PPO implementation is
+not substituted for the SAO training objective. Its upstream notices and license
+remain in the submodule.
+
+## Official Harness-R1 runtime and objective
+
+`third_party/harness-r1-upstream` pins the official
+[DeepExperience/Harness-R1](https://github.com/DeepExperience/Harness-R1)
+repository at `94f2e087f573e1b82fc9568bb634d4ae9a887e28`.
+Its Apache-2.0 license, NOTICE and component licenses remain in the submodule.
+The SearchQA adapter directly imports checksum-verified official normalization
+and PPO/KL primitives; its FSDP/vLLM backend is a local adaptation.
+The ALFWorld adapter invokes unchanged official builders, evaluators and
+AgentBench runtime through a writable shadow directory.
+Released model weights and benchmark assets are downloaded separately and are
+not redistributed by this repository. See the
+[current project state](docs/PROJECT_STATE.md) for model-role distinctions and
+reproduction limitations.
