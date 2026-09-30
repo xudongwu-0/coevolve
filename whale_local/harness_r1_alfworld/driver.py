@@ -10,6 +10,8 @@ import subprocess
 import sys
 import urllib.request
 
+from sao_bridge.alfworld_runtime import prepare_agentbench_runtime
+
 PROJECT = Path(__file__).resolve().parents[2]
 UPSTREAM = PROJECT / "third_party/harness-r1-upstream"
 ASSETS = PROJECT / "assets/alfworld_harness_r1"
@@ -47,7 +49,7 @@ def select_cohort(paths: list[str], size: int) -> list[int]:
     return selected
 
 
-def prepare_runtime(size: int = 32, task_start: int | None = None) -> dict:
+def prepare_runtime(size: int, task_start: int | None, runtime_root: Path) -> dict:
     head = subprocess.check_output(
         ["git", "-c", f"safe.directory={UPSTREAM}", "-C", str(UPSTREAM),
          "rev-parse", "HEAD"], text=True
@@ -58,32 +60,14 @@ def prepare_runtime(size: int = 32, task_start: int | None = None) -> dict:
     paths = json.loads(split.read_text())["mixed"]
     if len(paths) != 500:
         raise ValueError("expected official 500-task mixed test split")
-    runtime = ASSETS / "AgentBench"
-    runtime.mkdir(parents=True, exist_ok=True)
-    source = UPSTREAM / "code/life-harness/AgentBench"
-    for name in ("src", "scripts"):
-        link = runtime / name
-        if not link.exists():
-            link.symlink_to(source / name, target_is_directory=True)
-    configs = runtime / "configs"
-    configs.mkdir(exist_ok=True)
-    for entry in (source / "configs").iterdir():
-        if entry.name == "generated":
-            continue
-        link = configs / entry.name
-        if not link.exists():
-            link.symlink_to(entry, target_is_directory=entry.is_dir())
+    runtime_root.mkdir(parents=True, exist_ok=False)
+    prepare_agentbench_runtime(runtime_root / "AgentBench")
     data = ASSETS / "data"
-    data.mkdir(exist_ok=True)
-    (runtime / "data").mkdir(exist_ok=True)
-    link = runtime / "data/alfworld"
-    if not link.exists():
-        link.symlink_to(data, target_is_directory=True)
     destination = data / "test_set.json"
-    if destination.exists() and digest(destination) != digest(split):
+    if not destination.is_file():
+        raise FileNotFoundError("prepared ALFWorld test split is missing")
+    if digest(destination) != digest(split):
         raise RuntimeError("runtime official split has changed")
-    if not destination.exists():
-        destination.write_bytes(split.read_bytes())
     if task_start is None:
         ids = select_cohort(paths, size)
         label = "transductive_diagnostic_not_untouched_test"
@@ -101,22 +85,23 @@ def prepare_runtime(size: int = 32, task_start: int | None = None) -> dict:
         "task_ids": ids, "task_paths": [paths[i] for i in ids],
     }
     suffix = f"{size}" if task_start is None else f"{size}_start{task_start}"
-    (ASSETS / f"cohort{suffix}.json").write_text(json.dumps(cohort, indent=2) + "\n")
-    (ASSETS / f"task_ids{suffix}.json").write_text(json.dumps(ids) + "\n")
+    (runtime_root / f"cohort{suffix}.json").write_text(
+        json.dumps(cohort, indent=2) + "\n")
+    (runtime_root / f"task_ids{suffix}.json").write_text(json.dumps(ids) + "\n")
     return cohort
 
 
-def cpu_env() -> dict[str, str]:
+def cpu_env(runtime_root: Path) -> dict[str, str]:
     env = dict(os.environ)
     env.update(CUDA_VISIBLE_DEVICES="", ALFWORLD_DATA=str(ASSETS / "data"),
-               TMPDIR=str(ASSETS / "scratch"), PYTHONDONTWRITEBYTECODE="1")
-    (ASSETS / "scratch").mkdir(exist_ok=True)
+               TMPDIR=str(runtime_root / "scratch"), PYTHONDONTWRITEBYTECODE="1")
+    (runtime_root / "scratch").mkdir(exist_ok=True)
     return env
 
 
-def run(cmd: list[str], log: Path) -> None:
+def run(cmd: list[str], log: Path, runtime_root: Path) -> None:
     with log.open("w") as stream:
-        result = subprocess.run(cmd, env=cpu_env(), cwd=PROJECT,
+        result = subprocess.run(cmd, env=cpu_env(runtime_root), cwd=PROJECT,
                                 stdout=stream, stderr=subprocess.STDOUT)
     if result.returncode:
         raise RuntimeError(f"official command failed ({result.returncode}); see {log}")
@@ -127,11 +112,11 @@ def official_paths() -> tuple[Path, Path]:
             UPSTREAM / "code/Relax/examples/harness_r1")
 
 
-def baseline_command(args, out: Path) -> list[str]:
+def baseline_command(args, out: Path, agentbench_dir: Path) -> list[str]:
     scripts, _ = official_paths()
     return [
         str(args.python), str(scripts / "harness_r1_batch_debug.py"),
-        "--agentbench-dir", str(ASSETS / "AgentBench"),
+        "--agentbench-dir", str(agentbench_dir),
         "--agentbench-python", str(args.python),
         "--alfworld-worker-python", str(args.python),
         "--bench", "alfworld", "--run-id", args.run_id + "_baseline",
@@ -225,9 +210,11 @@ def paired(args) -> None:
     if args.python.is_symlink():
         raise RuntimeError("official evaluator resolves Python symlinks; use an isolated venv "
                            "created with virtualenv --copies, not a symlink interpreter")
-    cohort = prepare_runtime(args.size, args.task_start)
     out = args.run_root.resolve() / args.run_id
     out.mkdir(parents=True, exist_ok=False)
+    runtime_root = out / "runtime"
+    cohort = prepare_runtime(args.size, args.task_start, runtime_root)
+    agentbench_dir = runtime_root / "AgentBench"
     (out / "task_ids.json").write_text(json.dumps(cohort["task_ids"]))
     source_identity = {}
     for folder in ("code/life-harness/AgentBench/src/server/tasks/alfworld",
@@ -250,10 +237,10 @@ def paired(args) -> None:
                     upstream_source_identity=source_identity,
                     environment_freeze_sha256=digest(ASSETS / "environment_freeze.txt"),
                     asset_manifest_sha256=digest(ASSETS / "asset_manifest.json"),
-                    baseline_command=baseline_command(args, out))
+                    baseline_command=baseline_command(args, out, agentbench_dir))
     (out / "manifest.json").write_text(json.dumps(manifest, indent=2))
     control_identity = {name: digest(out / name) for name in ("manifest.json", "task_ids.json")}
-    run(manifest["baseline_command"], out / "baseline.log")
+    run(manifest["baseline_command"], out / "baseline.log", runtime_root)
     checked_rows(out / "baseline", cohort["task_ids"])
     frozen = freeze_baseline(out / "baseline")
     (out / "baseline_identity.json").write_text(json.dumps(
@@ -266,7 +253,7 @@ def paired(args) -> None:
          "--target-model", args.target_model, "--response-protocol", "prefill_think_patch",
          "--schema-style", "alfworld_life_multihook_v1", "--max-traces", str(args.size),
          "--include-incomplete"],
-        out / "packets.log")
+        out / "packets.log", runtime_root)
     records = [json.loads(line) for line in packets.read_text().splitlines() if line.strip()]
     if not records:
         (out / "adapter_summary.json").write_text(json.dumps({"status": "baseline_all_pass_no_failures"}))
@@ -290,11 +277,11 @@ def paired(args) -> None:
            "--rollout-concurrency", str(args.concurrency), "--rollout-max-tokens", "4096",
            "--rollout-tool-choice", "auto", "--rollout-auto-retry",
            "--rollout-chat-template-kwargs", '{"enable_thinking":false}',
-           "--agentbench-dir", str(ASSETS / "AgentBench"),
+           "--agentbench-dir", str(agentbench_dir),
            "--agentbench-python", str(args.python),
            "--controller-port-base", str(args.controller_port + 1),
            "--worker-port-base", str(args.worker_port + 20)]
-    run(cmd, out / "engineer_eval.log")
+    run(cmd, out / "engineer_eval.log", runtime_root)
     if freeze_baseline(out / "baseline") != frozen:
         raise RuntimeError("immutable baseline files changed")
     if any(digest(out / name) != value for name, value in control_identity.items()):
@@ -304,7 +291,7 @@ def paired(args) -> None:
         patch_path = out / "patched" / result["batch_tag"] / "patch.json"
         if patch_path.exists():
             patch = json.loads(patch_path.read_text())
-            task_file = ASSETS / "AgentBench/configs/generated/harness_r1" / (
+            task_file = agentbench_dir / "configs/generated/harness_r1" / (
                 args.run_id + "_baseline") / "alfworld-noharness-b000.task.json"
             result["adapter_no_op"] = patch_is_no_op(patch, json.loads(task_file.read_text()))
     summary = {"label": cohort["label"], "categories": classify_results(results),
@@ -358,7 +345,11 @@ def main() -> None:
     parser.add_argument("--worker-port", type=int, default=15340)
     args = parser.parse_args()
     if args.command == "prepare":
-        print(json.dumps(prepare_runtime(args.size, args.task_start), indent=2))
+        runtime_root = args.run_root.resolve() / (args.run_id + "_runtime")
+        print(json.dumps(
+            prepare_runtime(args.size, args.task_start, runtime_root),
+            indent=2,
+        ))
     else:
         output = args.run_root.resolve() / args.run_id
         existed = output.exists()

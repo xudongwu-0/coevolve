@@ -3,6 +3,7 @@ import json
 import sys
 from pathlib import Path
 import shutil
+import tempfile
 import unittest
 import uuid
 
@@ -26,19 +27,23 @@ class ControlsTest(unittest.TestCase):
             self.assertEqual({paths[i].split("/")[2].split("-")[0] for i in small}, set(TYPES))
 
     def test_contiguous_protocol_cohort(self):
-        cohort = prepare_runtime(10, 240)
-        self.assertEqual(cohort["task_ids"], list(range(240, 250)))
-        self.assertEqual(cohort["selection"],
-                         "contiguous official split indices [240,250)")
-        with self.assertRaises(ValueError):
-            prepare_runtime(10, 495)
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            cohort = prepare_runtime(10, 240, root / "valid")
+            self.assertEqual(cohort["task_ids"], list(range(240, 250)))
+            self.assertEqual(cohort["selection"],
+                             "contiguous official split indices [240,250)")
+            self.assertTrue((root / "valid/AgentBench/configs/generated").is_dir())
+            with self.assertRaises(ValueError):
+                prepare_runtime(10, 495, root / "invalid")
 
     def test_target_exact_and_cpu_cli(self):
         args = argparse.Namespace(python=PYTHON, run_id="test", size=32,
             concurrency=4, controller_port=15240, worker_port=15340,
             target_url="http://localhost:8110/v1", target_model="Qwen3.5-9B",
             target_agent_name="qwen35-9b-nothink")
-        cmd = baseline_command(args, ASSETS / "runs/test")
+        cmd = baseline_command(
+            args, ASSETS / "runs/test", ASSETS / "runs/test/AgentBench")
         self.assertEqual(cmd[cmd.index("--rollout-temperature") + 1], "0.0")
         self.assertEqual(cmd[cmd.index("--rollout-tool-choice") + 1], "auto")
         self.assertEqual(json.loads(cmd[cmd.index("--rollout-chat-template-kwargs") + 1]),
