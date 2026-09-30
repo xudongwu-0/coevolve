@@ -19,6 +19,7 @@ from sao_bridge.alfworld_w_train import (
 )
 from sao_bridge.alfworld_reward_service import infrastructure_failure, validate_metadata
 from sao_bridge.alfworld_runtime import prepare_agentbench_runtime
+from sao_bridge.alfworld_solver_selection import paired_solver_report
 from sao_bridge.budget import model_weight_digest
 from sao_bridge.common import ensure_model_runtime_metadata, file_sha, write_json
 from sao_bridge.gpu_report import LAYOUTS
@@ -39,6 +40,20 @@ class AlfworldSaoTest(unittest.TestCase):
         ))
         with self.assertRaisesRegex(ValueError, "minimum_absolute_gain"):
             accepted_candidate(report, 0.0)
+
+    def test_solver_selection_is_paired_and_uses_the_same_gate(self):
+        report = paired_solver_report(
+            {task_id: 0.0 for task_id in range(10)},
+            {task_id: 1.0 for task_id in range(10)},
+            1000,
+            42,
+            0.01,
+        )
+        self.assertTrue(report["accepted"])
+        self.assertEqual(report["gain"], 1.0)
+        self.assertEqual(report["one_sided_95pct_lower_bound"], 1.0)
+        with self.assertRaisesRegex(ValueError, "task identity"):
+            paired_solver_report({0: 0.0}, {1: 1.0}, 1000, 42, 0.01)
 
     def test_runtime_metadata_supplements_do_not_replace_weights(self):
         with tempfile.TemporaryDirectory() as temporary:

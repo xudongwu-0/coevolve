@@ -262,6 +262,10 @@ packet-transductive Engineer+Solver performance, Solver no-patch performance,
 and one global harness selected only on reward IDs then applied unchanged to
 unseen dev/test IDs. Dev acceptance requires positive paired gain, at least
 one percentage point, and a positive one-sided 95% bootstrap lower bound.
+Solver checkpoint acceptance compares per-task no-patch rewards against its
+incumbent on the same 100 development IDs with that same gate. Global harness
+selection is run separately under the resulting Solver state, so a Harness
+change cannot be misreported as a weight improvement.
 Sealed test remains unused until both arm states are frozen.
 
 ### Optimizer qualification and scheduling fixes

@@ -305,6 +305,8 @@ target必须返回真正的OpenAI `tool_calls`，文本看似XML不是等价证�
    每个角色至少两轮、patience=2、最多八轮，基础设施失败不算模型0分。
 3. 每轮只用dev 300–399停止/接受；要求≥1pp、paired gain>0且one-sided
    bootstrap 95% LCB>0。两臂冻结前禁止读取test 400–499结果。
+   Solver权重门控使用同一100个task的no-patch paired reward，避免把同时变化的
+   Harness收益误归因给W更新；global Harness另行在该Solver状态下选择。
 4. 只有MA-SAO在sealed test比顺序SAO至少+5pp且LCB>0，才搜索交替频率。
 5. WebShop尚未准备；小商品库预览与论文配置须区分，Java/JNI/检索索引和
    `webshop_goal_seed=233`/task manifest匹配后才能报告。
