@@ -8,7 +8,7 @@ import threading
 import time
 
 from .alfworld_h_train import monitor_gpus
-from .alfworld_phase_data import assignments_from_matrix
+from .alfworld_phase_data import assignments_from_matrix, solver_dataset
 from .common import read_json, write_json
 from .launch import Launcher
 from .resources import stop_known
@@ -92,6 +92,17 @@ def main() -> None:
             write_json(run / "task_names.json", {
                 str(task_id): name for task_id, name in sorted(task_names.items())
             })
+            solver_data_output = config.get("solver_data_output")
+            solver_rows = None
+            if solver_data_output:
+                solver_rows = solver_dataset(
+                    sorted(task_names),
+                    int(config["solver_data_count"]),
+                    int(config.get("solver_data_offset", 0)),
+                    config["harness_version"],
+                    task_names,
+                )
+                write_json(Path(solver_data_output), solver_rows)
             write_json(run / "COMPLETE.json", {
                 "status": "completed", "phase": config["phase"],
                 "elapsed_seconds": time.time() - started,
@@ -102,6 +113,8 @@ def main() -> None:
                 "delta_rate": report["delta_rate"],
                 "engineer_model": config["engineer_model"],
                 "solver_model": config["solver_model"],
+                "solver_data_output": solver_data_output,
+                "solver_data_rows": len(solver_rows) if solver_rows is not None else None,
             })
     except BaseException as exc:
         write_json(run / "FAILED.json", {

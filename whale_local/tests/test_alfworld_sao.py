@@ -343,6 +343,17 @@ class AlfworldSaoTest(unittest.TestCase):
                 [row["task_id"] for row in interleaved],
                 [0, 10, 20, 1, 11, 21],
             )
+            refreshed_solver_rows = solver_dataset(
+                sorted(names), 16, 8, 1, names,
+            )
+            self.assertEqual(len(refreshed_solver_rows), 16)
+            self.assertEqual(
+                len({row["id"] for row in refreshed_solver_rows}),
+                16,
+            )
+            self.assertTrue(all(
+                row["partner_version"] == 1 for row in refreshed_solver_rows
+            ))
 
     def test_h_train_spec_uses_native_alfworld_workflow(self):
         config = {
