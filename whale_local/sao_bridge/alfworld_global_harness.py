@@ -90,14 +90,25 @@ def candidate_patches(refresh_roots: list[Path]) -> list[dict]:
 
 
 def receipt_candidates(receipt_roots: list[Path],
-                       maximum_behavior_version: int) -> list[dict]:
+                       maximum_behavior_version: int,
+                       allowed_ids: set[str] | None = None) -> list[dict]:
     if maximum_behavior_version < 0:
         raise ValueError("maximum_behavior_version must be nonnegative")
     candidates = {}
+    found_ids = set()
     for root in receipt_roots:
         for path in sorted(root.glob("*.json")):
             receipt = read_json(path)
+            receipt_id = receipt.get("id")
+            if allowed_ids is not None and receipt_id not in allowed_ids:
+                continue
+            if allowed_ids is not None:
+                if receipt_id in found_ids:
+                    raise ValueError(f"duplicate consumed receipt ID: {receipt_id}")
+                found_ids.add(receipt_id)
             if receipt.get("replayed"):
+                if allowed_ids is not None:
+                    raise ValueError(f"consumed fresh receipt is marked replayed: {path}")
                 continue
             if not (receipt.get("evaluation") or {}).get("valid"):
                 continue
@@ -107,6 +118,10 @@ def receipt_candidates(receipt_roots: list[Path],
                 for version in call.get("versions", [])
             ]
             if not versions or max(versions) > maximum_behavior_version:
+                if allowed_ids is not None:
+                    raise ValueError(
+                        f"consumed receipt exceeds the behavior-version gate: {path}"
+                    )
                 continue
             source = receipt.get("action_text")
             if not isinstance(source, str) or source.count("<patch>") != 1:
@@ -127,6 +142,9 @@ def receipt_candidates(receipt_roots: list[Path],
                 "candidate_source": "optimizer_receipt",
                 "maximum_behavior_version": max(versions),
             })
+    if allowed_ids is not None and found_ids != allowed_ids:
+        missing = sorted(allowed_ids - found_ids)
+        raise ValueError(f"consumed receipt IDs are missing: {missing}")
     return [candidates[key] for key in sorted(candidates)]
 
 
@@ -299,7 +317,8 @@ def seed_reward_cache(run: Path, config: dict) -> None:
     previous = read_json(previous_config_path)
     identity_keys = (
         "packet_refresh", "candidate_refreshes", "candidate_receipt_roots",
-        "maximum_behavior_version", "patch", "incumbent_patch", "no_patch",
+        "candidate_id_ledger", "maximum_behavior_version", "patch",
+        "incumbent_patch", "no_patch",
         "solver_model", "solver_version",
     )
     mismatched = [
@@ -360,9 +379,19 @@ def main() -> None:
                     [Path(path) for path in config["candidate_refreshes"]]
                 ))
             if config.get("candidate_receipt_roots"):
+                allowed_ids = None
+                if config.get("candidate_id_ledger"):
+                    ledger = read_json(Path(config["candidate_id_ledger"]))
+                    ids = ledger.get("fresh_ids")
+                    if (not isinstance(ids, list) or not ids
+                            or any(not isinstance(value, str) or not value for value in ids)
+                            or len(ids) != len(set(ids))):
+                        raise ValueError("candidate ID ledger has invalid fresh IDs")
+                    allowed_ids = set(ids)
                 candidate_sets.extend(receipt_candidates(
                     [Path(path) for path in config["candidate_receipt_roots"]],
                     int(config["maximum_behavior_version"]),
+                    allowed_ids,
                 ))
             candidates = {
                 candidate["sha256"]: candidate for candidate in candidate_sets

@@ -45,6 +45,19 @@ def validate_training_rows(spec: dict, rows: list[dict]) -> None:
         raise ValueError("The declared step budget would consume duplicate training IDs")
 
 
+def consumed_row_ledger(spec: dict, rows: list[dict]) -> dict:
+    validate_training_rows(spec, rows)
+    count = spec["steps"] * spec["batch_size"]
+    consumed = rows[:count]
+    return {
+        "rows": count,
+        "sample_indices": list(range(count)),
+        "ids": [row["id"] for row in consumed],
+        "fresh_ids": [row["id"] for row in consumed if not row.get("replay")],
+        "replay_ids": [row["id"] for row in consumed if row.get("replay")],
+    }
+
+
 def training_capacity_audit(spec: dict, rows: list[dict]) -> dict:
     capacity = spec.get("microbatch_tokens", spec.get("context_tokens", 8192))
     if spec["role"] != "editor":
@@ -215,6 +228,7 @@ def main():
         os.environ.pop("MA_SAO_CONTEXT_FILE", None)
     rows = read_json(Path(spec["data"]))
     validate_training_rows(spec, rows)
+    write_json(run / "consumed_rows.json", consumed_row_ledger(spec, rows))
     capacity_audit = spec.get("capacity_audit")
     if capacity_audit is None:
         capacity_audit = training_capacity_audit(spec, rows)

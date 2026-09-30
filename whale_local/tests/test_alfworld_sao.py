@@ -28,6 +28,7 @@ from sao_bridge.alfworld_solver_selection import paired_solver_report
 from sao_bridge.budget import model_weight_digest
 from sao_bridge.common import ensure_model_runtime_metadata, file_sha, write_json
 from sao_bridge.gpu_report import LAYOUTS
+from sao_bridge.large_train import consumed_row_ledger
 from harness_r1_alfworld.matrix_probe import command as packet_command
 from harness_r1_alfworld.packet_probe import packet_jobs
 
@@ -182,6 +183,37 @@ class AlfworldSaoTest(unittest.TestCase):
         self.assertEqual(candidates[0]["patch"], patch_value)
         self.assertEqual(candidates[0]["candidate_source"], "optimizer_receipt")
         self.assertEqual(candidates[0]["maximum_behavior_version"], 0)
+
+    def test_global_candidates_honor_exact_consumed_id_ledger(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            patch_value = {"benchmark": "alfworld", "actions": []}
+            source = "reason</think><patch>" + json.dumps(patch_value) + "</patch>"
+            base = {
+                "role": "editor", "replayed": False,
+                "evaluation": {"valid": True}, "action_text": source,
+                "calls": [{"versions": [0]}],
+            }
+            write_json(root / "consumed.json", {**base, "id": "consumed"})
+            write_json(root / "prefetched.json", {**base, "id": "prefetched"})
+            candidates = receipt_candidates([root], 0, {"consumed"})
+            self.assertEqual(len(candidates), 1)
+            with self.assertRaisesRegex(ValueError, "missing"):
+                receipt_candidates([root], 0, {"absent"})
+
+    def test_consumed_row_ledger_separates_fresh_and_replay_rows(self):
+        spec = {"steps": 2, "batch_size": 2}
+        rows = [
+            {"id": "fresh-0"},
+            {"id": "replay-0", "replay": {"call": {}}},
+            {"id": "fresh-1"},
+            {"id": "fresh-2"},
+            {"id": "prefetched"},
+        ]
+        ledger = consumed_row_ledger(spec, rows)
+        self.assertEqual(ledger["ids"], ["fresh-0", "replay-0", "fresh-1", "fresh-2"])
+        self.assertEqual(ledger["fresh_ids"], ["fresh-0", "fresh-1", "fresh-2"])
+        self.assertEqual(ledger["replay_ids"], ["replay-0"])
 
     def test_global_metadata_normalizes_an_empty_all_pass_packet(self):
         with tempfile.TemporaryDirectory() as temporary:
