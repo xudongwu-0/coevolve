@@ -211,36 +211,57 @@ def main() -> None:
     run = Path(config["run"]).resolve()
     run.mkdir(parents=True, exist_ok=False)
     write_json(run / "config.json", config)
-    packets = packet_metadata(Path(config["packet_refresh"]), config["solver_version"])
-    if config.get("patch"):
-        candidates = [{
-            "sha256": hashlib.sha256(Path(config["patch"]).read_bytes()).hexdigest(),
-            "path": str(Path(config["patch"]).resolve()),
-            "patch": read_json(Path(config["patch"])),
-            "candidate_source": "declared_patch",
-        }]
-    else:
-        candidate_sets = []
-        if config.get("candidate_refreshes"):
-            candidate_sets.extend(candidate_patches(
-                [Path(path) for path in config["candidate_refreshes"]]
-            ))
-        if config.get("candidate_receipt_roots"):
-            candidate_sets.extend(receipt_candidates(
-                [Path(path) for path in config["candidate_receipt_roots"]],
-                int(config["maximum_behavior_version"]),
-            ))
-        candidates = {
-            candidate["sha256"]: candidate for candidate in candidate_sets
-        }
-        candidates = [candidates[key] for key in sorted(candidates)]
-    minimum_absolute_gain = float(config["minimum_absolute_gain"])
-    if not 0 < minimum_absolute_gain <= 1:
-        raise ValueError("minimum_absolute_gain must be in (0, 1]")
+    started = time.time()
+    try:
+        packets = packet_metadata(
+            Path(config["packet_refresh"]), config["solver_version"])
+        if config.get("patch"):
+            candidates = [{
+                "sha256": hashlib.sha256(
+                    Path(config["patch"]).read_bytes()).hexdigest(),
+                "path": str(Path(config["patch"]).resolve()),
+                "patch": read_json(Path(config["patch"])),
+                "candidate_source": "declared_patch",
+            }]
+        else:
+            candidate_sets = []
+            if config.get("candidate_refreshes"):
+                candidate_sets.extend(candidate_patches(
+                    [Path(path) for path in config["candidate_refreshes"]]
+                ))
+            if config.get("candidate_receipt_roots"):
+                candidate_sets.extend(receipt_candidates(
+                    [Path(path) for path in config["candidate_receipt_roots"]],
+                    int(config["maximum_behavior_version"]),
+                ))
+            candidates = {
+                candidate["sha256"]: candidate for candidate in candidate_sets
+            }
+            candidates = [candidates[key] for key in sorted(candidates)]
+        minimum_absolute_gain = float(config["minimum_absolute_gain"])
+        if not 0 < minimum_absolute_gain <= 1:
+            raise ValueError("minimum_absolute_gain must be in (0, 1]")
+    except BaseException as exc:
+        write_json(run / "FAILED.json", {
+            "status": "failed", "phase": config.get("phase"),
+            "stage": "pre_gpu_selection_audit",
+            "elapsed_seconds": time.time() - started,
+            "error": repr(exc),
+        })
+        raise
     if not candidates:
         complete_without_candidates(run, config, packets, minimum_absolute_gain)
         return
-    write_json(run / "resource_audit.json", stop_known(require_exclusive=True))
+    try:
+        write_json(run / "resource_audit.json", stop_known(require_exclusive=True))
+    except BaseException as exc:
+        write_json(run / "FAILED.json", {
+            "status": "failed", "phase": config.get("phase"),
+            "stage": "resource_audit",
+            "elapsed_seconds": time.time() - started,
+            "error": repr(exc),
+        })
+        raise
     launch = Launcher(run / "supervision")
     telemetry_stop = threading.Event()
     telemetry = threading.Thread(
@@ -250,7 +271,6 @@ def main() -> None:
         daemon=True,
     )
     telemetry.start()
-    started = time.time()
     try:
         with launch.vllm(
             config["solver_model"], port=config.get("solver_port", 19801),
