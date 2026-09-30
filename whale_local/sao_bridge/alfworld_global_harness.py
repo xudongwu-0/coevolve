@@ -76,6 +76,46 @@ def candidate_patches(refresh_roots: list[Path]) -> list[dict]:
     return [candidates[key] for key in sorted(candidates)]
 
 
+def receipt_candidates(receipt_roots: list[Path],
+                       maximum_behavior_version: int) -> list[dict]:
+    if maximum_behavior_version < 0:
+        raise ValueError("maximum_behavior_version must be nonnegative")
+    candidates = {}
+    for root in receipt_roots:
+        for path in sorted(root.glob("*.json")):
+            receipt = read_json(path)
+            if not (receipt.get("evaluation") or {}).get("valid"):
+                continue
+            versions = [
+                int(version)
+                for call in receipt.get("calls", [])
+                for version in call.get("versions", [])
+            ]
+            if not versions or max(versions) > maximum_behavior_version:
+                continue
+            source = receipt.get("action_text")
+            if not isinstance(source, str) or source.count("<patch>") != 1:
+                raise ValueError(f"valid receipt has no unique patch block: {path}")
+            if source.count("</patch>") != 1:
+                raise ValueError(f"valid receipt has no unique patch close tag: {path}")
+            raw = source.split("<patch>", 1)[1].split("</patch>", 1)[0]
+            patch = json.loads(raw)
+            if (not isinstance(patch, dict)
+                    or patch.get("benchmark") != "alfworld"
+                    or not isinstance(patch.get("actions"), list)):
+                raise ValueError(f"valid receipt has an invalid ALFWorld patch: {path}")
+            canonical = json.dumps(patch, sort_keys=True, separators=(",", ":"))
+            identity = hashlib.sha256(canonical.encode()).hexdigest()
+            candidates.setdefault(identity, {
+                "sha256": identity,
+                "path": str(path.resolve()),
+                "patch": patch,
+                "candidate_source": "optimizer_receipt",
+                "maximum_behavior_version": max(versions),
+            })
+    return [candidates[key] for key in sorted(candidates)]
+
+
 def lower_bound(deltas: list[float], samples: int, seed: int) -> float:
     rng = random.Random(seed)
     estimates = sorted(
@@ -172,13 +212,28 @@ def main() -> None:
     run.mkdir(parents=True, exist_ok=False)
     write_json(run / "config.json", config)
     packets = packet_metadata(Path(config["packet_refresh"]), config["solver_version"])
-    candidates = (
-        [{"sha256": hashlib.sha256(Path(config["patch"]).read_bytes()).hexdigest(),
-          "path": str(Path(config["patch"]).resolve()),
-          "patch": read_json(Path(config["patch"]))}]
-        if config.get("patch") else
-        candidate_patches([Path(path) for path in config["candidate_refreshes"]])
-    )
+    if config.get("patch"):
+        candidates = [{
+            "sha256": hashlib.sha256(Path(config["patch"]).read_bytes()).hexdigest(),
+            "path": str(Path(config["patch"]).resolve()),
+            "patch": read_json(Path(config["patch"])),
+            "candidate_source": "declared_patch",
+        }]
+    else:
+        candidate_sets = []
+        if config.get("candidate_refreshes"):
+            candidate_sets.extend(candidate_patches(
+                [Path(path) for path in config["candidate_refreshes"]]
+            ))
+        if config.get("candidate_receipt_roots"):
+            candidate_sets.extend(receipt_candidates(
+                [Path(path) for path in config["candidate_receipt_roots"]],
+                int(config["maximum_behavior_version"]),
+            ))
+        candidates = {
+            candidate["sha256"]: candidate for candidate in candidate_sets
+        }
+        candidates = [candidates[key] for key in sorted(candidates)]
     minimum_absolute_gain = float(config["minimum_absolute_gain"])
     if not 0 < minimum_absolute_gain <= 1:
         raise ValueError("minimum_absolute_gain must be in (0, 1]")

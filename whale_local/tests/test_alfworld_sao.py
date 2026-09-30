@@ -8,7 +8,7 @@ from sao_bridge.alfworld_domain import (
 )
 from sao_bridge.alfworld_env_service import task_definition
 from sao_bridge.alfworld_global_harness import (
-    accepted_candidate, complete_without_candidates,
+    accepted_candidate, complete_without_candidates, receipt_candidates,
 )
 from sao_bridge.alfworld_phase_data import (
     TRAINING_VALIDATOR_REMINDER, assignments_from_matrix, editor_dataset,
@@ -79,6 +79,31 @@ class AlfworldSaoTest(unittest.TestCase):
         self.assertEqual(result["tasks"], 20)
         self.assertEqual(result["reason"], "no_valid_harness_candidates")
         self.assertFalse(released["gpu_resources_claimed"])
+
+    def test_global_candidates_use_only_consumed_optimizer_receipts(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            patch_value = {"benchmark": "alfworld", "actions": []}
+            source = "reason</think><patch>" + json.dumps(patch_value) + "</patch>"
+            base = {
+                "evaluation": {"valid": True},
+                "action_text": source,
+                "calls": [{"versions": [0]}],
+            }
+            write_json(root / "consumed.json", base)
+            write_json(
+                root / "prefetched.json",
+                {**base, "calls": [{"versions": [1]}]},
+            )
+            write_json(
+                root / "invalid.json",
+                {**base, "evaluation": {"valid": False}},
+            )
+            candidates = receipt_candidates([root], 0)
+        self.assertEqual(len(candidates), 1)
+        self.assertEqual(candidates[0]["patch"], patch_value)
+        self.assertEqual(candidates[0]["candidate_source"], "optimizer_receipt")
+        self.assertEqual(candidates[0]["maximum_behavior_version"], 0)
 
     def test_runtime_metadata_supplements_do_not_replace_weights(self):
         with tempfile.TemporaryDirectory() as temporary:
