@@ -203,14 +203,26 @@ W smoke完成1次actor和2次critic更新：139条action trajectories、
 旧连续task顺序使并发首批都落到同一个单会话packet worker，产生3,870次
 HTTP 406工作流失败；数据现按24个packet assignment round-robin，运行前还会
 审计整个异步active window，碰撞直接失败而不是进入训练。旧smoke只用于通路
-与计时，不作为正式checkpoint。基于这些实测，protocol v6在任何正式更新前
-冻结为每轮`2 steps × batch 4`；H训练生成上限4096（23个历史合法提案均
+与计时，不作为正式checkpoint。H训练生成上限4096（23个历史合法提案均
 ≤3014 tokens，唯一12288-token样本是非法runaway），正式评测仍保留12288。
 首个正式H1 rollout随后暴露提示/验证器契约缺口：提示要求多hook，却未声明
 每个hook code最多5个helper和1200 AST nodes；node4前4个候选全因此无reward
 被拒，node3尚未产生候选。两臂均在`metrics=0/checkpoints=0`时按精确unit停止，
 原attempt不计正式更新。训练提示现只补充已有验证器限制，任务、reward、seed、
-模型、优化器均不变；两臂已从原始E0/W0同步以`h1_train_v2`重启。
+模型、优化器均不变。
+
+H1-r2证明修正后的契约有效：node3首批4/4候选合法，packet reward分别
+`+0.2/+0.1/0/-0.1`。但它也在任何critic forward/update前证明AReaL的3-way
+actor DP不仅要求`batch>=3`，还要求batch可被3整除；v6的batch4触发
+`balanced_greedy_partition`异常。与此同时，node4因共享AgentBench
+`configs/generated`由node3 UID1009以0775创建，而node4 UID为1008，官方评测
+在模型判分前触发`PermissionError`并返回HTTP502。两臂r2仍为
+`metrics=0/checkpoints=0/optimizer updates=0`。protocol v7保持全部数据split、
+E0/W0、seed、reward和优化器不变，只把H轮次改为`2 steps × batch6`并新增
+batch/DP整除预检；每个H reward与W环境现在使用run-local可写AgentBench布局和
+scratch，只把固定upstream源码与ALFWorld数据作为只读symlink目标。v7 manifest
+SHA256为`fa6c2c98315fcfba2a65edd48dfb17ff0c7f4380fea1f35cfa35e57188680eaa`。
+两臂已从原始E0/W0同步启动H1-r3。
 
 正式MA分支不是虚构完整MAPPO：采用去中心actor、pre-action joint-state critic、
 W版本隔离reward cache、W变化后的H reward refresh，以及25%真实Engineer
@@ -224,6 +236,7 @@ packet-transductive、Solver no-patch、reward区选择后原样用于未见题�
 - `runs/alfworld_sao_masao_20260930/matrix_infra_report.json`
 - `assets/alfworld_sao_masao_20260930/protocol_v3/manifest.json`
 - `assets/alfworld_sao_masao_20260930/protocol_v6/manifest.json`
+- `assets/alfworld_sao_masao_20260930/protocol_v7/manifest.json`
 - `assets/alfworld_sao_masao_20260930/data/manifest.json`
 - `whale_local/harness_r1_alfworld/README.md`
 
@@ -259,6 +272,8 @@ ALFWorld模型/环境就绪后的首轮8题基线+RL patch重跑约几分钟；
 | Packed-SDPA跨序列污染 | 上游SDPA忽略packed边界 | 受控block-diagonal mask补丁；旧受污染实验无效 |
 | Qwen3.5 critic变成词表logits | VLM分支无条件加载生成模型 | 专用token-value head；shape guard与save/reload回归 |
 | H 2-way FSDP OOM | 单条约18k token不能再切；critic backward仅余82 MiB | 3-way actor FSDP+1 rollout；20k microbatch防止双长序列打包 |
+| H batch4无法3-way dispatch | AReaL balanced partition要求consumer batch可被DP整除 | protocol v7 H batch6；领取GPU前显式整除校验 |
+| 双节点AgentBench写权限冲突 | 同名用户在node3/node4分别为UID1009/1008，共享generated目录为0775 | 每个H/W run建立独立可写runtime/scratch；固定源码和数据只读链接 |
 | W并发出现HTTP 406 | 连续task IDs共用同一单会话packet worker | 跨24 workers round-robin；启动前审计完整异步active window |
 | AReaL导出缺preprocessor metadata | 权重checkpoint不一定复制全部Qwen runtime文件 | 从输入checkpoint补齐并单独记录；权重变化使用纯safetensors digest |
 | H训练提示漏掉执行上限 | 多hook提示未声明每个code的helper/AST硬限制 | 零更新停止；显式声明已有validator契约并从E0/W0同步重启 |
@@ -274,7 +289,8 @@ target必须返回真正的OpenAI `tool_calls`，文本看似XML不是等价证�
 
 1. H-SAO与W-SAO真实optimizer smoke已完成；正式checkpoint均不从smoke继承。
    E0/W0 dev为no-patch79/100、packet-transductive76/100。packet370基础设施
-   失败已仅重跑该packet。首个零更新H1提示契约attempt已隔离，两臂r2正在运行。
+   失败已仅重跑该packet。两个r1/r2零更新attempt均已隔离；protocol v7下两臂
+   H1-r3正从原始E0/W0运行。
 2. node4按H至平台→W至平台执行顺序SAO；node3按H1-W1-H2-W2执行MA-SAO。
    每个角色至少两轮、patience=2、最多八轮，基础设施失败不算模型0分。
 3. 每轮只用dev 300–399停止/接受；要求≥1pp、paired gain>0且one-sided
@@ -298,8 +314,8 @@ target必须返回真正的OpenAI `tool_calls`，文本看似XML不是等价证�
 - 首先读本文件，再读对应方法README和实际JSON receipt；启动日志不是完成receipt。
 - 当前服务器仅授权node3/node4。CPU测试显式`CUDA_VISIBLE_DEVICES=''`，
   每节点GPU进程由单个ownership supervisor管理，不杀未知/其他用户进程。
-- 目前模型服务可按需待命；开始新任务前重新核验实际service、PID、端口和GPU占用，
-  不依赖本文件推断“仍在训练”。当前没有新RL训练。
+- 目前两节点运行正式H1-r3；开始新任务前仍须重新核验实际service、PID、端口和
+  GPU占用，不能只依赖本文判断运行状态。
 - 保存已有权重、算法和分析；清理中间产物必须先有经过验证的保留清单。
   旧约826.5GB checkpoint inventory仅做过盘点，不能声称已安全清理。
 - 使用既有测试；仓库导出不是新的GPU实验。提交前禁止带入任何模型文件或凭据。

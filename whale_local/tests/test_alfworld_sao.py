@@ -17,6 +17,7 @@ from sao_bridge.alfworld_w_train import (
     assignment_schedule_audit, training_spec as solver_training_spec,
 )
 from sao_bridge.alfworld_reward_service import infrastructure_failure, validate_metadata
+from sao_bridge.alfworld_runtime import prepare_agentbench_runtime
 from sao_bridge.budget import model_weight_digest
 from sao_bridge.common import ensure_model_runtime_metadata, file_sha, write_json
 from sao_bridge.gpu_report import LAYOUTS
@@ -53,6 +54,25 @@ class AlfworldSaoTest(unittest.TestCase):
         task = task_definition("external", [0, 8], 2, harness["patch"])
         self.assertEqual(set(task), {"external"})
         self.assertEqual(task["external"]["parameters"]["task_ids"], [0, 8])
+
+    def test_agentbench_runtime_is_run_local(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            runtime = prepare_agentbench_runtime(Path(temporary) / "AgentBench")
+            self.assertTrue((runtime / "src").is_symlink())
+            self.assertTrue((runtime / "scripts").is_symlink())
+            self.assertTrue((runtime / "data/alfworld").is_symlink())
+            self.assertTrue((runtime / "configs/generated").is_dir())
+            marker = runtime / "configs/generated/owned-by-this-run"
+            marker.write_text("ok")
+            task = task_definition(
+                "external", [0, 8], 2,
+                {"benchmark": "alfworld", "actions": []},
+                runtime,
+            )
+            self.assertEqual(
+                task["external"]["parameters"]["data_path"],
+                str(runtime / "data/alfworld"),
+            )
 
     def test_status_and_reward(self):
         self.assertTrue(_running("SampleStatus.RUNNING"))
@@ -174,12 +194,13 @@ class AlfworldSaoTest(unittest.TestCase):
     def test_h_train_spec_uses_native_alfworld_workflow(self):
         config = {
             "engineer_model": "/models/e0", "solver_model": "/models/w0",
-            "phase": "h1", "experiment": "campaign", "steps": 2, "batch_size": 8,
+            "phase": "h1", "experiment": "campaign", "steps": 2, "batch_size": 6,
+            "actor_gpus": 3, "rollout_gpus": 1,
             "harness": "/run/h0.json", "data": "/run/h1.json",
         }
         spec = training_spec(config, Path("/run"), "http://127.0.0.1:28600")
         self.assertEqual(spec["domain"], "alfworld")
-        self.assertEqual((spec["actor_gpus"], spec["rollout_gpus"]), (2, 2))
+        self.assertEqual((spec["actor_gpus"], spec["rollout_gpus"]), (3, 1))
         self.assertEqual(spec["gdn_prefill_backend"], "triton")
         self.assertEqual(spec["evaluator_url"], "http://127.0.0.1:28600")
         self.assertEqual(spec["microbatch_tokens"], 20000)

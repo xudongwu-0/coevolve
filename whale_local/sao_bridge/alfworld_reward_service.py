@@ -14,13 +14,12 @@ from types import SimpleNamespace
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
+from .alfworld_runtime import ALFWORLD_DATA, prepare_agentbench_runtime
 from .common import ROOT, read_json, write_json
 
 UPSTREAM = ROOT / "third_party/harness-r1-upstream"
 RELAX = UPSTREAM / "code/Relax"
-AGENTBENCH = ROOT / "assets/alfworld_harness_r1/AgentBench"
 ALFWORLD_PYTHON = "/dev/shm/harness-r1-alfworld-venv/bin/python"
-DEFAULT_TMPDIR = ROOT / "assets/alfworld_harness_r1/scratch"
 
 
 class RewardRequest(BaseModel):
@@ -30,10 +29,10 @@ class RewardRequest(BaseModel):
     reference_source: str | None = None
 
 
-def official_args(config: dict) -> SimpleNamespace:
+def official_args(config: dict, agentbench: Path) -> SimpleNamespace:
     return SimpleNamespace(
         harness_r1_eval_root=str(Path(config["cache_root"]).resolve()),
-        harness_r1_agentbench_dir=str(AGENTBENCH),
+        harness_r1_agentbench_dir=str(agentbench),
         harness_r1_agentbench_python=ALFWORLD_PYTHON,
         harness_r1_alfworld_worker_python=ALFWORLD_PYTHON,
         harness_r1_target_urls=list(config["target_urls"]),
@@ -99,14 +98,19 @@ def infrastructure_failure(result: dict) -> bool:
 
 
 def create_app(config: dict) -> FastAPI:
-    tmpdir = Path(config.get("tmpdir", DEFAULT_TMPDIR)).resolve()
+    cache_root = Path(config["cache_root"]).resolve()
+    tmpdir = Path(config.get("tmpdir", cache_root.parent / "tmp")).resolve()
     tmpdir.mkdir(parents=True, exist_ok=True)
     os.environ["TMPDIR"] = str(tmpdir)
+    os.environ["ALFWORLD_DATA"] = str(ALFWORLD_DATA)
+    agentbench = prepare_agentbench_runtime(Path(
+        config.get("agentbench_dir", cache_root.parent / "runtime/AgentBench")
+    ))
     sys.path.insert(0, str(RELAX))
     from examples.harness_r1.reward_alfworld_patch import reward_func
     from relax.utils.types import Sample
 
-    args = official_args(config)
+    args = official_args(config, agentbench)
     Path(args.harness_r1_eval_root).mkdir(parents=True, exist_ok=True)
     receipts = Path(config["receipts"]).resolve()
     receipts.mkdir(parents=True, exist_ok=True)
@@ -122,6 +126,7 @@ def create_app(config: dict) -> FastAPI:
             "ready": True, "solver_version": solver_version,
             "target_urls": len(args.harness_r1_target_urls),
             "reward": "official_harness_r1_delta_average_reward",
+            "agentbench_dir": str(agentbench),
         }
 
     @app.post("/score")

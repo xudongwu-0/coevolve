@@ -168,6 +168,11 @@ class DomainIntegrationTests(unittest.TestCase):
                 configure({**spec, "context_tokens": 4096}, Path(temporary))
             with self.assertRaisesRegex(ValueError, "data-parallel size"):
                 configure({**spec, "batch_size": 1}, Path(temporary))
+            with self.assertRaisesRegex(ValueError, "divisible"):
+                configure(
+                    {**spec, "batch_size": 4, "actor_gpus": 3},
+                    Path(temporary),
+                )
 
 
 if __name__ == "__main__":

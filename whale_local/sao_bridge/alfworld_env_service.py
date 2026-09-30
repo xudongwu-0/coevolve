@@ -14,11 +14,13 @@ import time
 
 import httpx
 
+from .alfworld_runtime import (
+    ALFWORLD_ASSETS, ALFWORLD_DATA, prepare_agentbench_runtime,
+)
 from .common import ROOT, read_json, write_json
 
 UPSTREAM = ROOT / "third_party/harness-r1-upstream"
-ASSETS = ROOT / "assets/alfworld_harness_r1"
-AGENTBENCH = ASSETS / "AgentBench"
+AGENTBENCH = ALFWORLD_ASSETS / "AgentBench"
 PYTHON = Path("/dev/shm/harness-r1-alfworld-venv/bin/python")
 
 TOOLS = [{
@@ -38,7 +40,8 @@ TOOLS = [{
 }]
 
 
-def task_definition(name: str, task_ids: list[int], concurrency: int, harness: dict) -> dict:
+def task_definition(name: str, task_ids: list[int], concurrency: int, harness: dict,
+                    agentbench: Path = AGENTBENCH) -> dict:
     if (not task_ids or len(set(task_ids)) != len(task_ids)
             or any(type(value) is not int or not 0 <= value < 500 for value in task_ids)):
         raise ValueError("task_ids must be distinct official ALFWorld indices")
@@ -47,12 +50,12 @@ def task_definition(name: str, task_ids: list[int], concurrency: int, harness: d
         "parameters": {
             "name": name,
             "concurrency": concurrency,
-            "data_path": str(AGENTBENCH / "data/alfworld"),
+            "data_path": str(agentbench / "data/alfworld"),
             "config_path": str(
-                AGENTBENCH / "src/server/tasks/alfworld/configs/base_config.yaml"
+                agentbench / "src/server/tasks/alfworld/configs/base_config.yaml"
             ),
             "prompts_path": str(
-                AGENTBENCH
+                agentbench
                 / "src/server/tasks/alfworld/prompts/alfworld_multiturn_plan_first.json"
             ),
             "split": "test_set",
@@ -129,6 +132,9 @@ def main() -> None:
         raise RuntimeError("ALFWorld requires the copied isolated worker interpreter")
     run = args.run.resolve()
     run.mkdir(parents=True, exist_ok=False)
+    agentbench = prepare_agentbench_runtime(run / "runtime/AgentBench")
+    scratch = run / "scratch"
+    scratch.mkdir()
     if args.assignments:
         if args.task_name or args.task_ids or args.harness:
             parser.error("--assignments cannot be combined with the single-task arguments")
@@ -148,7 +154,7 @@ def main() -> None:
         task_ids = assignment["task_ids"]
         harness = json.loads(Path(assignment["harness"]).read_text())
         definition = task_definition(
-            assignment["name"], task_ids, args.concurrency, harness,
+            assignment["name"], task_ids, args.concurrency, harness, agentbench,
         )
         if set(config) & set(definition):
             raise ValueError("duplicate ALFWorld task assignment name")
@@ -162,18 +168,18 @@ def main() -> None:
     env = dict(
         os.environ,
         CUDA_VISIBLE_DEVICES="",
-        ALFWORLD_DATA=str(ASSETS / "data"),
-        TMPDIR=str(ASSETS / "scratch"),
+        ALFWORLD_DATA=str(ALFWORLD_DATA),
+        TMPDIR=str(scratch),
         PYTHONDONTWRITEBYTECODE="1",
-        PYTHONPATH=":".join((str(AGENTBENCH / "src"), str(AGENTBENCH))),
+        PYTHONPATH=":".join((str(agentbench / "src"), str(agentbench))),
     )
     controller_url = f"http://127.0.0.1:{args.controller_port}/api"
     with ExitStack() as logs:
         controller_log = logs.enter_context((run / "controller.log").open("wb"))
         controller = subprocess.Popen([
-            str(PYTHON), str(AGENTBENCH / "scripts/local_agentrl_controller.py"),
+            str(PYTHON), str(agentbench / "scripts/local_agentrl_controller.py"),
             "--host", "127.0.0.1", "--port", str(args.controller_port),
-        ], cwd=AGENTBENCH, env=env, stdout=controller_log, stderr=subprocess.STDOUT)
+        ], cwd=agentbench, env=env, stdout=controller_log, stderr=subprocess.STDOUT)
         workers = []
         for index, task_name in enumerate(task_names):
             port = args.worker_port + index
@@ -183,7 +189,7 @@ def main() -> None:
                 "--controller", controller_url,
                 "--self", f"http://127.0.0.1:{port}/api",
                 "--host", "127.0.0.1", "--port", str(port), task_name,
-            ], cwd=AGENTBENCH, env=env, stdout=worker_log, stderr=subprocess.STDOUT))
+            ], cwd=agentbench, env=env, stdout=worker_log, stderr=subprocess.STDOUT))
         stopping = False
 
         def interrupted(_signum, _frame):
@@ -202,6 +208,8 @@ def main() -> None:
                 "controller_pid": controller.pid,
                 "worker_pids": [worker.pid for worker in workers],
                 "health": ready,
+                "agentbench_dir": str(agentbench),
+                "scratch": str(scratch),
             })
             while not stopping:
                 if controller.poll() is not None or any(

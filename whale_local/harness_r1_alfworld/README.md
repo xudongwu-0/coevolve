@@ -291,8 +291,8 @@ across all 24 packet assignments. Before any W process claims GPUs, it audits
 every asynchronous active window (`batch × (staleness+1)`) and fails if a
 worker repeats. The colliding smoke checkpoint is never a formal initializer.
 
-Protocol v6 was frozen before formal optimization at `2 steps × batch 4` per
-staged role round. H training uses at most 4,096 generated tokens: all 23 valid
+Protocol v6 initially froze `2 steps × batch 4` per staged role round.
+H training uses at most 4,096 generated tokens: all 23 valid
 released-Engineer train-matrix responses were at most 3,014 tokens, while the
 only response reaching 12,288 was invalid. Evaluation retains the official
 12,288-token cap. Checkpoint export also restores missing Qwen processor
@@ -308,6 +308,23 @@ zero checkpoint files. Fresh training rows now append the literal existing
 validator limits (they do not relax validation or add format reward), and both
 arms restarted from untouched E0/W0. The invalid attempts and four physical
 rollouts remain archived and are not formal checkpoints.
+
+That H1-r2 restart produced four valid node3 patches with packet deltas
+`+0.2`, `+0.1`, `0`, and `-0.1`, confirming the prompt fix. It then failed
+before critic forward because AReaL's balanced three-way dispatch requires the
+consumer batch length to be divisible by three, not merely at least three.
+Node4 independently returned infrastructure HTTP 502 because its UID 1008
+could not write a shared AgentBench generated-config directory created by
+node3 UID 1009 with mode 0775. Both r2 runs have zero metric rows, zero
+checkpoints, and zero optimizer updates.
+
+Protocol v7 preserves every split hash, E0/W0, seed, reward, and optimizer
+setting. It changes only the H batch to six, adds a pre-GPU divisibility check,
+and gives every H reward or W environment run its own writable AgentBench
+layout and scratch directory. Pinned upstream source and ALFWorld data remain
+read-only symlink targets. Its manifest SHA256 is
+`fa6c2c98315fcfba2a65edd48dfb17ff0c7f4380fea1f35cfa35e57188680eaa`.
+Both H1-r3 arms started again from untouched E0/W0.
 
 ## Environment and official assets
 

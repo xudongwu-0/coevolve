@@ -45,6 +45,11 @@ def configure(spec: dict, run: Path) -> dict:
             f"Training batch size ({spec['batch_size']}) must be at least the "
             f"actor data-parallel size ({actor_gpus})"
         )
+    if spec["batch_size"] % actor_gpus:
+        raise ValueError(
+            f"Training batch size ({spec['batch_size']}) must be divisible by the "
+            f"actor data-parallel size ({actor_gpus})"
+        )
     cfg["cluster"]["n_gpus_per_node"] = actor_gpus + rollout_gpus
     cfg["actor"]["backend"] = f"fsdp:d{actor_gpus}p1t1"
     cfg["actor"]["weight_update_mode"] = spec.get("weight_update_mode", "disk")

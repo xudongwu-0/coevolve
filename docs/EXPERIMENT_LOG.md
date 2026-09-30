@@ -1760,3 +1760,41 @@ It is exploratory validation, not held-out AIME. AIME test stays sealed until a 
     existing validator limits. Both arms restarted from untouched E0/W0 as
     H1-r2. The four physical invalid rollouts remain counted and cannot become
     formal checkpoints. Sealed test IDs400--499 remain unread.
+
+71. **H1-r2 zero-update diagnosis, protocol v7 and H1-r3 restart
+    (2026-09-30).** The validator reminder worked: node3 produced four
+    executable patches whose ten-task packet deltas were `+0.2`, `+0.1`, `0`
+    and `-0.1`. Training then stopped before critic forward with
+    `ValueError: The length of nums must be divisible by K`. AReaL's
+    three-way actor dispatch requires consumer batch divisibility, while the
+    v6 preflight checked only `batch>=DP`; therefore batch4 was never a valid
+    formal 3-way configuration. Node3 retained four physical evaluations but
+    has zero metric rows, checkpoints and optimizer updates.
+
+    Node4 exposed a separate cross-node ownership failure. The shared
+    AgentBench runtime had been initialized by node3 UID1009 with mode0775;
+    node4 uses UID1008 and could not create official generated task configs.
+    All affected evaluations returned `PermissionError` through the explicit
+    HTTP502 infrastructure path rather than model reward. The exact node4 unit
+    was stopped while metrics and checkpoints were still absent. Its two
+    persisted receipts are syntax-invalid model patches scored zero normally;
+    no infrastructure fallback was accepted.
+
+    The root fix creates a writable AgentBench layout and scratch directory
+    inside every H reward or W environment run. Pinned upstream source and
+    fixed ALFWorld data are symlinked read-only; generated configs never cross
+    UID ownership. `large_train.configure` now rejects any batch not divisible
+    by actor DP before model allocation. Protocol v7 changes H only to
+    `2 steps × batch6`; W remains `2 × 4`. All four partition SHA256 values,
+    E0/W0, seed, task rows, reward and optimizer settings are unchanged.
+    Manifest SHA256 is
+    `fa6c2c98315fcfba2a65edd48dfb17ff0c7f4380fea1f35cfa35e57188680eaa`.
+
+    Focused tests passed under both node identities (node3 uses
+    `TMPDIR=/dev/shm` because `/tmp` is not reliable). Local discovery passed
+    307 repository tests plus10 ALFWorld tests with5 skips; compile and all
+    pinned upstream reverse checks passed. While repairing, the verified
+    filler held all16 GPUs at roughly84--92% utilization and was excluded from
+    algorithm metrics. It was identity-checked and stopped by each launcher.
+    Sequential and MA H1-r3 then started simultaneously from untouched E0/W0.
+    Sealed test400--499 remains unread.

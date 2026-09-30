@@ -172,6 +172,7 @@ def main() -> None:
                 "cache_root": str(run / "reward_cache"),
                 "receipts": str(run / "reward_receipts"),
                 "port_locks": str(run / "reward_port_locks"),
+                "agentbench_dir": str(run / "runtime/AgentBench"),
                 "tmpdir": config["tmpdir"], "target_urls": urls.split(","),
                 "target_model": "policy", "target_agent_name": "qwen35-9b-nothink",
                 "solver_version": config["solver_version"],
