@@ -11,6 +11,7 @@ import time
 
 from .budget import model_digests
 from .common import ensure_model_runtime_metadata, read_json, write_json
+from .large_train import training_capacity_audit
 from .launch import Launcher
 from .resources import stop_known
 
@@ -71,6 +72,23 @@ def main() -> None:
     run = Path(config["run"]).resolve()
     run.mkdir(parents=True, exist_ok=False)
     write_json(run / "config.json", config)
+    started = time.time()
+    try:
+        preflight_spec = training_spec(
+            config, run, f"http://127.0.0.1:{config.get('reward_service_port', 28600)}"
+        )
+        capacity_audit = training_capacity_audit(
+            preflight_spec, read_json(Path(config["data"]))
+        )
+        write_json(run / "capacity_audit.json", capacity_audit)
+    except BaseException as exc:
+        write_json(run / "FAILED.json", {
+            "status": "failed", "phase": config.get("phase"),
+            "stage": "pre_gpu_capacity_audit",
+            "elapsed_seconds": time.time() - started,
+            "error": repr(exc),
+        })
+        raise
     write_json(run / "resource_audit.json", stop_known(require_exclusive=True))
     launch = Launcher(run / "supervision")
     telemetry_stop = threading.Event()
@@ -81,7 +99,6 @@ def main() -> None:
         daemon=True,
     )
     telemetry.start()
-    started = time.time()
     try:
         with launch.vllm(
             config["solver_model"], port=config.get("solver_port", 19501),
@@ -116,6 +133,7 @@ def main() -> None:
             )
             launch.ready(reward_process, f"http://127.0.0.1:{reward_port}/health")
             spec = training_spec(config, run, f"http://127.0.0.1:{reward_port}")
+            spec["capacity_audit"] = capacity_audit
             write_json(run / "train_spec.json", spec)
             trainer = launch.module(
                 "sao_bridge.large_train", ["--spec", run / "train_spec.json"],

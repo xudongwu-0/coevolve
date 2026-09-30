@@ -11,7 +11,7 @@ import httpx
 from sao_bridge.domain_api import get_domain
 from sao_bridge.evaluation import create_app, evaluate
 from sao_bridge.experiment import propose
-from sao_bridge.large_train import configure
+from sao_bridge.large_train import configure, validate_capacity_audit
 from sao_bridge.phase_data import editor_dataset
 from sao_bridge import retool
 
@@ -172,6 +172,16 @@ class DomainIntegrationTests(unittest.TestCase):
                 configure(
                     {**spec, "batch_size": 4, "actor_gpus": 3},
                     Path(temporary),
+                )
+            audit = {
+                "role": "solver", "microbatch_tokens": 16384,
+                "required_microbatch_tokens": 16384,
+            }
+            validate_capacity_audit(spec, audit)
+            with self.assertRaisesRegex(ValueError, "longest possible trajectory"):
+                validate_capacity_audit(
+                    {**spec, "microbatch_tokens": 12000},
+                    {**audit, "microbatch_tokens": 12000},
                 )
 
 

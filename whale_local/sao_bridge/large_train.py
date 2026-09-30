@@ -13,6 +13,83 @@ from .common import read_json, verify_upstreams, write_json
 from .train import make_config, upstream_trainer
 
 
+def validate_capacity_audit(spec: dict, audit: dict) -> None:
+    capacity = spec.get("microbatch_tokens", spec.get("context_tokens", 8192))
+    if audit.get("role") != spec["role"]:
+        raise ValueError("Trajectory capacity audit role does not match the training role")
+    if audit.get("microbatch_tokens") != capacity:
+        raise ValueError("Trajectory capacity audit does not match the microbatch limit")
+    required = audit.get("required_microbatch_tokens")
+    if type(required) is not int or required <= 0:
+        raise ValueError("Trajectory capacity audit omitted a positive token requirement")
+    if required > capacity:
+        raise ValueError(
+            f"Microbatch token limit ({capacity}) cannot fit the longest possible "
+            f"trajectory ({required})"
+        )
+    if required > spec.get("context_tokens", 8192):
+        raise ValueError("Longest possible trajectory exceeds the training context")
+
+
+def training_capacity_audit(spec: dict, rows: list[dict]) -> dict:
+    capacity = spec.get("microbatch_tokens", spec.get("context_tokens", 8192))
+    if spec["role"] != "editor":
+        return {
+            "role": spec["role"], "applicable": False,
+            "microbatch_tokens": capacity,
+            "required_microbatch_tokens": 1,
+        }
+    from transformers import AutoTokenizer
+    from .domain_api import get_domain
+
+    tokenizer = AutoTokenizer.from_pretrained(
+        spec["model"], trust_remote_code=True, local_files_only=True,
+    )
+    domain = get_domain(spec.get("domain", "math"))
+    prefill = getattr(domain, "EDITOR_ASSISTANT_PREFILL", None)
+    extra_body = getattr(domain, "EDITOR_EXTRA_BODY", None) or {}
+    template_kwargs = dict(extra_body.get("chat_template_kwargs", {}))
+    prompt_lengths = []
+    replay_lengths = []
+    for row in rows:
+        if row.get("replay"):
+            call = row["replay"]["call"]
+            replay_lengths.append(
+                len(call["prompt_ids"]) + len(call["response_ids"])
+            )
+            continue
+        messages = list(row["messages"])
+        if prefill is not None:
+            messages.append({"role": "assistant", "content": prefill})
+        encoded = tokenizer.apply_chat_template(
+            messages, tokenize=True, **template_kwargs,
+        )
+        input_ids = encoded["input_ids"] if hasattr(encoded, "keys") else encoded
+        prompt_lengths.append(len(input_ids))
+    requirements = list(replay_lengths)
+    if prompt_lengths:
+        requirements.append(max(prompt_lengths) + spec["tokens"])
+    if not requirements:
+        raise ValueError("Editor trajectory capacity audit found no training rows")
+    audit = {
+        "role": "editor", "applicable": True,
+        "fresh_rows": len(prompt_lengths), "replay_rows": len(replay_lengths),
+        "minimum_fresh_prompt_tokens": min(prompt_lengths) if prompt_lengths else None,
+        "maximum_fresh_prompt_tokens": max(prompt_lengths) if prompt_lengths else None,
+        "maximum_new_tokens": spec["tokens"],
+        "maximum_replay_trajectory_tokens": (
+            max(replay_lengths) if replay_lengths else None
+        ),
+        "required_microbatch_tokens": max(requirements),
+        "microbatch_tokens": capacity,
+        "context_tokens": spec.get("context_tokens", 8192),
+        "chat_template_kwargs": template_kwargs,
+        "assistant_prefill": prefill,
+    }
+    validate_capacity_audit(spec, audit)
+    return audit
+
+
 class MetricsRecorder:
     def __init__(self, delegate, path: Path):
         self.delegate = delegate
@@ -120,10 +197,15 @@ def main():
         os.environ["MA_SAO_CONTEXT_FILE"] = str(Path(spec["central_context"]).resolve())
     else:
         os.environ.pop("MA_SAO_CONTEXT_FILE", None)
+    rows = read_json(Path(spec["data"]))
+    capacity_audit = spec.get("capacity_audit")
+    if capacity_audit is None:
+        capacity_audit = training_capacity_audit(spec, rows)
+    validate_capacity_audit(spec, capacity_audit)
+    write_json(run / "capacity_audit.json", capacity_audit)
     cfg_path = run / "trainer.yaml"
     cfg_path.write_text(yaml.safe_dump(configure(spec, run), sort_keys=False))
     config, _ = load_expr_config(["--config", str(cfg_path)], PPOConfig)
-    rows = read_json(Path(spec["data"]))
     started = time.monotonic()
     with upstream_trainer(config, Dataset.from_list(rows)) as trainer:
         trainer.stats_logger = MetricsRecorder(trainer.stats_logger, run / "metrics.jsonl")

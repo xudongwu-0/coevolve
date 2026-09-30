@@ -326,6 +326,22 @@ read-only symlink targets. Its manifest SHA256 is
 `fa6c2c98315fcfba2a65edd48dfb17ff0c7f4380fea1f35cfa35e57188680eaa`.
 Both H1-r3 arms started again from untouched E0/W0.
 
+H1-r3 verified both fixes: node4 completed official run-local evaluations
+without permission failures, and both arms entered critic value forward with a
+six-item divisible batch. It then exposed that the 20,000-token microbatch
+limit was below each sampled 20,309--21,139-token trajectory. AReaL failed
+explicitly before `compute_logp` or any optimizer update; both r3 runs still
+have zero metric rows and checkpoints.
+
+The exact training chat template over all 64 H1 rows has a maximum 18,606-token
+prompt. With the 4,096 generation cap, every possible fresh trajectory is at
+most 22,702 tokens. Protocol v8 therefore uses a 23,040-token H microbatch:
+large enough for one worst-case trajectory, but too small to combine two long
+ones. The launcher now computes and persists this audit before stopping filler
+or claiming GPUs. Protocol v8 manifest SHA256 is
+`d952ef63f49f83dbb2c1bc730115cdcbfc870043e30253984e3541bed2d5a643`.
+Both H1-r4 arms restarted from untouched E0/W0.
+
 ## Environment and official assets
 
 `/dev/shm/harness-r1-alfworld-venv` is node3-local and intentionally isolated.

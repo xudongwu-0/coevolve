@@ -1798,3 +1798,38 @@ It is exploratory validation, not held-out AIME. AIME test stays sealed until a 
     algorithm metrics. It was identity-checked and stopped by each launcher.
     Sequential and MA H1-r3 then started simultaneously from untouched E0/W0.
     Sealed test400--499 remains unread.
+
+72. **Exact trajectory-capacity audit and protocol v8 H1-r4
+    (2026-09-30).** H1-r3 crossed both preceding failure points. Node4's
+    run-local AgentBench tree was owned by UID1008 and completed official
+    evaluations without `PermissionError` or HTTP502; node3 independently
+    used UID1009. Both six-item batches completed reward collection and critic
+    value forward, proving the AReaL three-way dispatch was now divisible.
+
+    The actor then rejected `compute_logp` because each rank's sampled
+    trajectories exceeded the20,000-token microbatch capacity. Exact physical
+    ranges were20,456--21,117 tokens on node4 and20,309--21,139 on node3.
+    This is a capacity/configuration failure, not OOM and not model reward.
+    It occurred before actor or critic optimizer steps; both runs retain zero
+    metric rows and zero checkpoint files. Node4/node3 performed9/6 physical
+    reward evaluations because asynchronous work already in flight was allowed
+    to finish before the wrappers released resources.
+
+    A new pre-GPU audit applies the exact Qwen chat template, including the
+    assistant `<think>` prefill, to every fresh Engineer row and reads exact
+    token receipts for replay rows. Across all64 H1 rows, prompt length is
+    9,830--18,606 tokens; with a4,096-token generation ceiling the declared
+    worst case is22,702. Protocol v8 sets H microbatch capacity to23,040 and
+    fails before stopping filler if any row no longer fits. This capacity can
+    contain one worst-case trajectory but not two long trajectories.
+    All split hashes, E0/W0, seed, batch6, reward and optimizer settings are
+    unchanged. The v8 manifest SHA256 is
+    `d952ef63f49f83dbb2c1bc730115cdcbfc870043e30253984e3541bed2d5a643`.
+
+    Focused17 tests, compile checks and the capacity audit passed on both node
+    identities. The verified filler covered the repair interval and was then
+    released by the launchers. Both formal H1-r4 arms started from untouched
+    E0/W0 with persisted preflight receipts showing
+    `required=22702 < configured=23040`. Dev evaluation chains are queued only
+    behind a valid H `COMPLETE.json`; failures restore filler instead of
+    fabricating scores. Sealed test400--499 remains unread.
