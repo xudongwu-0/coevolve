@@ -1936,3 +1936,82 @@ It is exploratory validation, not held-out AIME. AIME test stays sealed until a 
     generate512 assignment-aligned W1 rows. W1's centralized critic context
     is frozen before action and records E1, selected harness identity and
     89/100 dev calibration. Solver cross-role replay remains disabled.
+
+76. **Sequential Harness plateau and exact packet recovery
+    (2026-09-30).** Node4 H3 restarted from accepted H1 rather than rejected
+    H2, completed two actor/four critic updates in1,207.4s, and changed its
+    final weights to
+    `86b6eec4d052740e66731f0b69ae07cc1a0e23f4b5f2203db431cec8fd9e99d1`.
+    Its 11-candidate dev gate had zero incremental gain over H1. The incumbent
+    remained+9pp over no-patch with a+3pp one-sided95% LCB. H2 and H3 are two
+    consecutive rejected Harness rounds, so the sequential arm freezes H1
+    patch
+    `60b43b8fd5f64852bd20234dbd4e50e71b46253a6f604adba86bc53f5f49a680`.
+
+    MA W1 train refresh initially completed21/24 packets and sequential W1
+    18/24. Neither failure set was converted to model score or recomputed in
+    full. Serial partial recovery completed3 and6 missing starts, then a
+    strict merger required exact, duplicate-free coverage of starts0--230.
+    Final node3 baseline/packet-transductive rates were69.58%/71.25%;
+    node4 was70.42%/71.25%. Both produced24 assignments,240 task identities
+    and512 Solver rows. The transductive rates are training-data diagnostics,
+    not held-out acceptance evidence.
+
+77. **Formal dual-arm W1 and centralized-critic repairs
+    (2026-09-30).** MA W1 had two zero-update failures. The first embedded a
+    complete9.8KB patch in centralized context and exceeded the reserved
+    1,024 tokens before model initialization. Context now records a stable
+    patch SHA and H/W launchers tokenize-audit it before claiming GPUs. The
+    second reached real rollout but failed before value forward because DP4
+    gives each rank a1-D token trajectory; prefixing had assumed `[1,seq]`.
+    The value path now prefixes1-D,2-D and general token-aligned tensors,
+    updates masks/versions/values/returns/positions consistently, and strips
+    the prefix from values returned to the actor.
+
+    MA W1 retry2 then completed2 actor/4 critic updates in4,059.97s
+    (optimizer3,919.08s) with a224-token pre-action centralized context.
+    Weights changed from
+    `435cb03ebd100f83817e129eb7fa11696123ec573923b102543a32f3e1fb559f`
+    to
+    `258e52983e8b59bb2b5c5d3c5d4bb141cf0adc1a324df4a23ff44d7052e43043`.
+    Sequential W1 completed the same update budget in4,065.14s
+    (optimizer3,920.90s), without centralized context, and ended at
+    `81bc16629ec3fc66663c9ed3f08f65534b99ef565dea106b79dbf4343f0b6682`.
+    Both used four actor/critic and four rollout GPUs. Long second-batch
+    trajectories, not idle allocation, explain the roughly68-minute rounds.
+
+78. **W1 gates, MA H2, and exact-consumption selection
+    (2026-09-30).** MA W1 dev refresh recovered2 missing packets after an
+    8/10 first pass. Its no-patch result tied W0 at78/100, so gain and LCB were
+    zero and W1 was rejected. Sequential W1 recovered one missing packet
+    after9/10; it scored81/100 versus W0's79/100, but its paired one-sided95%
+    LCB was zero, so it too was rejected. Packet-transductive scores77/100
+    and83/100 remain diagnostics.
+
+    MA H2 used64 rows at offsets64--127:48 fresh plus16 authentic H1 replay
+    rows in the dataset, interaction credit0.5, and maximum replay lag16
+    decoupled from online rollout concurrency staleness1. It completed2
+    actor/4 critic updates in1,217.98s; weights changed from
+    `bf7017f860f0cfb69bdbb73a626c490e8091613add94500962fa61bc813dc1cd`
+    to
+    `a68594777e7db981a290e13d78898dac4735dcf6eb91344d61acf8ef4c973996`.
+    The two actual optimizer batches consumed9 fresh and3 replay rows.
+
+    The wider replay lag allowed20 unique fresh version-0 receipts to be
+    prefetched, so the old version-only gate was no longer equivalent to
+    optimizer consumption. The first H2 selector was stopped before producing
+    a decision. Training now persists an exact first-`steps*batch` ID ledger;
+    selection requires every declared fresh ID exactly once, rejects replay
+    receipts, and ignores extra prefetched IDs. The corrected pool contained
+    nine candidates. None beat H1; H2 was rejected with incremental gain0 and
+    LCB0. H1 itself re-evaluated at90/100 versus no-patch78/100
+    (+12pp, LCB+6pp); the one-task run fluctuation from89 is not H2 gain.
+    Commits `e3ba7d6`, `5bbfb05`, and `2144c34` implement separated replay
+    lag, replay exclusion, and exact consumed-ID gates. The latest focused
+    suites passed32 tests.
+
+    Both arms therefore start W2 from accepted W0, not rejected W1, using
+    assignment-balanced rows at non-overlapping offsets512--1023. Node3 W2
+    retains the pre-action centralized critic; node4 W2 is sequential. Both
+    eight-GPU optimizer runs were active at23:02 UTC. Sealed test400--499
+    remains unread.

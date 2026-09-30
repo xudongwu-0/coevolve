@@ -248,11 +248,28 @@ packet-local连续集合，并将后者按packet start映射回协议ID。中断
 253秒完成。完整`whale_local/tests`为135 passed，后续失败cache过滤定向回归为
 18 passed。
 
-node4 H2又完成2个actor/4个critic更新（1,320.9秒），但没有超过H1 incumbent，
-因此拒绝H2 checkpoint。该轮重测H1 incumbent为88/100，而首次为87/100；
-这一个task的运行波动不能记作H2收益。node4已从接受的H1 actor/critic重新采样
-H3（新sample offsets128–191）。node3正在用接受的E1/W0刷新24个train packets，
-随后训练MA W1。
+node4 H2又完成2个actor/4个critic更新（1,320.9秒），但没有超过H1 incumbent；
+H3从接受的H1而非被拒绝的H2重启，1,207.4秒后同样增量为0。H2/H3连续两轮
+未接受，顺序臂Harness达到patience=2并冻结H1 patch
+`60b43b8fd5f64852bd20234dbd4e50e71b46253a6f604adba86bc53f5f49a680`。
+
+两臂随后分别用21+3（node3）和18+6（node4）的严格partial recovery覆盖全部
+24个train packets，各生成512行assignment-aligned Solver数据。MA W1首次因把
+完整9.8KB patch源码放入critic context而在GPU分配前超出1024-token预算；改为
+稳定patch SHA后，第二次又在首个value forward暴露AReaL DP4实际发送1-D单轨迹，
+而prefix逻辑只接受`[1, seq]`。两次均为零optimizer update。修复后MA W1和顺序
+W1均完成2个actor/4个critic更新，分别耗时4,060.0秒和4,065.1秒；MA使用
+224-token pre-action centralized context，顺序臂不使用。MA权重digest从
+`435cb03ebd10`变为`258e52983e8b`，顺序臂变为`81bc16629ec3`。
+
+W1的paired no-patch dev gate均拒绝：node3为78→78、gain 0、LCB 0；node4为
+79→81、gain +2pp但LCB 0。node3 dev packet用8+2恢复，node4用9+1恢复；
+packet-transductive结果77/100和83/100只作诊断。MA H2随后在E1/W0上完成
+2个actor/4个critic更新（1,218.0秒），64行数据中有25% authentic replay；
+实际两个batch精确消费9条fresh与3条replay。最终权重digest为`a68594777e7d`。
+其9个已消费fresh候选都未超过H1 incumbent；H1本轮重测为90/100，相对
+no-patch 78/100为+12pp、LCB+6pp，这一题运行波动不归因于H2。H2拒绝。
+两臂W2均从接受的W0（不是被拒绝的W1）重启，使用sample offsets512–1023。
 
 正式MA分支不是虚构完整MAPPO：采用去中心actor、pre-action joint-state critic、
 W版本隔离reward cache、W变化后的H reward refresh，以及25%真实Engineer
@@ -309,6 +326,9 @@ ALFWorld模型/环境就绪后的首轮8题基线+RL patch重跑约几分钟；
 | dev packet仍写共享cohort | 旧driver把generated config/cohort留在共享asset目录 | AgentBench、config、cohort、task ID和scratch全部run-local；exit0 summary仍检查infra failure并有界重试 |
 | global reward返回packet局部ID | 官方子评测输出0–9，selector基线使用300–399 | 只接受精确global集合或完整局部集合；后者按packet start显式映射，其他形状失败 |
 | 中断cache retry等待7200秒 | SIGKILL遗留`.lock`，失败`reward.json`又会成为cache hit | resume排除锁并丢弃infra-failure entry，只复用评测身份一致的成功结果 |
+| centralized critic context超预算 | 把完整Harness源码放进joint context，tokenizer后远超预留1024 | 只存稳定patch SHA；H/W领取GPU前审计context token数 |
+| DP4 value输入为1-D | 每rank单轨迹没有显式batch维，旧prefix只接受`[1,seq]` | prefix沿最后一维扩展全部token-aligned字段，返回actor前剥离context |
+| replay轮次version-0候选过量 | 放宽replay head lag后异步预取也产生version-0 fresh receipts | 训练持久化前`steps×batch` ID ledger；global gate精确限定已消费fresh ID并排除replay |
 | W并发出现HTTP 406 | 连续task IDs共用同一单会话packet worker | 跨24 workers round-robin；启动前审计完整异步active window |
 | AReaL导出缺preprocessor metadata | 权重checkpoint不一定复制全部Qwen runtime文件 | 从输入checkpoint补齐并单独记录；权重变化使用纯safetensors digest |
 | H训练提示漏掉执行上限 | 多hook提示未声明每个code的helper/AST硬限制 | 零更新停止；显式声明已有validator契约并从E0/W0同步重启 |
@@ -326,8 +346,9 @@ target必须返回真正的OpenAI `tool_calls`，文本看似XML不是等价证�
    r1/r2/r3均为零optimizer更新且已隔离；protocol v8下两臂H1-r4均完成
    2个actor/4个critic更新。node4 H1在dev从79/100升至87/100
    （+8pp，LCB+2pp），node3从78/100升至89/100（+11pp，LCB+5pp），
-   两者均被接受。node4 H2未超过H1 incumbent，当前运行H3；node3当前进行
-   E1/W0 train refresh，随后启动MA W1。
+   两者均被接受。node4 H2/H3连续未接受，顺序Harness已冻结H1；node3 W1和
+   H2、node4 W1均未通过增量gate。两节点当前从W0运行W2；W2后继续paired
+   no-patch dev gate。
 2. node4按H至平台→W至平台执行顺序SAO；node3按H1-W1-H2-W2执行MA-SAO。
    每个角色至少两轮、patience=2、最多八轮，基础设施失败不算模型0分。
 3. 每轮只用dev 300–399停止/接受；要求≥1pp、paired gain>0且one-sided
@@ -353,8 +374,8 @@ target必须返回真正的OpenAI `tool_calls`，文本看似XML不是等价证�
 - 首先读本文件，再读对应方法README和实际JSON receipt；启动日志不是完成receipt。
 - 当前服务器仅授权node3/node4。CPU测试显式`CUDA_VISIBLE_DEVICES=''`，
   每节点GPU进程由单个ownership supervisor管理，不杀未知/其他用户进程。
-- 截至2026-09-30 19:40 UTC，node4运行顺序H3，node3运行MA W1的train
-  packet refresh；开始新任务前仍须重新核验实际service、PID、端口和GPU占用，
+- 截至2026-09-30 23:02 UTC，node4运行顺序W2，node3运行MA W2；开始新任务
+  前仍须重新核验实际service、PID、端口和GPU占用，
   不能只依赖本文判断运行状态。
 - 保存已有权重、算法和分析；清理中间产物必须先有经过验证的保留清单。
   旧约826.5GB checkpoint inventory仅做过盘点，不能声称已安全清理。
@@ -369,6 +390,8 @@ target必须返回真正的OpenAI `tool_calls`，文本看似XML不是等价证�
 提交范围的CPU回归：**448 passed、5 skipped、843 subtests passed**。
 本轮global-selector/cache恢复改动另通过完整`whale_local/tests`：
 **135 passed**；其后失败cache过滤的定向回归为**18 passed**。
+centralized-context、1-D trajectory、partial packet和精确消费ledger相关定向
+回归最新为**32 passed**。
 跳过项不代表通过GPU训练测试；本次没有重新训练模型。存在上游依赖的弃用警告。
 服务器Python环境为torch 2.10、transformers 5.7、vLLM 0.19.1；
 旧发布环境的requirements不能静默视为当前环境完全相同。

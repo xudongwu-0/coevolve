@@ -381,11 +381,45 @@ and cached infrastructure-failure results. Node3 retry3 consequently reused
 109 successful evaluations and recomputed one failed key in 253 seconds.
 
 Node4 H2 completed two more actor and four critic updates in 1,320.9 seconds
-but did not improve over the H1 incumbent. The incumbent itself re-evaluated
-at 88 rather than 87 passes, so the one-task run-level fluctuation is recorded
-but not attributed to H2. H2 was rejected, and H3 restarted from the accepted
-H1 actor/critic using fresh sample offsets 128--191. Node3 is refreshing all
-24 train packets under accepted E1/W0 before MA-SAO W1. Sealed test 400--499
+but did not improve over the H1 incumbent. H3 restarted from accepted H1
+rather than rejected H2 and completed in 1,207.4 seconds; it also produced
+zero incremental gain. Two consecutive rejected rounds satisfy the Harness
+patience rule, so the sequential arm freezes H1 patch
+`60b43b8fd5f64852bd20234dbd4e50e71b46253a6f604adba86bc53f5f49a680`.
+
+Train-packet refresh then reached exact 24-packet coverage through 21+3
+partial recovery on node3 and 18+6 on node4. Each arm generated 512
+assignment-aligned Solver rows. MA W1 had two zero-update infrastructure
+failures before its formal run: first, a full 9.8 KB patch embedded in the
+critic context exceeded the reserved 1,024 tokens; second, AReaL's DP4
+dispatch supplied one-dimensional per-rank trajectories while the context
+prefix assumed `[1, seq]`. Context now stores a stable patch SHA and is
+token-audited before GPU allocation. Prefixing now supports 1-D, 2-D, and
+general token-aligned leading dimensions and strips the prefix from returned
+values.
+
+After those fixes, MA W1 and sequential W1 each completed two actor and four
+critic updates in 4,060.0 and 4,065.1 seconds. MA used a 224-token pre-action
+centralized context; sequential W1 had no centralized context. Their final
+weight digests were `258e52983e8b...` and `81bc16629ec3...`. Paired no-patch
+dev gates rejected both: MA was 78 to 78 (gain 0, LCB 0), while sequential was
+79 to 81 (+2 points, LCB 0). The associated packet-transductive 77 and 83 are
+diagnostics only.
+
+MA H2 then completed in 1,218.0 seconds from accepted E1/W0 with 25% authentic
+Engineer replay and a decentralized actor. The two optimizer batches consumed
+exactly nine fresh rows and three replay rows. Relaxing replay head lag also
+allowed extra version-0 fresh prefetches, so behavior version alone was no
+longer an exact consumption marker. The first selector launch was stopped
+before a decision. Training now persists the first `steps * batch` ID ledger;
+global selection requires exact receipt coverage for its fresh IDs and
+excludes replay. The corrected nine-candidate gate rejected H2. H1 re-evaluated
+at 90/100 versus a 78/100 no-patch baseline (+12 points, LCB +6); the one-task
+change from its first 89/100 run is not credited to H2.
+
+Both W1 checkpoints are therefore rejected. Sequential and MA W2 restart from
+W0, not W1, with non-overlapping Solver sample offsets 512--1023. Both W2
+optimizer runs were active at 2026-09-30 23:02 UTC. Sealed test 400--499
 remains unread.
 
 ## Environment and official assets
