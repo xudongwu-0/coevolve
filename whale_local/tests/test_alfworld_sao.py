@@ -199,6 +199,7 @@ class AlfworldSaoTest(unittest.TestCase):
             cache = previous / "reward_cache"
             cache.mkdir(parents=True)
             (cache / "result.json").write_text("{}", encoding="utf-8")
+            (cache / ".lock").write_text("", encoding="utf-8")
             identity = {
                 "packet_refresh": "/packets",
                 "candidate_receipt_roots": ["/receipts"],
@@ -219,6 +220,7 @@ class AlfworldSaoTest(unittest.TestCase):
                 (run / "reward_cache/result.json").read_text(encoding="utf-8"),
                 "{}",
             )
+            self.assertFalse((run / "reward_cache/.lock").exists())
             manifest = json.loads(
                 (run / "reward_cache_seed.json").read_text(encoding="utf-8")
             )

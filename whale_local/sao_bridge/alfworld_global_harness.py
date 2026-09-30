@@ -303,7 +303,7 @@ def seed_reward_cache(run: Path, config: dict) -> None:
             f"seed reward cache evaluation identity changed: {mismatched}"
         )
     destination = run / "reward_cache"
-    shutil.copytree(source, destination)
+    shutil.copytree(source, destination, ignore=shutil.ignore_patterns(".lock"))
     files = [path for path in destination.rglob("*") if path.is_file()]
     write_json(run / "reward_cache_seed.json", {
         "source": str(source),
