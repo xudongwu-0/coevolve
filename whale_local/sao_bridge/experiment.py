@@ -187,7 +187,8 @@ def main():
             write_json(context, {
                 "phase": "w" if role == "solver" else ("h1" if phase == "h1" else "h2"),
                 "actor_role": role, "partner_checkpoint": solver if role == "editor" else editor,
-                "harness_source": harness.read_text(), "calibration_accuracy": feedback,
+                "harness_source": "sha256:" + hashlib.sha256(harness.read_bytes()).hexdigest(),
+                "calibration_accuracy": feedback,
                 "calibration_split": "dev", "partner_version": len(stages) - 1,
             })
         actor_gpus, rollout_gpus = spec.get(f"{role}_layout", [2, 2] if role == "editor" else [4, 4])

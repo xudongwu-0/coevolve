@@ -12,6 +12,7 @@ import time
 from .alfworld_h_train import monitor_gpus
 from .budget import model_digests
 from .common import ensure_model_runtime_metadata, read_json, write_json
+from .joint_context import joint_context_audit
 from .launch import Launcher
 from .resources import stop_known
 
@@ -92,10 +93,18 @@ def main() -> None:
     args = parser.parse_args()
     config = read_json(args.config)
     schedule_audit = assignment_schedule_audit(config)
+    context_audit = None
+    if config.get("central_context"):
+        context_audit = joint_context_audit(
+            Path(config["central_context"]),
+            Path(config.get("solver_critic", config["solver_model"])),
+        )
     run = Path(config["run"]).resolve()
     run.mkdir(parents=True, exist_ok=False)
     write_json(run / "config.json", config)
     write_json(run / "schedule_audit.json", schedule_audit)
+    if context_audit is not None:
+        write_json(run / "joint_context_audit.json", context_audit)
     write_json(run / "resource_audit.json", stop_known(require_exclusive=True))
     launch = Launcher(run / "supervision")
     telemetry_stop = threading.Event()

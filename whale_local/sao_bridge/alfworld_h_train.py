@@ -11,6 +11,7 @@ import time
 
 from .budget import model_digests
 from .common import ensure_model_runtime_metadata, read_json, write_json
+from .joint_context import joint_context_audit
 from .large_train import training_capacity_audit, validate_training_rows
 from .launch import Launcher
 from .resources import stop_known
@@ -81,6 +82,14 @@ def main() -> None:
         validate_training_rows(preflight_spec, rows)
         capacity_audit = training_capacity_audit(preflight_spec, rows)
         write_json(run / "capacity_audit.json", capacity_audit)
+        if config.get("central_context"):
+            write_json(
+                run / "joint_context_audit.json",
+                joint_context_audit(
+                    Path(config["central_context"]),
+                    Path(config.get("engineer_critic", config["engineer_model"])),
+                ),
+            )
     except BaseException as exc:
         write_json(run / "FAILED.json", {
             "status": "failed", "phase": config.get("phase"),

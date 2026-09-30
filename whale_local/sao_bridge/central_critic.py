@@ -9,24 +9,7 @@ import torch
 from areal.engine.fsdp_engine import FSDPPPOCritic
 from transformers import AutoTokenizer
 
-CONTEXT_KEYS = {
-    "phase", "actor_role", "partner_checkpoint", "harness_source",
-    "calibration_accuracy", "calibration_split", "partner_version",
-}
-
-
-def context_text(context: dict) -> str:
-    if set(context) != CONTEXT_KEYS:
-        raise ValueError("Joint context must contain exactly the declared pre-action fields")
-    if context["calibration_split"] != "dev":
-        raise ValueError("Only pre-action development calibration is permitted")
-    if context["phase"] not in {"h1", "w", "h2"}:
-        raise ValueError("Invalid joint phase")
-    if context["actor_role"] not in {"editor", "solver"}:
-        raise ValueError("Invalid actor role")
-    if not 0 <= float(context["calibration_accuracy"]) <= 1:
-        raise ValueError("Invalid calibration accuracy")
-    return "Joint pre-action training state:\n" + json.dumps(context, sort_keys=True) + "\n"
+from .joint_context import CONTEXT_TOKEN_BUDGET, context_text
 
 
 def prepend_context(sample: dict, prefix: list[int]) -> dict:
@@ -59,8 +42,10 @@ class JointStateCritic(FSDPPPOCritic):
         context = json.loads(Path(os.environ["MA_SAO_CONTEXT_FILE"]).read_text())
         tokenizer = AutoTokenizer.from_pretrained(config.path, local_files_only=True)
         self.context_ids = tokenizer.encode(context_text(context), add_special_tokens=False)
-        if len(self.context_ids) > 1024:
-            raise ValueError("Joint context exceeds the reserved 1024-token budget")
+        if len(self.context_ids) > CONTEXT_TOKEN_BUDGET:
+            raise ValueError(
+                f"Joint context exceeds the reserved {CONTEXT_TOKEN_BUDGET}-token budget"
+            )
 
     @torch.no_grad()
     def compute_values(self, data):

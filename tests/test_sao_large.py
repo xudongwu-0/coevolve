@@ -3,12 +3,13 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import torch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "whale_local"))
 from sao_bridge.central_critic import JointStateCritic, context_text, prepend_context
+from sao_bridge.joint_context import joint_context_audit
 from sao_bridge.resources import SCRIPT, UNIT, is_filler
 from sao_bridge.replay import interaction_reward, replay_interaction, replay_rows, validate_call
 from sao_bridge.common import write_json
@@ -68,6 +69,23 @@ class CentralCriticTests(unittest.TestCase):
             context_text({**context, "test_accuracy": 1.0})
         with self.assertRaises(ValueError):
             context_text({**context, "calibration_split": "test"})
+
+    def test_context_audit_rejects_full_harness_source(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            context = Path(temporary) / "context.json"
+            write_json(context, {
+                "phase": "w", "actor_role": "solver",
+                "partner_checkpoint": "frozen",
+                "harness_source": "full source", "calibration_accuracy": 0.5,
+                "calibration_split": "dev", "partner_version": 1,
+            })
+            tokenizer = Mock()
+            tokenizer.encode.return_value = list(range(1025))
+            with patch(
+                "transformers.AutoTokenizer.from_pretrained",
+                return_value=tokenizer,
+            ), self.assertRaisesRegex(ValueError, "stable harness identity"):
+                joint_context_audit(context, Path(temporary))
 
     def test_native_value_results_are_sliced_back_to_actor_tokens(self):
         from sao_bridge.central_critic import JointStateCritic
