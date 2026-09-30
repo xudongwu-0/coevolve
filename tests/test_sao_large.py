@@ -31,18 +31,19 @@ class CentralCriticTests(unittest.TestCase):
         from areal.engine.fsdp_engine import FSDPPPOCritic
         critic = object.__new__(JointStateCritic)
         critic.context_ids = [10, 11]
-        row = {"input_ids": torch.tensor([[4, 5, 6]]),
-               "attention_mask": torch.ones((1, 3), dtype=torch.bool),
-               "loss_mask": torch.tensor([[0, 1, 1]])}
+        row = {"input_ids": torch.tensor([4, 5, 6]),
+               "attention_mask": torch.ones(3, dtype=torch.bool),
+               "loss_mask": torch.tensor([0, 1, 1])}
         with patch.object(FSDPPPOCritic, "compute_values",
-                          return_value=[torch.tensor([[10., 11., 1., 2., 3.]])]) as forward:
+                          return_value=[torch.tensor([10., 11., 1., 2., 3.])]) as forward:
             values = critic.compute_values([row])
-            self.assertEqual(values[0].tolist(), [[1., 2., 3.]])
+            self.assertEqual(values[0].tolist(), [1., 2., 3.])
             self.assertEqual(forward.call_args.args[0][0]["loss_mask"].tolist(),
-                             [[0, 0, 0, 1, 1]])
+                             [0, 0, 0, 1, 1])
         with patch.object(FSDPPPOCritic, "ppo_update") as update:
             critic.ppo_update([row])
-            self.assertEqual(update.call_args.args[0][0]["loss_mask"].sum(), 2)
+            self.assertEqual(update.call_args.args[0][0]["loss_mask"].tolist(),
+                             [0, 0, 0, 1, 1])
 
     def test_prefix_masks_and_alignment_without_actor_mutation(self):
         row = {

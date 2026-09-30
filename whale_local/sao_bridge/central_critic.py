@@ -14,17 +14,19 @@ from .joint_context import CONTEXT_TOKEN_BUDGET, context_text
 
 def prepend_context(sample: dict, prefix: list[int]) -> dict:
     ids = sample["input_ids"]
-    if ids.ndim != 2 or ids.shape[0] != 1 or not prefix:
-        raise ValueError("Expected one unpadded/padded trajectory and a nonempty context")
+    if ids.ndim < 1 or not prefix:
+        raise ValueError("Expected token-aligned trajectory tensors and a nonempty context")
     n = len(prefix)
     result = {}
     for key, value in sample.items():
-        if torch.is_tensor(value) and value.ndim == 2 and value.shape == ids.shape:
+        if torch.is_tensor(value) and value.shape == ids.shape:
             if key == "position_ids":
                 continue
-            lead = torch.zeros((1, n), dtype=value.dtype, device=value.device)
+            lead_shape = (*value.shape[:-1], n)
+            lead = torch.zeros(lead_shape, dtype=value.dtype, device=value.device)
             if key == "input_ids":
-                lead[0] = torch.tensor(prefix, dtype=value.dtype, device=value.device)
+                context = torch.tensor(prefix, dtype=value.dtype, device=value.device)
+                lead.copy_(context.reshape(*([1] * (value.ndim - 1)), n))
             elif key == "attention_mask":
                 lead.fill_(1)
             elif key == "versions":
