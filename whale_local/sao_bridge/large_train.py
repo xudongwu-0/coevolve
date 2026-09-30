@@ -159,7 +159,9 @@ def configure(spec: dict, run: Path) -> dict:
     cfg["actor"]["mb_spec"]["max_tokens_per_mb"] = microbatch_tokens
     cfg["critic"]["mb_spec"]["max_tokens_per_mb"] = microbatch_tokens + 2048
     cfg["rollout"].update(
-        max_head_offpolicyness=spec.get("staleness", 4),
+        max_head_offpolicyness=spec.get(
+            "max_head_offpolicyness", spec.get("staleness", 4)
+        ),
         # One extra batch may be generated while the previous batch trains.
         max_concurrent_rollouts=spec["batch_size"] * (spec.get("staleness", 1) + 1),
         consumer_batch_size=spec["batch_size"], dump_to_file=True,

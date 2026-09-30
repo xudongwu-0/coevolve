@@ -482,6 +482,7 @@ class AlfworldSaoTest(unittest.TestCase):
             "phase": "h1", "experiment": "campaign", "steps": 2, "batch_size": 6,
             "actor_gpus": 3, "rollout_gpus": 1,
             "harness": "/run/h0.json", "data": "/run/h1.json",
+            "staleness": 1, "max_head_offpolicyness": 16,
         }
         spec = training_spec(config, Path("/run"), "http://127.0.0.1:28600")
         self.assertEqual(spec["domain"], "alfworld")
@@ -489,6 +490,8 @@ class AlfworldSaoTest(unittest.TestCase):
         self.assertEqual(spec["gdn_prefill_backend"], "triton")
         self.assertEqual(spec["evaluator_url"], "http://127.0.0.1:28600")
         self.assertEqual(spec["microbatch_tokens"], 20000)
+        self.assertEqual(spec["staleness"], 1)
+        self.assertEqual(spec["max_head_offpolicyness"], 16)
         self.assertEqual(LAYOUTS["h"], {
             "actor": [0, 1, 2], "rollout": [3],
             "frozen_solver": [4, 5, 6, 7],

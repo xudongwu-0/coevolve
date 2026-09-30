@@ -36,6 +36,9 @@ def training_spec(config: dict, run: Path, evaluator_url: str) -> dict:
         "tokens": config.get("engineer_tokens", 12288),
         "temperature": config.get("temperature", 0.7),
         "staleness": config.get("staleness", 1),
+        "max_head_offpolicyness": config.get(
+            "max_head_offpolicyness", config.get("staleness", 1)
+        ),
         "harness": config["harness"],
         "data": config["data"],
         "evaluator_url": evaluator_url,
