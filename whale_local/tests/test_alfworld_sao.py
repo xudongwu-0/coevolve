@@ -16,6 +16,7 @@ from sao_bridge.alfworld_phase_data import (
     TRAINING_VALIDATOR_REMINDER, assignments_from_matrix, editor_dataset,
     packet_rows, solver_dataset,
 )
+from sao_bridge.alfworld_packet_refresh import combine_probe_results
 from sao_bridge.alfworld_h_train import training_spec
 from sao_bridge.alfworld_prepare import partition_rows
 from sao_bridge.alfworld_w_train import (
@@ -32,6 +33,35 @@ from harness_r1_alfworld.packet_probe import packet_jobs
 
 
 class AlfworldSaoTest(unittest.TestCase):
+    def test_packet_refresh_combines_only_complete_disjoint_results(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            first = root / "first"
+            second = root / "second"
+            first.mkdir()
+            second.mkdir()
+            base = {"pairing": "rl_agent_sft", "size": 10}
+            write_json(first / "COMPLETE.json", {
+                "status": "failed", "completed": 1, "failed": 1,
+                "results": [
+                    {**base, "start": 0, "status": "completed"},
+                    {**base, "start": 10, "status": "failed"},
+                ],
+            })
+            write_json(second / "COMPLETE.json", {
+                "status": "completed", "completed": 1, "failed": 0,
+                "results": [{**base, "start": 10, "status": "completed"}],
+            })
+            combined = combine_probe_results([first, second], [0, 10], 10)
+            self.assertEqual(combined["status"], "completed")
+            self.assertEqual(
+                [row["start"] for row in combined["results"]], [0, 10],
+            )
+            with self.assertRaisesRegex(ValueError, "duplicate completed"):
+                combine_probe_results([second, second], [10], 10)
+            with self.assertRaisesRegex(ValueError, "coverage mismatch"):
+                combine_probe_results([first], [0, 10], 10)
+
     def test_packet_retry_ports_do_not_overlap_full_train_first_attempt(self):
         jobs = packet_jobs(
             "phase", list(range(0, 240, 10)), 10, 4,

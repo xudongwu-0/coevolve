@@ -15,6 +15,44 @@ from .resources import stop_known
 from harness_r1_alfworld.packet_report import aggregate
 
 
+def combine_probe_results(probe_roots: list[Path], expected_starts: list[int],
+                          size: int) -> dict:
+    if not expected_starts or len(expected_starts) != len(set(expected_starts)):
+        raise ValueError("expected packet starts must be nonempty and distinct")
+    results = {}
+    sources = []
+    for root in probe_roots:
+        receipt_path = root / "COMPLETE.json"
+        receipt = read_json(receipt_path)
+        sources.append({
+            "path": str(root.resolve()),
+            "status": receipt.get("status"),
+            "completed": receipt.get("completed"),
+            "failed": receipt.get("failed"),
+        })
+        for result in receipt.get("results", []):
+            if result.get("status") != "completed":
+                continue
+            start = result.get("start")
+            if (type(start) is not int or result.get("size") != size
+                    or result.get("pairing") != "rl_agent_sft"):
+                raise ValueError(f"invalid completed packet result in {receipt_path}")
+            if start in results:
+                raise ValueError(f"duplicate completed packet start: {start}")
+            results[start] = result
+    if set(results) != set(expected_starts):
+        missing = sorted(set(expected_starts) - set(results))
+        extra = sorted(set(results) - set(expected_starts))
+        raise ValueError(
+            f"combined packet coverage mismatch: missing={missing}, extra={extra}"
+        )
+    ordered = [results[start] for start in sorted(results)]
+    return {
+        "status": "completed", "completed": len(ordered), "failed": 0,
+        "results": ordered, "source_probes": sources,
+    }
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, required=True)
@@ -86,11 +124,20 @@ def main() -> None:
                 process, f"{config['phase']}_probe",
                 timeout=float(config.get("phase_timeout_seconds", 21600)),
             )
-            probe = read_json(run / "probe/COMPLETE.json")
-            report = aggregate([run / "probe"])
+            probe_roots = [
+                Path(path) for path in config.get("reuse_probe_roots", [])
+            ] + [run / "probe"]
+            expected_starts = config.get("expected_starts", starts)
+            combined = combine_probe_results(
+                probe_roots, list(map(int, expected_starts)), int(config.get("size", 10)),
+            )
+            combined_root = run / "combined_probe"
+            combined_root.mkdir()
+            write_json(combined_root / "COMPLETE.json", combined)
+            report = aggregate([combined_root])
             write_json(run / "report.json", report)
             assignments, task_names = assignments_from_matrix(
-                [run / "probe"], Path(config["no_patch"]), config["harness_version"],
+                [combined_root], Path(config["no_patch"]), config["harness_version"],
             )
             write_json(run / "assignments.json", assignments)
             write_json(run / "task_names.json", {
@@ -110,7 +157,7 @@ def main() -> None:
             write_json(run / "COMPLETE.json", {
                 "status": "completed", "phase": config["phase"],
                 "elapsed_seconds": time.time() - started,
-                "packets": probe["completed"], "assignments": len(assignments),
+                "packets": combined["completed"], "assignments": len(assignments),
                 "task_count": len(task_names), "harness_version": config["harness_version"],
                 "baseline_rate": report["baseline_rate"],
                 "patched_rate": report["patched_rate"],
@@ -119,6 +166,7 @@ def main() -> None:
                 "solver_model": config["solver_model"],
                 "solver_data_output": solver_data_output,
                 "solver_data_rows": len(solver_rows) if solver_rows is not None else None,
+                "source_probes": combined["source_probes"],
             })
     except BaseException as exc:
         write_json(run / "FAILED.json", {
