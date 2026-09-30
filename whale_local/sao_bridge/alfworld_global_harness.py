@@ -94,6 +94,29 @@ def accepted_candidate(report: dict, minimum_absolute_gain: float) -> bool:
     )
 
 
+def complete_without_candidates(run: Path, config: dict, packets: list[dict],
+                                minimum_absolute_gain: float) -> None:
+    no_patch = Path(config["no_patch"])
+    selected_sha256 = hashlib.sha256(no_patch.read_bytes()).hexdigest()
+    write_json(run / "candidates.json", [])
+    write_json(run / "selected_patch.json", read_json(no_patch))
+    write_json(run / "COMPLETE.json", {
+        "status": "completed", "phase": config["phase"],
+        "elapsed_seconds": 0.0,
+        "tasks": sum(packet["batch_size"] for packet in packets),
+        "candidate_count": 0, "accepted": False,
+        "selected_sha256": selected_sha256, "selected_gain": 0.0,
+        "selected_lcb": 0.0,
+        "minimum_absolute_gain": minimum_absolute_gain,
+        "selection_split": config["selection_split"],
+        "reason": "no_valid_harness_candidates",
+    })
+    write_json(run / "RELEASED.json", {
+        "released_at": time.time(), "remaining_gpu_pids": [],
+        "gpu_resources_claimed": False,
+    })
+
+
 async def evaluate_candidates(url: str, candidates: list[dict], packets: list[dict],
                               concurrency: int) -> list[dict]:
     semaphore = asyncio.Semaphore(concurrency)
@@ -148,7 +171,6 @@ def main() -> None:
     run = Path(config["run"]).resolve()
     run.mkdir(parents=True, exist_ok=False)
     write_json(run / "config.json", config)
-    write_json(run / "resource_audit.json", stop_known(require_exclusive=True))
     packets = packet_metadata(Path(config["packet_refresh"]), config["solver_version"])
     candidates = (
         [{"sha256": hashlib.sha256(Path(config["patch"]).read_bytes()).hexdigest(),
@@ -157,8 +179,13 @@ def main() -> None:
         if config.get("patch") else
         candidate_patches([Path(path) for path in config["candidate_refreshes"]])
     )
+    minimum_absolute_gain = float(config["minimum_absolute_gain"])
+    if not 0 < minimum_absolute_gain <= 1:
+        raise ValueError("minimum_absolute_gain must be in (0, 1]")
     if not candidates:
-        raise ValueError("global harness selection has no valid candidates")
+        complete_without_candidates(run, config, packets, minimum_absolute_gain)
+        return
+    write_json(run / "resource_audit.json", stop_known(require_exclusive=True))
     launch = Launcher(run / "supervision")
     telemetry_stop = threading.Event()
     telemetry = threading.Thread(
@@ -217,7 +244,6 @@ def main() -> None:
                 )
             reports.sort(key=lambda row: (-row["patched_pass"], row["sha256"]))
             best = reports[0]
-            minimum_absolute_gain = float(config["minimum_absolute_gain"])
             accepted = accepted_candidate(best, minimum_absolute_gain)
             selected = best if accepted else {
                 "sha256": hashlib.sha256(Path(config["no_patch"]).read_bytes()).hexdigest(),

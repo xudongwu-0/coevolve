@@ -7,7 +7,9 @@ from sao_bridge.alfworld_domain import (
     _running, _terminal_reward, harness_spec,
 )
 from sao_bridge.alfworld_env_service import task_definition
-from sao_bridge.alfworld_global_harness import accepted_candidate
+from sao_bridge.alfworld_global_harness import (
+    accepted_candidate, complete_without_candidates,
+)
 from sao_bridge.alfworld_phase_data import (
     TRAINING_VALIDATOR_REMINDER, assignments_from_matrix, editor_dataset,
     packet_rows, solver_dataset,
@@ -54,6 +56,29 @@ class AlfworldSaoTest(unittest.TestCase):
         self.assertEqual(report["one_sided_95pct_lower_bound"], 1.0)
         with self.assertRaisesRegex(ValueError, "task identity"):
             paired_solver_report({0: 0.0}, {1: 1.0}, 1000, 42, 0.01)
+
+    def test_no_valid_global_candidate_is_a_rejected_model_result(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            run = Path(temporary)
+            no_patch = run / "no-patch.json"
+            no_patch.write_text('{"benchmark":"alfworld","actions":[]}')
+            complete_without_candidates(
+                run,
+                {
+                    "phase": "h2-dev",
+                    "no_patch": str(no_patch),
+                    "selection_split": "dev-300-399",
+                },
+                [{"batch_size": 10}, {"batch_size": 10}],
+                0.01,
+            )
+            result = json.loads((run / "COMPLETE.json").read_text())
+            released = json.loads((run / "RELEASED.json").read_text())
+        self.assertFalse(result["accepted"])
+        self.assertEqual(result["candidate_count"], 0)
+        self.assertEqual(result["tasks"], 20)
+        self.assertEqual(result["reason"], "no_valid_harness_candidates")
+        self.assertFalse(released["gpu_resources_claimed"])
 
     def test_runtime_metadata_supplements_do_not_replace_weights(self):
         with tempfile.TemporaryDirectory() as temporary:
