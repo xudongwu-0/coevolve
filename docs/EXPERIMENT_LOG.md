@@ -1832,4 +1832,7 @@ It is exploratory validation, not held-out AIME. AIME test stays sealed until a 
     E0/W0 with persisted preflight receipts showing
     `required=22702 < configured=23040`. Dev evaluation chains are queued only
     behind a valid H `COMPLETE.json`; failures restore filler instead of
-    fabricating scores. Sealed test400--499 remains unread.
+    fabricating scores. Before those chains ran, the selector was corrected to
+    enforce the protocol's declared `minimum_dev_gain=0.01` in addition to a
+    positive one-sided95% LCB; a regression test prevents sub-1pp noise from
+    being accepted. Sealed test400--499 remains unread.

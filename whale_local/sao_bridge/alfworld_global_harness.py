@@ -85,6 +85,15 @@ def lower_bound(deltas: list[float], samples: int, seed: int) -> float:
     return estimates[int(0.05 * samples)]
 
 
+def accepted_candidate(report: dict, minimum_absolute_gain: float) -> bool:
+    if not 0 < minimum_absolute_gain <= 1:
+        raise ValueError("minimum_absolute_gain must be in (0, 1]")
+    return (
+        report["gain"] >= minimum_absolute_gain
+        and report["one_sided_95pct_lower_bound"] > 0
+    )
+
+
 async def evaluate_candidates(url: str, candidates: list[dict], packets: list[dict],
                               concurrency: int) -> list[dict]:
     semaphore = asyncio.Semaphore(concurrency)
@@ -208,7 +217,8 @@ def main() -> None:
                 )
             reports.sort(key=lambda row: (-row["patched_pass"], row["sha256"]))
             best = reports[0]
-            accepted = best["gain"] > 0 and best["one_sided_95pct_lower_bound"] > 0
+            minimum_absolute_gain = float(config["minimum_absolute_gain"])
+            accepted = accepted_candidate(best, minimum_absolute_gain)
             selected = best if accepted else {
                 "sha256": hashlib.sha256(Path(config["no_patch"]).read_bytes()).hexdigest(),
                 "path": str(Path(config["no_patch"]).resolve()),
@@ -224,6 +234,7 @@ def main() -> None:
                 "candidate_count": len(reports), "accepted": accepted,
                 "selected_sha256": selected["sha256"], "selected_gain": selected["gain"],
                 "selected_lcb": selected["one_sided_95pct_lower_bound"],
+                "minimum_absolute_gain": minimum_absolute_gain,
                 "selection_split": config["selection_split"],
             })
     except BaseException as exc:

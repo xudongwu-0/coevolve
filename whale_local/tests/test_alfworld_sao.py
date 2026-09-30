@@ -7,6 +7,7 @@ from sao_bridge.alfworld_domain import (
     _running, _terminal_reward, harness_spec,
 )
 from sao_bridge.alfworld_env_service import task_definition
+from sao_bridge.alfworld_global_harness import accepted_candidate
 from sao_bridge.alfworld_phase_data import (
     TRAINING_VALIDATOR_REMINDER, assignments_from_matrix, editor_dataset,
     packet_rows, solver_dataset,
@@ -24,6 +25,21 @@ from sao_bridge.gpu_report import LAYOUTS
 
 
 class AlfworldSaoTest(unittest.TestCase):
+    def test_global_harness_requires_declared_gain_and_positive_lcb(self):
+        threshold = 0.01
+        report = {"gain": 0.009, "one_sided_95pct_lower_bound": 0.001}
+        self.assertFalse(accepted_candidate(report, threshold))
+        self.assertTrue(accepted_candidate(
+            {**report, "gain": threshold},
+            threshold,
+        ))
+        self.assertFalse(accepted_candidate(
+            {**report, "gain": 0.02, "one_sided_95pct_lower_bound": 0.0},
+            threshold,
+        ))
+        with self.assertRaisesRegex(ValueError, "minimum_absolute_gain"):
+            accepted_candidate(report, 0.0)
+
     def test_runtime_metadata_supplements_do_not_replace_weights(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
