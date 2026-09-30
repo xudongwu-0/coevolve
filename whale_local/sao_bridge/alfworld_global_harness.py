@@ -25,8 +25,14 @@ def patch_identity(patch: dict) -> str:
     return hashlib.sha256(canonical.encode()).hexdigest()
 
 
+def probe_receipt(refresh_root: Path) -> dict:
+    combined = refresh_root / "combined_probe/COMPLETE.json"
+    path = combined if combined.is_file() else refresh_root / "probe/COMPLETE.json"
+    return read_json(path)
+
+
 def packet_metadata(refresh_root: Path, solver_version: str) -> list[dict]:
-    complete = read_json(refresh_root / "probe/COMPLETE.json")
+    complete = probe_receipt(refresh_root)
     metadata = []
     template = None
     for result in complete["results"]:
@@ -64,7 +70,7 @@ def packet_metadata(refresh_root: Path, solver_version: str) -> list[dict]:
 def candidate_patches(refresh_roots: list[Path]) -> list[dict]:
     candidates = {}
     for root in refresh_roots:
-        complete = read_json(root / "probe/COMPLETE.json")
+        complete = probe_receipt(root)
         for result in complete["results"]:
             attempt = result["attempts"][result["selected_attempt"] - 1]
             summary = attempt["summary"]

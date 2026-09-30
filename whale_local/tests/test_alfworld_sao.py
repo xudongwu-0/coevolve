@@ -186,6 +186,8 @@ class AlfworldSaoTest(unittest.TestCase):
             all_pass = root / "all-pass"
             failed = root / "failed"
             probe.mkdir()
+            combined = root / "combined_probe"
+            combined.mkdir()
             all_pass.mkdir()
             failed.mkdir()
             (all_pass / "failure_packets.jsonl").write_text("")
@@ -201,7 +203,8 @@ class AlfworldSaoTest(unittest.TestCase):
                     },
                 },
             }) + "\n")
-            write_json(probe / "COMPLETE.json", {
+            write_json(probe / "COMPLETE.json", {"results": []})
+            write_json(combined / "COMPLETE.json", {
                 "results": [
                     {
                         "start": 300,
