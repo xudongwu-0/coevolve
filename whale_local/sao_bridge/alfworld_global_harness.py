@@ -19,6 +19,11 @@ from .launch import Launcher
 from .resources import stop_known
 
 
+def patch_identity(patch: dict) -> str:
+    canonical = json.dumps(patch, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(canonical.encode()).hexdigest()
+
+
 def packet_metadata(refresh_root: Path, solver_version: str) -> list[dict]:
     complete = read_json(refresh_root / "probe/COMPLETE.json")
     metadata = []
@@ -68,10 +73,11 @@ def candidate_patches(refresh_roots: list[Path]) -> list[dict]:
                 continue
             path = Path(attempt["output"]) / "patched/baseline/patch.json"
             source = path.read_text()
-            identity = hashlib.sha256(source.encode()).hexdigest()
+            patch = json.loads(source)
+            identity = patch_identity(patch)
             candidates.setdefault(identity, {
                 "sha256": identity, "path": str(path.resolve()),
-                "patch": json.loads(source),
+                "patch": patch,
             })
     return [candidates[key] for key in sorted(candidates)]
 
@@ -104,8 +110,7 @@ def receipt_candidates(receipt_roots: list[Path],
                     or patch.get("benchmark") != "alfworld"
                     or not isinstance(patch.get("actions"), list)):
                 raise ValueError(f"valid receipt has an invalid ALFWorld patch: {path}")
-            canonical = json.dumps(patch, sort_keys=True, separators=(",", ":"))
-            identity = hashlib.sha256(canonical.encode()).hexdigest()
+            identity = patch_identity(patch)
             candidates.setdefault(identity, {
                 "sha256": identity,
                 "path": str(path.resolve()),
@@ -134,12 +139,65 @@ def accepted_candidate(report: dict, minimum_absolute_gain: float) -> bool:
     )
 
 
+def no_patch_report(no_patch: Path, packets: list[dict]) -> dict:
+    patch = read_json(no_patch)
+    rows = []
+    for metadata in packets:
+        baseline = {
+            int(task_id): float(reward)
+            for task_id, reward in metadata["baseline_rewards"].items()
+        }
+        rows.extend({
+            "task_id": task_id,
+            "baseline_reward": baseline[task_id],
+            "patched_reward": baseline[task_id],
+            "delta_reward": 0.0,
+        } for task_id in sorted(baseline))
+    baseline_pass = sum(row["baseline_reward"] for row in rows)
+    return {
+        "sha256": patch_identity(patch),
+        "path": str(no_patch.resolve()),
+        "patch": patch,
+        "candidate_source": "no_patch_incumbent",
+        "task_rows": rows,
+        "tasks": len(rows),
+        "baseline_pass": baseline_pass,
+        "patched_pass": baseline_pass,
+        "gain": 0.0,
+        "one_sided_95pct_lower_bound": 0.0,
+        "is_incumbent": True,
+    }
+
+
+def paired_patch_improvement(candidate: dict, incumbent: dict,
+                             bootstrap_samples: int, bootstrap_seed: int) -> dict:
+    candidate_rows = {
+        row["task_id"]: row["patched_reward"] for row in candidate["task_rows"]
+    }
+    incumbent_rows = {
+        row["task_id"]: row["patched_reward"] for row in incumbent["task_rows"]
+    }
+    if set(candidate_rows) != set(incumbent_rows):
+        raise ValueError("candidate and incumbent changed development task identity")
+    deltas = [
+        candidate_rows[task_id] - incumbent_rows[task_id]
+        for task_id in sorted(incumbent_rows)
+    ]
+    return {
+        "gain": sum(deltas) / len(deltas),
+        "one_sided_95pct_lower_bound": lower_bound(
+            deltas, bootstrap_samples, bootstrap_seed,
+        ),
+    }
+
+
 def complete_without_candidates(run: Path, config: dict, packets: list[dict],
                                 minimum_absolute_gain: float) -> None:
-    no_patch = Path(config["no_patch"])
-    selected_sha256 = hashlib.sha256(no_patch.read_bytes()).hexdigest()
+    incumbent = Path(config.get("incumbent_patch", config["no_patch"]))
+    patch = read_json(incumbent)
+    selected_sha256 = patch_identity(patch)
     write_json(run / "candidates.json", [])
-    write_json(run / "selected_patch.json", read_json(no_patch))
+    write_json(run / "selected_patch.json", patch)
     write_json(run / "COMPLETE.json", {
         "status": "completed", "phase": config["phase"],
         "elapsed_seconds": 0.0,
@@ -147,6 +205,8 @@ def complete_without_candidates(run: Path, config: dict, packets: list[dict],
         "candidate_count": 0, "accepted": False,
         "selected_sha256": selected_sha256, "selected_gain": 0.0,
         "selected_lcb": 0.0,
+        "selected_absolute_gain_vs_no_patch": None,
+        "incumbent_sha256": selected_sha256,
         "minimum_absolute_gain": minimum_absolute_gain,
         "selection_split": config["selection_split"],
         "reason": "no_valid_harness_candidates",
@@ -215,12 +275,17 @@ def main() -> None:
     try:
         packets = packet_metadata(
             Path(config["packet_refresh"]), config["solver_version"])
+        no_patch = Path(config["no_patch"])
+        no_patch_incumbent = no_patch_report(no_patch, packets)
+        incumbent_path = Path(config.get("incumbent_patch", no_patch))
+        incumbent_patch = read_json(incumbent_path)
+        incumbent_sha256 = patch_identity(incumbent_patch)
         if config.get("patch"):
+            patch = read_json(Path(config["patch"]))
             candidates = [{
-                "sha256": hashlib.sha256(
-                    Path(config["patch"]).read_bytes()).hexdigest(),
+                "sha256": patch_identity(patch),
                 "path": str(Path(config["patch"]).resolve()),
-                "patch": read_json(Path(config["patch"])),
+                "patch": patch,
                 "candidate_source": "declared_patch",
             }]
         else:
@@ -252,6 +317,18 @@ def main() -> None:
     if not candidates:
         complete_without_candidates(run, config, packets, minimum_absolute_gain)
         return
+    evaluation_candidates = list(candidates)
+    if (incumbent_sha256 != no_patch_incumbent["sha256"]
+            and incumbent_sha256 not in {
+                candidate["sha256"] for candidate in evaluation_candidates
+            }):
+        evaluation_candidates.append({
+            "sha256": incumbent_sha256,
+            "path": str(incumbent_path.resolve()),
+            "patch": incumbent_patch,
+            "candidate_source": "declared_incumbent",
+            "is_incumbent": True,
+        })
     try:
         write_json(run / "resource_audit.json", stop_known(require_exclusive=True))
     except BaseException as exc:
@@ -302,7 +379,7 @@ def main() -> None:
             )
             launch.ready(process, f"http://127.0.0.1:{port}/health")
             reports = asyncio.run(evaluate_candidates(
-                f"http://127.0.0.1:{port}", candidates, packets,
+                f"http://127.0.0.1:{port}", evaluation_candidates, packets,
                 config.get("candidate_concurrency", 8),
             ))
             samples = int(config.get("bootstrap_samples", 10000))
@@ -317,24 +394,50 @@ def main() -> None:
                     gain=sum(deltas) / len(deltas),
                     one_sided_95pct_lower_bound=lower_bound(deltas, samples, seed),
                 )
-            reports.sort(key=lambda row: (-row["patched_pass"], row["sha256"]))
-            best = reports[0]
-            accepted = accepted_candidate(best, minimum_absolute_gain)
-            selected = best if accepted else {
-                "sha256": hashlib.sha256(Path(config["no_patch"]).read_bytes()).hexdigest(),
-                "path": str(Path(config["no_patch"]).resolve()),
-                "patch": read_json(Path(config["no_patch"])),
-                "gain": 0.0, "one_sided_95pct_lower_bound": 0.0,
+            if incumbent_sha256 == no_patch_incumbent["sha256"]:
+                incumbent = no_patch_incumbent
+            else:
+                incumbent = next(
+                    report for report in reports
+                    if report["sha256"] == incumbent_sha256
+                )
+                incumbent["is_incumbent"] = True
+            fresh_reports = [
+                report for report in reports
+                if report["sha256"] != incumbent_sha256
+            ]
+            ranked = sorted(
+                [*fresh_reports, incumbent],
+                key=lambda row: (-row["patched_pass"], row["sha256"]),
+            )
+            best = ranked[0]
+            improvement = paired_patch_improvement(best, incumbent, samples, seed)
+            accepted = (
+                best["sha256"] != incumbent_sha256
+                and accepted_candidate(improvement, minimum_absolute_gain)
+            )
+            selected = best if accepted else incumbent
+            selected_improvement = improvement if accepted else {
+                "gain": 0.0,
+                "one_sided_95pct_lower_bound": 0.0,
             }
+            reports.sort(key=lambda row: (-row["patched_pass"], row["sha256"]))
             write_json(run / "candidates.json", reports)
             write_json(run / "selected_patch.json", selected["patch"])
             write_json(run / "COMPLETE.json", {
                 "status": "completed", "phase": config["phase"],
                 "elapsed_seconds": time.time() - started,
                 "tasks": sum(packet["batch_size"] for packet in packets),
-                "candidate_count": len(reports), "accepted": accepted,
-                "selected_sha256": selected["sha256"], "selected_gain": selected["gain"],
-                "selected_lcb": selected["one_sided_95pct_lower_bound"],
+                "candidate_count": len(fresh_reports), "accepted": accepted,
+                "selected_sha256": selected["sha256"],
+                "selected_gain": selected_improvement["gain"],
+                "selected_lcb": selected_improvement[
+                    "one_sided_95pct_lower_bound"],
+                "selected_absolute_gain_vs_no_patch": selected["gain"],
+                "selected_absolute_lcb_vs_no_patch": selected[
+                    "one_sided_95pct_lower_bound"],
+                "incumbent_sha256": incumbent_sha256,
+                "incumbent_absolute_gain_vs_no_patch": incumbent["gain"],
                 "minimum_absolute_gain": minimum_absolute_gain,
                 "selection_split": config["selection_split"],
             })

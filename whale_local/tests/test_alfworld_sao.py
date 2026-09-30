@@ -9,7 +9,7 @@ from sao_bridge.alfworld_domain import (
 from sao_bridge.alfworld_env_service import task_definition
 from sao_bridge.alfworld_global_harness import (
     accepted_candidate, complete_without_candidates, packet_metadata,
-    receipt_candidates,
+    paired_patch_improvement, receipt_candidates,
 )
 from sao_bridge.alfworld_phase_data import (
     TRAINING_VALIDATOR_REMINDER, assignments_from_matrix, editor_dataset,
@@ -43,6 +43,23 @@ class AlfworldSaoTest(unittest.TestCase):
         ))
         with self.assertRaisesRegex(ValueError, "minimum_absolute_gain"):
             accepted_candidate(report, 0.0)
+
+    def test_harness_round_compares_against_the_incumbent_not_no_patch(self):
+        incumbent = {
+            "task_rows": [
+                {"task_id": task_id, "patched_reward": 1.0}
+                for task_id in range(10)
+            ],
+        }
+        candidate = {
+            "task_rows": [
+                {"task_id": task_id, "patched_reward": float(task_id != 0)}
+                for task_id in range(10)
+            ],
+        }
+        improvement = paired_patch_improvement(candidate, incumbent, 1000, 42)
+        self.assertEqual(improvement["gain"], -0.1)
+        self.assertFalse(accepted_candidate(improvement, 0.01))
 
     def test_solver_selection_is_paired_and_uses_the_same_gate(self):
         report = paired_solver_report(
