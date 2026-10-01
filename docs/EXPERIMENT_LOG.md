@@ -2583,3 +2583,23 @@ It is exploratory validation, not held-out AIME. AIME test stays sealed until a 
     A real CPU-only environment check used a local mock API on tasks240/247
     and verified exact sparse task mapping. It made zero real model/GPU calls
     and does not contribute to any accuracy result.
+
+93. **Repair matched-evaluation port collisions without changing model
+    evidence (2026-10-01).** All24 Engineer proposals completed: E0 andstep15
+    each8/8 valid, step31 5/8 valid with3 missing complete patch blocks.
+    Five baseline shards and15 selection target jobs completed. Five
+    unfinished jobs have explicit worker `EADDRINUSE` logs (ports46172,
+    46196,46244,46316,46340; two second attempts also collided); another job
+    was interrupted by controller teardown. These fixed ports fall in the
+    host ephemeral range32768--60999. The occupying processes at failure
+    time were not captured, so do not claim a particular process caused it.
+
+    Reuse the official locked/free-port allocator outside the ephemeral
+    range. Authorize exactly two further attempts only for the six
+    unfinished target jobs; preserve all original attempts and bind
+    successful cache checksums in a recovery receipt. No Engineer
+    regeneration, candidate filtering, task change or gate change.
+    Cached proposals now skip Engineer model startup, and exhausted job
+    budgets are detected before GPU allocation and exit78. Old identity
+    and failure/release receipts are archived rather than silently replaced.
+    This is an infrastructure recovery, not an algorithm outcome.

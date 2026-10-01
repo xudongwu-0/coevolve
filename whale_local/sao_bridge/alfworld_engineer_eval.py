@@ -28,11 +28,24 @@ UPSTREAM = ROOT / "third_party/harness-r1-upstream"
 ALFWORLD_PYTHON = Path("/dev/shm/harness-r1-alfworld-venv/bin/python")
 
 
+class EvaluationAttemptsExhausted(RuntimeError):
+    pass
+
+
 def official_modules():
     sys.path.insert(0, str(UPSTREAM / "code/Relax"))
     from examples.harness_r1 import eval_alfworld_patches, reward_alfworld_patch
 
     return eval_alfworld_patches, reward_alfworld_patch
+
+
+def reserve_ports(reward, job: dict):
+    os.environ["HARNESS_R1_PORT_LOCK_DIR"] = job["port_locks"]
+    os.environ["HARNESS_R1_AVOID_EPHEMERAL_PORTS"] = "1"
+    return reward._select_free_port_pair(
+        controller_base=12000, worker_base=22000, num_workers=1, span=4000,
+        seed=int(contract_digest(job["request"])[:8], 16) + job["attempt"] * 104729,
+    )
 
 
 def normalize_rewards(values: dict, task_ids: list[int]) -> dict[int, float]:
@@ -129,6 +142,7 @@ def run_job(path: Path) -> dict:
     output = Path(job["output"])
     output.mkdir(parents=True, exist_ok=True)
     evaluator, reward = official_modules()
+    port_locks = []
     try:
         if request["kind"] == "generate":
             args = generation_args(request)
@@ -157,8 +171,11 @@ def run_job(path: Path) -> dict:
             runtime = output / "runtime"
             agentbench = prepare_agentbench_runtime(runtime / "AgentBench")
             os.environ.update(cpu_env(runtime))
-            controller = 39000 + request["port_index"] + job["attempt"] * 200
-            worker = 43000 + request["port_index"] * 24 + job["attempt"] * 2500
+            controller, worker, port_locks = reserve_ports(reward, job)
+            write_json(output / "ports.json", {
+                "controller": controller, "worker": worker,
+                "ephemeral_range_excluded": True, "file_locks_held": True,
+            })
             if request["kind"] == "baseline":
                 write_json(output / "task_ids.json", task_ids)
                 args = SimpleNamespace(
@@ -216,6 +233,27 @@ def run_job(path: Path) -> dict:
     except BaseException as exc:
         write_json(output / "FAILED.json", {"error": repr(exc), "failed_at_unix": time.time()})
         raise
+    finally:
+        reward._release_port_locks(port_locks)
+
+
+def retry_credits(root: Path) -> dict:
+    recovery = root / "infrastructure_recovery.json"
+    record = read_json(recovery) if recovery.exists() else None
+    credits = record["additional_attempts"] if record is not None else {}
+    if any(type(value) is not int or value != 2 for value in credits.values()):
+        raise ValueError("Infrastructure recovery permits exactly two additional attempts per named job")
+    identity = root / "identity.json"
+    if identity.exists() and read_json(identity).get("infrastructure_recovery_sha256") != (
+        file_sha(recovery) if recovery.exists() else None
+    ):
+        raise ValueError("Infrastructure recovery authorization changed")
+    if record is not None:
+        for relative, digest in record["preserved_file_sha256"].items():
+            path = (root / relative).resolve()
+            if not path.is_relative_to(root.resolve()) or file_sha(path) != digest:
+                raise ValueError(f"Successful pre-recovery evaluation evidence changed: {relative}")
+    return credits
 
 
 class Jobs:
@@ -229,6 +267,7 @@ class Jobs:
         self.active = []
         self.results = {}
         self.requests = {}
+        self.retry_credits = retry_credits(root.parent)
 
     def add(self, request: dict) -> None:
         name = request["name"]
@@ -290,12 +329,18 @@ class Jobs:
             root = self.root / request["name"]
             attempts_path = root / "attempts.json"
             attempts = read_json(attempts_path) if attempts_path.exists() else []
-            if len(attempts) >= 2:
-                raise RuntimeError(f"Evaluation job exhausted two attempts: {request['name']}")
+            limit = 2 + self.retry_credits.get(request["name"], 0)
+            if len(attempts) >= limit:
+                raise EvaluationAttemptsExhausted(
+                    f"Evaluation job exhausted {limit} attempts: {request['name']}"
+                )
             attempt = len(attempts) + 1
             output = root / f"attempt-{attempt}"
             job_path = root / f"job-{attempt}.json"
-            write_json(job_path, {"request": request, "output": str(output), "attempt": attempt})
+            write_json(job_path, {
+                "request": request, "output": str(output), "attempt": attempt,
+                "port_locks": str(self.root.parent / "port_locks"),
+            })
             attempts.append({"started_at_unix": time.time(), "attempt": attempt})
             write_json(attempts_path, attempts)
             process = self.launch.module(
@@ -452,11 +497,20 @@ def run(spec_path: Path) -> dict:
         "solver_identity_sha256": file_sha(Path(spec["solver_identity_receipt"])),
         "evaluation_catalogue_sha256": file_sha(ALFWORLD_DATA / "test_set.json"),
         "sources": {str(path.relative_to(ROOT)): file_sha(path) for path in source_files},
+        "infrastructure_recovery_sha256": (
+            file_sha(root / "infrastructure_recovery.json")
+            if (root / "infrastructure_recovery.json").exists() else None
+        ),
     }
     _immutable_json(root / "identity.json", frozen)
     if (root / "COMPLETE.json").exists():
         return read_json(root / "COMPLETE.json")
-    (root / "FAILED.json").unlink(missing_ok=True)
+    for name in ("FAILED.json", "RELEASED.json"):
+        previous = root / name
+        if previous.exists():
+            archive = root / "controller_history" / f"{time.time_ns()}-{name}"
+            archive.parent.mkdir(exist_ok=True)
+            previous.rename(archive)
     started = time.time()
     launch = None
     telemetry = None
@@ -480,6 +534,24 @@ def run(spec_path: Path) -> dict:
         validate_spec(spec_path)
         if any(file_sha(ROOT / path) != digest for path, digest in frozen["sources"].items()):
             raise ValueError("Engineer evaluator source changed while waiting for training")
+        jobs_root = root / "jobs"
+        if jobs_root.exists():
+            credits = retry_credits(root)
+            for job_root in jobs_root.iterdir():
+                if not job_root.is_dir() or (job_root / "result.json").exists():
+                    continue
+                attempts_path = job_root / "attempts.json"
+                if not attempts_path.exists():
+                    continue
+                attempts = read_json(attempts_path)
+                recovered = any(
+                    (job_root / f"attempt-{index + 1}" / "result.json").exists()
+                    for index in range(len(attempts))
+                )
+                if not recovered and len(attempts) >= 2 + credits.get(job_root.name, 0):
+                    raise EvaluationAttemptsExhausted(
+                        f"Evaluation job exhausted its attempts before GPU allocation: {job_root.name}"
+                    )
         audit = read_json(root.parent / "TRAINING_NATIVE_AUDIT.json")
         if audit["status"] != "complete" or not audit["source_manifest_matches"]:
             raise ValueError("Engineer training audit is incomplete")
@@ -529,10 +601,17 @@ def run(spec_path: Path) -> dict:
             generation_names = {}
             with ExitStack() as engineer_servers:
                 for index, (label, model) in enumerate(models.items()):
-                    url = engineer_servers.enter_context(launch.vllm(**_model_options(
-                        model, port=19601 + index * 20, gpus=str(index),
-                        name=label, replicas=1, context=16384,
-                    )))
+                    cached = all(
+                        (root / "jobs" / f"generate-{label}-{sample}" / "result.json").is_file()
+                        for sample in range(len(prompts))
+                    )
+                    if cached:
+                        url = f"http://127.0.0.1:{19601 + index * 20}/v1"
+                    else:
+                        url = engineer_servers.enter_context(launch.vllm(**_model_options(
+                            model, port=19601 + index * 20, gpus=str(index),
+                            name=label, replicas=1, context=16384,
+                        )))
                     names = []
                     for sample, prompt in enumerate(prompts):
                         name = f"generate-{label}-{sample}"
@@ -611,6 +690,7 @@ def run(spec_path: Path) -> dict:
                     )
                 )
         validate_spec(spec_path)
+        retry_credits(root)
         if any(file_sha(ROOT / path) != digest for path, digest in frozen["sources"].items()):
             raise ValueError("Engineer evaluator source changed before result publication")
         complete = {
@@ -667,7 +747,11 @@ def main() -> None:
     mode.add_argument("--job", type=Path)
     mode.add_argument("--spec", type=Path)
     args = parser.parse_args()
-    print(run_job(args.job) if args.job else run(args.spec), flush=True)
+    try:
+        print(run_job(args.job) if args.job else run(args.spec), flush=True)
+    except EvaluationAttemptsExhausted as exc:
+        print(str(exc), file=sys.stderr, flush=True)
+        raise SystemExit(78) from exc
 
 
 if __name__ == "__main__":

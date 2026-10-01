@@ -360,6 +360,17 @@ fallback作为分数；非法模型输出则明确记为no-patch并保留在分�
 真实CPU环境用mock API验证了任务240/247的稀疏路由；零模型/GPU调用，不是
 准确率证据。收据在`runs/alfworld_engineer_eval_cpu_smoke_v1/validation.json`。
 
+首次匹配评测完成5个baseline shard、全部24个Engineer提案及15个selection
+target job后，部分worker因`EADDRINUSE`启动失败。已确认固定worker端口
+46172/46196/46244等落在机器的ephemeral范围32768--60999；没有证据确定
+当时占用每个端口的具体进程，不能把该故障当作模型零分或归因于某个用户。
+修复使用官方已存在的free-port/文件锁allocator，强制避开ephemeral范围，
+不修改系统端口设置、不杀未知进程。额外重试仅授权给6个未完成target job，
+原attempt、失败日志、旧源码identity和所有成功cache的SHA保留；不重采样
+任何Engineer输出，也不修改任务、候选数、seed、token或模型选择门槛。
+恢复时跳过已缓存的Engineer模型加载；耗尽重试返回78，避免重复加载GPU模型
+后才再次发现预算耗尽。`infrastructure_recovery.json`冻结这次迁移及有限授权。
+
 另已把train-only catalogue接入Engineer launcher和官方reward adapter：可选
 `training_split/training_catalogue/training_catalogue_sha256/solver_weights_sha256`
 贯穿预检、run-local overlay、请求metadata和cache namespace。每次请求先检查

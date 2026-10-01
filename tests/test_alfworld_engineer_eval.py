@@ -11,7 +11,7 @@ from unittest.mock import Mock, patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "whale_local"))
 from sao_bridge.alfworld_engineer_eval import (
     Jobs, _model_options, checked_scores, generation_args,
-    normalize_rewards, proposal_report, run, run_job,
+    normalize_rewards, official_modules, proposal_report, reserve_ports, run, run_job,
 )
 from sao_bridge.analysis import paired_difference
 from sao_bridge.budget import contract_digest
@@ -152,6 +152,7 @@ class AlfworldEngineerEvalTests(unittest.TestCase):
             patch("sao_bridge.alfworld_engineer_eval.official_modules", return_value=(evaluator, Mock())),
             patch("sao_bridge.alfworld_engineer_eval.prepare_agentbench_runtime", return_value=self.root),
             patch("sao_bridge.alfworld_engineer_eval.cpu_env", return_value={}),
+            patch("sao_bridge.alfworld_engineer_eval.reserve_ports", return_value=(12000, 22000, [])),
         ):
             with self.assertRaisesRegex(RuntimeError, "not a model score"):
                 run_job(job)
@@ -159,6 +160,42 @@ class AlfworldEngineerEvalTests(unittest.TestCase):
         self.assertEqual(metadata["task_ids"], [240, 247])
         self.assertEqual(metadata["batch_size"], 2)
         self.assertEqual(metadata["baseline_rewards"], {240: 0.0, 247: 1.0})
+
+    def test_real_port_allocator_excludes_ephemeral_and_locks_parallel_jobs(self):
+        _, reward = official_modules()
+        job = {
+            "request": {"name": "same-seed"}, "attempt": 1,
+            "port_locks": str(self.root / "ports"),
+        }
+        import os
+        with patch.dict(os.environ, {}):
+            left = reserve_ports(reward, job)
+            try:
+                right = reserve_ports(reward, job)
+                try:
+                    self.assertFalse(set(left[:2]) & set(right[:2]))
+                    self.assertTrue(all(
+                        not reward._port_is_ephemeral(port) for port in (*left[:2], *right[:2])
+                    ))
+                finally:
+                    reward._release_port_locks(right[2])
+            finally:
+                reward._release_port_locks(left[2])
+
+    def test_infrastructure_retry_credits_apply_only_to_named_jobs(self):
+        write_json(self.root / "infrastructure_recovery.json", {
+            "additional_attempts": {"affected": 2},
+            "preserved_file_sha256": {},
+        })
+        jobs = Jobs(self.root / "jobs", Mock(), 1)
+        self.assertEqual(jobs.retry_credits.get("affected", 0), 2)
+        self.assertEqual(jobs.retry_credits.get("new-report", 0), 0)
+        write_json(self.root / "infrastructure_recovery.json", {
+            "additional_attempts": {"affected": 100},
+            "preserved_file_sha256": {},
+        })
+        with self.assertRaises(ValueError):
+            Jobs(self.root / "jobs", Mock(), 1)
 
     def controller_fixture(self):
         root = self.root / "study/evaluation"
@@ -190,8 +227,14 @@ class AlfworldEngineerEvalTests(unittest.TestCase):
         prompts = [{"id": f"packet-{index}", "messages": []} for index in range(8)]
         return root, spec, manifest, prompts
 
-    def test_controller_selects_mean_proposal_quality_and_only_then_opens_report(self):
+    def execute_controller(self, *, cached=False):
         root, spec, manifest, prompts = self.controller_fixture()
+        if cached:
+            for label in ("e0", "step15", "step31"):
+                for sample in range(8):
+                    write_json(root / "jobs" / f"generate-{label}-{sample}" / "result.json", {
+                        "status": "complete",
+                    })
         requests = {}
         jobs = Mock()
         jobs.add.side_effect = lambda request: requests.update({request["name"]: request})
@@ -214,7 +257,7 @@ class AlfworldEngineerEvalTests(unittest.TestCase):
 
         @contextmanager
         def vllm(**options):
-            yield ",".join(f"http://local:{options['port'] + index}/v1" for index in range(options["data_parallel"]))
+            yield ",".join(f"http://127.0.0.1:{options['port'] + index}/v1" for index in range(options["data_parallel"]))
 
         launch.vllm.side_effect = vllm
 
@@ -238,6 +281,10 @@ class AlfworldEngineerEvalTests(unittest.TestCase):
             patch("sao_bridge.alfworld_engineer_eval._score_models", side_effect=reports) as score,
         ):
             complete = run(self.root / "spec.json")
+        return root, complete, score, launch
+
+    def test_controller_selects_mean_proposal_quality_and_only_then_opens_report(self):
+        root, complete, score, launch = self.execute_controller()
         self.assertTrue(complete["gate_passed"])
         self.assertTrue(complete["report_opened"])
         self.assertEqual(complete["selected"]["global_step"], 15)
@@ -248,6 +295,14 @@ class AlfworldEngineerEvalTests(unittest.TestCase):
         self.assertEqual(read_json(root / "COMPLETE.json"), complete)
         launch.close.assert_called_once()
         self.assertTrue((root / "RELEASED.json").is_file())
+
+    def test_completed_proposals_do_not_reload_any_engineer_model(self):
+        _, complete, _, launch = self.execute_controller(cached=True)
+        self.assertTrue(complete["gate_passed"])
+        self.assertEqual(
+            [call.kwargs["name"] for call in launch.vllm.call_args_list],
+            ["fixed_solver_5", "fixed_solver_extra_3"],
+        )
 
 
 if __name__ == "__main__":
