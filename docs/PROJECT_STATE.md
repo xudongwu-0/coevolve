@@ -351,6 +351,12 @@ serving协议不同，不能直接把两个train准确率相减；若需要配�
 完整轨迹，不能为接入旧MA组件重新打开已修正的bootstrap错误。
 24/70仍是用过的development数据，不是新sealed test；当前只是预算匹配的
 强续训探索，不预先声称到收敛或MA更强。完整说明见[MA方案](MA_SAO.md)。
+协议已冻结到`runs/alfworld_strong_sao_ma_v1/frozen_protocol.json`。
+第一次共同H1选择启动在import阶段失败：新worktree遗漏根目录WHALE link，
+没有启动GPU模型或采样；`common/INITIAL_STARTUP_FAILURE.json`保留完整记录。
+另已补齐matrix与环境服务的显式shared-cohort接线，普通训练仍强制ID分区。
+85项CPU测试和32个subtests通过；恢复必须保留9个标签/8个原E15提案、
+原seed/预算和24题cohort，不能把零计算启动失败当作算法负结果。
 
 复现数据准备（仓库根目录，无模型调用）：
 ```bash

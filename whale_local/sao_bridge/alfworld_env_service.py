@@ -81,6 +81,20 @@ def task_definition(name: str, task_ids: list[int], concurrency: int, harness: d
     return task
 
 
+def validate_assignment_cohorts(assignments: list[dict], *, harness_matrix: bool = False) -> None:
+    if not assignments:
+        raise ValueError("ALFWorld assignments must be nonempty")
+    if harness_matrix:
+        keys = ("task_ids", "split", "catalogue", "catalogue_sha256")
+        cohort = {key: assignments[0].get(key) for key in keys}
+        if any({key: entry.get(key) for key in keys} != cohort for entry in assignments[1:]):
+            raise ValueError("Harness matrix workers must use the same exact task cohort and split")
+    else:
+        ids = [task_id for entry in assignments for task_id in entry["task_ids"]]
+        if len(set(ids)) != len(ids):
+            raise ValueError("ALFWorld task assignments must partition task IDs")
+
+
 def stop(process: subprocess.Popen) -> None:
     if process.poll() is not None:
         return
@@ -127,6 +141,10 @@ def main() -> None:
     parser.add_argument("--harness", type=Path)
     parser.add_argument("--assignments", type=Path,
                         help="JSON list of {name, task_ids, harness} records")
+    parser.add_argument(
+        "--harness-matrix", action="store_true",
+        help="Permit the same exact task cohort in independently named harness workers",
+    )
     parser.add_argument("--controller-port", type=int, required=True)
     parser.add_argument("--worker-port", type=int, required=True)
     parser.add_argument("--concurrency", type=int, default=32)
@@ -149,6 +167,7 @@ def main() -> None:
             "name": args.task_name, "task_ids": read_json(args.task_ids),
             "harness": str(args.harness),
         }]
+    validate_assignment_cohorts(assignments, harness_matrix=args.harness_matrix)
     catalogues = {}
     for assignment in assignments:
         split = assignment.get("split", "test_set")
@@ -165,7 +184,6 @@ def main() -> None:
         run / "runtime/AgentBench", catalogues=catalogues,
     )
     config = {}
-    all_ids = []
     for assignment in assignments:
         if not re.fullmatch(r"[A-Za-z0-9_.-]+", assignment["name"]):
             raise ValueError("ALFWorld task assignment name contains unsafe characters")
@@ -180,9 +198,6 @@ def main() -> None:
         if set(config) & set(definition):
             raise ValueError("duplicate ALFWorld task assignment name")
         config.update(definition)
-        all_ids.extend(task_ids)
-    if len(set(all_ids)) != len(all_ids):
-        raise ValueError("ALFWorld task assignments must partition task IDs")
     task_names = list(config)
     config_path = run / "tasks.json"
     write_json(config_path, config)

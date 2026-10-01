@@ -2737,3 +2737,16 @@ It is exploratory validation, not held-out AIME. AIME test stays sealed until a 
     logger manager; logging tests now capture the actual module logger rather
     than a newly looked-up, orphaned name. Upstream sources were not changed.
     Real GPU matrix validation and the paired continuation are still pending.
+
+    The first common matrix unit failed during import, before creating an
+    evaluation root or loading any GPU model: snapshot setup omitted the
+    root-level WHALE submodule. Preserve the journal and zero-compute receipt
+    in `common/INITIAL_STARTUP_FAILURE.json`; enumerate `.gitmodules` rather
+    than only `third_party` on retry. Runtime-wiring inspection also found
+    that the environment service deliberately required partitioned IDs.
+    Add a separate explicit matrix flag permitting identical cohorts under
+    distinct worker names, without weakening training partition checks.
+    An end-to-end CPU runner test verifies that flag and patch snapshots;
+    the expanded suite passes85 tests/32 subtests. Its older token-budget
+    fixture now supplies structurally valid OpenAI tool arguments, preserving
+    its intended budget test under the already-adopted format-error semantics.

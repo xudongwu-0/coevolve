@@ -1,4 +1,5 @@
 import asyncio
+from contextlib import nullcontext
 import json
 from pathlib import Path
 import sys
@@ -11,14 +12,32 @@ import httpx
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "whale_local"))
 from sao_bridge.alfworld_solver_eval import (
-    bind_environment, evaluate_harnesses, matrix_harnesses, validate_config,
+    bind_environment, evaluate_harnesses, matrix_harnesses, run, validate_config,
 )
+from sao_bridge.alfworld_env_service import validate_assignment_cohorts
 from sao_bridge.alfworld_domain import logger as alfworld_logger, run_episode
 from sao_bridge.common import write_json
 from sao_bridge.evaluation import Sampler
 
 
 class AlfworldSolverEvaluationTests(unittest.TestCase):
+    def test_shared_cohort_is_explicit_and_training_assignments_remain_disjoint(self):
+        first = {"name": "a", "task_ids": [240, 241]}
+        repeated = [first, {**first, "name": "b"}]
+        with self.assertRaisesRegex(ValueError, "partition"):
+            validate_assignment_cohorts(repeated)
+        validate_assignment_cohorts(repeated, harness_matrix=True)
+        disjoint = [first, {"name": "b", "task_ids": [242, 243]}]
+        validate_assignment_cohorts(disjoint)
+        with self.assertRaisesRegex(ValueError, "same exact"):
+            validate_assignment_cohorts(disjoint, harness_matrix=True)
+        for change in ({"task_ids": [241, 242]}, {"split": "sao_train_v1"},
+                       {"catalogue_sha256": "different"}):
+            with self.subTest(change=change), self.assertRaisesRegex(ValueError, "same exact"):
+                validate_assignment_cohorts([first, {**first, **change}], harness_matrix=True)
+        with self.assertRaisesRegex(ValueError, "nonempty"):
+            validate_assignment_cohorts([], harness_matrix=True)
+
     def episode(self, completion, *, total_tokens=4096, environment_finishes=True):
         requests = []
 
@@ -424,6 +443,66 @@ class AlfworldSolverEvaluationTests(unittest.TestCase):
                 ))
             self.assertTrue(cancelled)
             sampler.close.assert_awaited_once()
+
+    def test_runner_wires_matrix_environment_and_freezes_patches_before_workers_start(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            model = root / "model"
+            model.mkdir()
+            (model / "model.safetensors").write_bytes(b"fixture")
+            no_patch, candidate = root / "empty.json", root / "candidate.json"
+            write_json(no_patch, {"benchmark": "alfworld", "actions": []})
+            original = {"benchmark": "alfworld", "actions": [{"fixture": 1}]}
+            write_json(candidate, original)
+            config = {
+                "run": str(root / "run"), "solver_model": str(model),
+                "solver_version": "fixture", "task_ids": [240, 300],
+                "no_patch": str(no_patch), "harnesses": {"candidate": str(candidate)},
+                "seed": 42, "samples": 2,
+            }
+            config_path = root / "config.json"
+            write_json(config_path, config)
+            launch = Mock(env={})
+            launch.vllm.return_value = nullcontext("http://localhost/v1")
+
+            def environment(module, arguments, **kwargs):
+                self.assertEqual(module, "sao_bridge.alfworld_env_service")
+                self.assertIn("--harness-matrix", arguments)
+                run_root = Path(arguments[arguments.index("--run") + 1])
+                write_json(run_root / "READY.json", {"ready": True})
+                assignment_path = Path(arguments[arguments.index("--assignments") + 1])
+                assignments = json.loads(assignment_path.read_text())
+                validate_assignment_cohorts(assignments, harness_matrix=True)
+                snapshots = [json.loads(Path(value["harness"]).read_text()) for value in assignments]
+                self.assertIn(original, snapshots)
+                self.assertNotIn(str(candidate), [value["harness"] for value in assignments])
+                write_json(candidate, {"benchmark": "alfworld", "actions": []})
+                return Mock(poll=Mock(return_value=None))
+
+            launch.module.side_effect = environment
+
+            async def evaluate_matrix(urls, normalized, assignments, run_root, aliases):
+                snapshots = [json.loads(Path(value["harness"]).read_text()) for value in assignments]
+                self.assertIn(original, snapshots)
+                self.assertEqual(set(aliases), {"no_patch", "candidate"})
+                return {"variants": {"candidate": {"accuracy": 0.75}},
+                        "unique_harnesses": 2, "logical_harnesses": 2}
+
+            with (
+                patch("sao_bridge.alfworld_solver_eval.Launcher", return_value=launch),
+                patch("sao_bridge.alfworld_solver_eval.stop_known", return_value={}),
+                patch("sao_bridge.alfworld_solver_eval.gpu_release_audit", return_value={}),
+                patch("sao_bridge.alfworld_solver_eval.threading.Thread"),
+                patch("sao_bridge.alfworld_solver_eval.evaluate_harnesses", side_effect=evaluate_matrix),
+                patch.dict("os.environ"),
+            ):
+                complete = run(config_path, harness_matrix=True)
+            self.assertEqual(complete["evaluation_mode"], "frozen_harness_matrix")
+            self.assertEqual(complete["unique_harnesses"], 2)
+            self.assertNotIn("accuracy", complete)
+            launch.vllm.assert_called_once()
+            launch.close.assert_called_once()
+            self.assertTrue((root / "run/RELEASED.json").is_file())
 
 
 if __name__ == "__main__":

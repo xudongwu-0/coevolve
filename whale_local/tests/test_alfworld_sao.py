@@ -454,7 +454,14 @@ class AlfworldSaoTest(unittest.TestCase):
                 "choices": [{
                     "message": {
                         "role": "assistant",
-                        "tool_calls": [{"type": "function"}],
+                        "tool_calls": [{
+                            "id": "call-0",
+                            "type": "function",
+                            "function": {
+                                "name": "take_action",
+                                "arguments": '{"action":"look"}',
+                            },
+                        }],
                     },
                 }],
                 "usage": {"completion_tokens": 1},

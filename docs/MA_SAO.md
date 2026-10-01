@@ -48,6 +48,13 @@ share the request limit; `environment_concurrency` is per harness worker, so the
 declared configuration allows at most 4x32 active episodes. Partial completed
 reports survive errors; peer evaluations are cancelled before the shared client
 closes, and infrastructure errors never become zero-reward fallback reports.
+The environment service also requires explicit matrix mode to repeat a cohort
+across independently named workers. Every matrix worker must have identical
+task IDs/split/catalogue; ordinary training assignments still must partition IDs.
+When preparing detached source worktrees, link **all** paths in `.gitmodules`,
+including root-level `WHALE`, as well as assets, then CPU-import the runner before
+starting a GPU unit. Looking only inside `third_party` misses the math reward
+dependency imported by the shared bridge.
 
 The matrix runner and train-only context support have CPU regression coverage.
 The full paired continuation is not yet a completed experiment; runtime receipts
