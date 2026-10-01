@@ -1,5 +1,58 @@
 # Fixed-sample SAO / MA-SAO research protocol
 
+## Current ALFWorld continuation (2026-10-01)
+
+The two independent 9B learning gates have passed; see
+[project state](PROJECT_STATE.md). The next **single-seed exploratory continuation**
+is declared in [the strong paired protocol](../examples/alfworld_strong_sao_ma_v1.json).
+It is not a fresh, independently initialized reproduction of the older formal math
+protocol below.
+
+- Both arms inherit the same validated Engineer E15 prefix and official W0. E15
+  contains 11 Actor updates, but the common history actually executed 32 native
+  steps/27 Actor updates and searched E0/E15/E31. Charge that whole history,
+  including discarded work, to both logical arms. Choose one common global H1
+  from the eight frozen E15 proposals on selection data only.
+- Strong sequential: common H1, then **H2-W1-W2**. MA: common H1, then
+  **W1-H2-W2**. H2 receives 32 native steps (5 critic-only, 27 Actor); each W
+  block receives the demonstrated 80-step recipe (5 critic-only, 75 Actor),
+  not the historical two-update recipe. Do not reject/restart W after step39:
+  the successful v4 run only improved at step79.
+- Both arms use the same per-role learning settings, examples/offsets, proposal
+  counts and phase-boundary Adam resets. Carry same-role critic weights, not an
+  Engineer critic into the Solver. Actual generation, failed attempts, GPU time,
+  refresh and selection costs must also be reported, not equated to update counts.
+- MA uses a pre-action centralized critic and refreshes train-only failure
+  packets after the Solver changes. Calibration is **train-only**, never report
+  labels. Fresh-only terminal trajectories are mandatory. Replay, interaction
+  bonuses and Solver recycling are **off**: the current terminal-mode validator
+  explicitly rejects legacy replay, and official target receipts do not contain
+  authentic Solver behavior probabilities. Do not bypass that guard to claim a
+  richer algorithm.
+- Selection/report use the goal-isolated 24/70 cohorts, mean@2, total 4096
+  completion tokens/episode, temperature1 and matched per-task/sample seeds.
+  These development cohorts have been used before; do not call them untouched
+  or confirmatory. Freeze both final arms before reading this comparison's report.
+  A large MA win requires at least +5pp and a positive paired 95% lower bound.
+  Order and centralized context change together; a win alone would not identify
+  which component is essential. A budget stop does not establish convergence.
+
+`python -m sao_bridge.alfworld_solver_eval --config CONFIG --harness-matrix`
+evaluates a JSON `harnesses` label-to-patch-path mapping using one Solver serving
+pool. The usual no-patch entry point remains strict; matrix mode must be explicit.
+The no-patch control is inserted automatically and its label cannot be overridden.
+Canonical duplicates share a rollout file but retain every logical label, including
+invalid proposals deliberately mapped to no-patch by the proposal selector.
+Patches are snapshotted before environment startup. Bounded parallel harnesses
+share the request limit; `environment_concurrency` is per harness worker, so the
+declared configuration allows at most 4x32 active episodes. Partial completed
+reports survive errors; peer evaluations are cancelled before the shared client
+closes, and infrastructure errors never become zero-reward fallback reports.
+
+The matrix runner and train-only context support have CPU regression coverage.
+The full paired continuation is not yet a completed experiment; runtime receipts
+and subsequent entries in [the experiment log](EXPERIMENT_LOG.md) are authoritative.
+
 ## Objective and control
 
 The primary endpoint is final held-out task accuracy under the same declared
@@ -20,8 +73,9 @@ As of 2026-09-29, only node3 and node4 are authorized for new experiments
 (the older runs below used node0/node4). Node0's prior utilization service was
 restored after its jobs completed. Both `sao_bridge.resources` and the launcher
 reject new compute allocation on other hosts. `sao_bridge.resources`
-checks command, owner and systemd cgroup before temporarily stopping the exact
-authorized utilization unit. It never disables/masks the service or kills an
+checks command, owner and systemd cgroup and keeps the separately deployed
+adaptive utilization supervisor active. Filler activity is excluded from
+experiment utilization. It never disables/masks that service or kills an
 unrecognized GPU job. A new run requires a fresh audit.
 
 ## Benchmark

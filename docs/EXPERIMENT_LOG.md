@@ -2697,3 +2697,43 @@ It is exploratory validation, not held-out AIME. AIME test stays sealed until a 
     failure. The node3 monitor also needs an output inside its owned run,
     not the node4-owned parent. Preserve these failed startup attempts;
     recovery uses an explicitly linked new run, not erased retry history.
+
+97. **2026-10-01 — verified v5 learning and bounded strong MA preparation.**
+    The explicit v5-r1 retry on node3 now has real native updates, not merely
+    loaded models: at20:32UTC,20 steps/12 nonzero Actor updates, targets[0,1],
+    matching frozen source and no controller restarts. First12 Actor-step
+    timing means are35.33s Actor,34.84s critic and11.72s rollout wait with
+    batch12. Compare per-sample and whole-run costs after completion; this
+    is not yet a quality result or a proven speedup over batch8.
+
+    On node4, a frozen31c66f4 train-only W79 probe completed240/240 episodes
+    in17.97 minutes:191 successes, one retained environment-invalid-action
+    episode. No report/test was opened. Release audit shows only the active
+    adaptive filler. This79.58% is training feedback, not a paired gain;
+    the old packet baseline has a different token/serving protocol.
+
+    Declare `examples/alfworld_strong_sao_ma_v1.json`: shared validated E15
+    prefix/W0, sequential H2-W1-W2 versus MA W1-H2-W2. H2 is32 native
+    steps(5 warmup+27 Actor); each W block is80(5+75). Both arms receive
+    the same role budgets and Adam-reset counts. The prefix actually spent
+    32 steps/27 Actor updates, although selected E15 has11 Actor updates;
+    discarded prefix work is not free. W1/W2 use1280 different instances/
+    880 train goals, isolated from the24/70 evaluation goals.
+
+    An important compatibility gate remains enforced: corrected terminal
+    training forbids legacy replay/recycled rows. Initial strong MA therefore
+    uses train-only centralized context and counterpart-refresh alternation,
+    with replay, interaction bonuses and Solver recycling OFF. Do not revert
+    terminal semantics or manufacture behavior probabilities to add features.
+    This shared-prefix, reused-development-cohort continuation is exploratory,
+    not a fresh seed replication or proof of convergence.
+
+    Native Solver evaluation gains an explicit `--harness-matrix` mode:
+    one serving pool, frozen patches, all duplicate labels retained,
+    common task/sample seeds, bounded parallel harnesses, incremental reports
+    and peer cancellation before client cleanup. The default no-patch CLI
+    remains strict.44 CPU tests plus12 subtests pass, including real evaluator
+    seed pairing and error cleanup. Combined AReaL imports reset the stdlib
+    logger manager; logging tests now capture the actual module logger rather
+    than a newly looked-up, orphaned name. Upstream sources were not changed.
+    Real GPU matrix validation and the paired continuation are still pending.

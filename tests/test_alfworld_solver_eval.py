@@ -4,14 +4,16 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import httpx
 
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "whale_local"))
-from sao_bridge.alfworld_solver_eval import bind_environment, validate_config
-from sao_bridge.alfworld_domain import run_episode
+from sao_bridge.alfworld_solver_eval import (
+    bind_environment, evaluate_harnesses, matrix_harnesses, validate_config,
+)
+from sao_bridge.alfworld_domain import logger as alfworld_logger, run_episode
 from sao_bridge.common import write_json
 from sao_bridge.evaluation import Sampler
 
@@ -72,7 +74,7 @@ class AlfworldSolverEvaluationTests(unittest.TestCase):
         for arguments in ('{"action": "look', '["look"]', None):
             with self.subTest(arguments=arguments):
                 completion = self.completion(arguments)
-                with self.assertLogs("sao_bridge.alfworld_domain", level="WARNING"):
+                with self.assertLogs(alfworld_logger, level="WARNING"):
                     result, requests = self.episode(completion)
                 self.assertEqual(result["reward"], 0.0)
                 self.assertEqual(result["stop_reason"], "invalid_tool_arguments")
@@ -92,7 +94,7 @@ class AlfworldSolverEvaluationTests(unittest.TestCase):
             "id": "call-1", "type": "function",
             "function": {"name": "action", "arguments": '{"action": "take'},
         })
-        with self.assertLogs("sao_bridge.alfworld_domain", level="WARNING"):
+        with self.assertLogs(alfworld_logger, level="WARNING"):
             result, _ = self.episode(completion)
         self.assertEqual(result["invalid_tool_arguments"][0]["tool_call_index"], 1)
         self.assertEqual(result["tool_calls"], 2)
@@ -176,6 +178,252 @@ class AlfworldSolverEvaluationTests(unittest.TestCase):
             self.assertEqual(normalized["samples"], 1)
             with self.assertRaisesRegex(ValueError, "distinct"):
                 validate_config({**config, "task_ids": [300, 300]})
+            with self.assertRaisesRegex(ValueError, "explicit"):
+                validate_config({**config, "harnesses": {"candidate": str(no_patch)}})
+            self.assertEqual(
+                validate_config(
+                    {**config, "harnesses": {"candidate": str(no_patch)}},
+                    harness_matrix=True,
+                )["solver_tokens"],
+                normalized["solver_tokens"],
+            )
+            with self.assertRaisesRegex(ValueError, "matrix_concurrency"):
+                validate_config({**config, "matrix_concurrency": 0}, harness_matrix=True)
+
+    def test_matrix_preserves_duplicate_labels_and_rejects_invalid_inputs(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            no_patch, duplicate = root / "no_patch.json", root / "duplicate.json"
+            write_json(no_patch, {"benchmark": "alfworld", "actions": []})
+            duplicate.write_text('{"actions": [], "benchmark": "alfworld"}\n')
+            config = {
+                "no_patch": str(no_patch), "harnesses": {
+                    "proposal0": str(no_patch), "proposal1": str(duplicate),
+                },
+            }
+            unique, aliases = matrix_harnesses(config)
+            self.assertEqual(len(unique), 1)
+            self.assertEqual(set(aliases), {"no_patch", "proposal0", "proposal1"})
+            self.assertEqual(len({value["sha256"] for value in aliases.values()}), 1)
+            for requested in ({}, [], {"no_patch": str(no_patch)}, {"../escape": str(no_patch)}):
+                with self.subTest(requested=requested), self.assertRaises(ValueError):
+                    matrix_harnesses({**config, "harnesses": requested})
+            write_json(duplicate, {"benchmark": "math", "actions": []})
+            with self.assertRaisesRegex(ValueError, "benchmark"):
+                matrix_harnesses(config)
+
+    def test_matrix_uses_one_sampler_and_common_task_sample_seeds(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            no_patch, candidate = root / "no_patch.json", root / "candidate.json"
+            write_json(no_patch, {"benchmark": "alfworld", "actions": []})
+            write_json(candidate, {"benchmark": "alfworld", "actions": [{"fixture": 1}]})
+            config = {
+                "no_patch": str(no_patch),
+                "harnesses": {"candidate": str(candidate), "duplicate": str(candidate)},
+                "task_ids": [240, 300], "seed": 42, "samples": 2,
+                "solver_tokens": 4096, "temperature": 1.0,
+                "eval_concurrency": 32, "environment_concurrency": 32,
+            }
+            unique, aliases = matrix_harnesses(config)
+            assignments = []
+            for index, (identity, value) in enumerate(unique.items()):
+                snapshot = root / f"{identity}.json"
+                write_json(snapshot, value["patch"])
+                assignments.append({
+                    "name": f"fixture-{index}", "harness": str(snapshot),
+                    "harness_sha256": identity,
+                })
+            sampler = Mock(close=AsyncMock())
+            evaluation = AsyncMock(side_effect=[{"accuracy": 0.5}, {"accuracy": 0.75}])
+            with (
+                patch("sao_bridge.alfworld_solver_eval.Sampler", return_value=sampler) as factory,
+                patch("sao_bridge.alfworld_solver_eval.evaluate", evaluation),
+            ):
+                report = asyncio.run(evaluate_harnesses(
+                    "http://localhost/v1", config, assignments, root, aliases,
+                ))
+            factory.assert_called_once()
+            sampler.close.assert_awaited_once()
+            self.assertEqual(evaluation.await_count, 2)
+            first, second = evaluation.await_args_list
+            self.assertEqual(first.kwargs, second.kwargs)
+            self.assertEqual(first.kwargs["samples"], 2)
+            self.assertEqual(first.kwargs["seed"], 42)
+            self.assertEqual(
+                [(row["id"], row["task_id"]) for row in first.args[1]],
+                [(row["id"], row["task_id"]) for row in second.args[1]],
+            )
+            self.assertNotEqual(first.args[1][0]["task_name"], second.args[1][0]["task_name"])
+            self.assertNotEqual(first.args[2], second.args[2])
+            self.assertEqual(report["logical_harnesses"], 3)
+            self.assertEqual(report["unique_harnesses"], 2)
+            self.assertEqual(report["variants"]["candidate"], report["variants"]["duplicate"])
+            self.assertEqual(report["variants"]["candidate"]["accuracy"], 0.75)
+            self.assertEqual(len(list((root / "reports").glob("*.json"))), 2)
+
+    def test_single_harness_output_is_unchanged_and_failures_close_sampler(self):
+        config = {
+            "task_ids": [240], "seed": 42, "samples": 2, "solver_tokens": 4096,
+            "temperature": 1.0, "eval_concurrency": 32, "environment_concurrency": 32,
+        }
+        assignment = [{"name": "fixture", "harness": "unused-in-no-patch-mode"}]
+        for value in ({"accuracy": 0.5}, RuntimeError("environment failed")):
+            sampler = Mock(close=AsyncMock())
+            with (
+                patch("sao_bridge.alfworld_solver_eval.Sampler", return_value=sampler),
+                patch(
+                    "sao_bridge.alfworld_solver_eval.evaluate",
+                    AsyncMock(side_effect=value if isinstance(value, Exception) else None,
+                              return_value=value),
+                ),
+            ):
+                if isinstance(value, Exception):
+                    with self.assertRaisesRegex(RuntimeError, "environment failed"):
+                        asyncio.run(evaluate_harnesses("http://localhost/v1", config, assignment, Path(".")))
+                else:
+                    report = asyncio.run(evaluate_harnesses(
+                        "http://localhost/v1", config, assignment, Path("."),
+                    ))
+                    self.assertIs(report, value)
+            sampler.close.assert_awaited_once()
+
+    def test_matrix_real_evaluator_pairs_seeds_and_keeps_completed_reports_on_failure(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            no_patch = root / "no_patch.json"
+            write_json(no_patch, {"benchmark": "alfworld", "actions": []})
+            config = {
+                "task_ids": [240, 300], "seed": 42, "samples": 2,
+                "solver_tokens": 4096, "temperature": 1.0,
+                "eval_concurrency": 32, "environment_concurrency": 32,
+            }
+            assignments = [
+                {"name": name, "harness": str(no_patch), "harness_sha256": name}
+                for name in ("first", "second")
+            ]
+            aliases = {name: {"sha256": name, "source_path": str(no_patch)}
+                       for name in ("first", "second")}
+            seeds = {}
+
+            async def episode(row, spec, sampler, *, total_tokens, seed):
+                seeds[row["task_name"], row["task_id"], seed] = total_tokens
+                return {
+                    "id": row["id"], "task_id": row["task_id"], "reward": 1.0,
+                    "tokens": 8, "tool_calls": 1, "tool_errors": 0,
+                    "truncated": False, "boxed": True,
+                }
+
+            domain = Mock(harness_spec=Mock(return_value={}),
+                          run_episode=AsyncMock(side_effect=episode))
+            sampler = Mock(close=AsyncMock())
+            with (
+                patch("sao_bridge.alfworld_solver_eval.Sampler", return_value=sampler),
+                patch("sao_bridge.evaluation.get_domain", return_value=domain),
+            ):
+                result = asyncio.run(evaluate_harnesses(
+                    "http://localhost/v1", config, assignments, root, aliases,
+                ))
+            self.assertEqual(len(seeds), 8)
+            self.assertEqual(
+                {(task, seed) for name, task, seed in seeds if name == "first"},
+                {(task, seed) for name, task, seed in seeds if name == "second"},
+            )
+            for value in result["variants"].values():
+                report = json.loads(Path(value["report"]).read_text())
+                self.assertEqual(report["metric"], "mean@2")
+                self.assertEqual(len(report["results"]), 4)
+                self.assertEqual({row["sample_index"] for row in report["results"]}, {0, 1})
+            sampler.close.assert_awaited_once()
+
+            failed_root = root / "failure"
+            sampler = Mock(close=AsyncMock())
+            with (
+                patch("sao_bridge.alfworld_solver_eval.Sampler", return_value=sampler),
+                patch(
+                    "sao_bridge.alfworld_solver_eval.evaluate",
+                    AsyncMock(side_effect=[{"accuracy": 0.5}, RuntimeError("real HTTP failure")]),
+                ),
+                self.assertRaisesRegex(RuntimeError, "real HTTP failure"),
+            ):
+                asyncio.run(evaluate_harnesses(
+                    "http://localhost/v1", config, assignments, failed_root, aliases,
+                ))
+            sampler.close.assert_awaited_once()
+            self.assertTrue((failed_root / "reports/first.json").is_file())
+            self.assertFalse((failed_root / "reports/second.json").exists())
+            self.assertEqual(
+                json.loads((failed_root / "PROGRESS.json").read_text())["completed_unique_harnesses"],
+                1,
+            )
+
+    def test_matrix_parallelism_is_bounded_and_cancels_peers_before_closing_sampler(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            source = root / "no_patch.json"
+            write_json(source, {"benchmark": "alfworld", "actions": []})
+            config = {
+                "task_ids": [240], "seed": 42, "samples": 2, "solver_tokens": 4096,
+                "temperature": 1.0, "eval_concurrency": 64, "environment_concurrency": 32,
+                "matrix_concurrency": 2,
+            }
+            assignments = [{
+                "name": f"fixture-{index}", "harness": str(source),
+                "harness_sha256": str(index),
+            } for index in range(5)]
+            aliases = {str(index): {"sha256": str(index), "source_path": str(source)}
+                       for index in range(5)}
+            active = maximum = 0
+
+            async def score(*args, **kwargs):
+                nonlocal active, maximum
+                active += 1
+                maximum = max(maximum, active)
+                try:
+                    await asyncio.sleep(0.01)
+                    return {"accuracy": 0.5}
+                finally:
+                    active -= 1
+
+            async def close():
+                self.assertEqual(active, 0)
+
+            sampler = Mock(close=AsyncMock(side_effect=close))
+            with (
+                patch("sao_bridge.alfworld_solver_eval.Sampler", return_value=sampler),
+                patch("sao_bridge.alfworld_solver_eval.evaluate", side_effect=score),
+            ):
+                result = asyncio.run(evaluate_harnesses(
+                    "http://localhost/v1", config, assignments, root, aliases,
+                ))
+            self.assertEqual(maximum, 2)
+            self.assertEqual(result["unique_harnesses"], 5)
+            sampler.close.assert_awaited_once()
+
+            cancelled = False
+
+            async def failing_score(sampler, rows, *args, **kwargs):
+                nonlocal active, cancelled
+                if rows[0]["task_name"] == "fixture-1":
+                    raise RuntimeError("real HTTP failure")
+                active += 1
+                try:
+                    await asyncio.sleep(60)
+                finally:
+                    active -= 1
+                    cancelled = True
+
+            sampler = Mock(close=AsyncMock(side_effect=close))
+            with (
+                patch("sao_bridge.alfworld_solver_eval.Sampler", return_value=sampler),
+                patch("sao_bridge.alfworld_solver_eval.evaluate", side_effect=failing_score),
+                self.assertRaisesRegex(RuntimeError, "real HTTP failure"),
+            ):
+                asyncio.run(evaluate_harnesses(
+                    "http://localhost/v1", config, assignments, root / "failed", aliases,
+                ))
+            self.assertTrue(cancelled)
+            sampler.close.assert_awaited_once()
 
 
 if __name__ == "__main__":

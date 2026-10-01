@@ -14,8 +14,8 @@ CONTEXT_TOKEN_BUDGET = 1024
 def context_text(context: dict) -> str:
     if set(context) != CONTEXT_KEYS:
         raise ValueError("Joint context must contain exactly the declared pre-action fields")
-    if context["calibration_split"] != "dev":
-        raise ValueError("Only pre-action development calibration is permitted")
+    if context["calibration_split"] not in {"train", "dev"}:
+        raise ValueError("Only pre-action train or legacy development calibration is permitted")
     if context["phase"] not in {"h1", "w", "h2"}:
         raise ValueError("Invalid joint phase")
     if context["actor_role"] not in {"editor", "solver"}:
@@ -47,4 +47,5 @@ def joint_context_audit(context_path: Path, model_path: Path) -> dict:
         "phase": context["phase"],
         "actor_role": context["actor_role"],
         "harness_identity": context["harness_source"],
+        "calibration_split": context["calibration_split"],
     }

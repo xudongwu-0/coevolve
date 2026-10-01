@@ -138,10 +138,16 @@ class CentralCriticTests(unittest.TestCase):
                        harness_source="h0", calibration_accuracy=0.5,
                        calibration_split="dev", partner_version=0)
         self.assertIn("Joint pre-action", context_text(context))
+        self.assertIn(
+            '"calibration_split": "train"',
+            context_text({**context, "calibration_split": "train"}),
+        )
         with self.assertRaises(ValueError):
             context_text({**context, "test_accuracy": 1.0})
         with self.assertRaises(ValueError):
             context_text({**context, "calibration_split": "test"})
+        with self.assertRaises(ValueError):
+            context_text({**context, "calibration_split": "report"})
 
     def test_context_audit_rejects_full_harness_source(self):
         with tempfile.TemporaryDirectory() as temporary:

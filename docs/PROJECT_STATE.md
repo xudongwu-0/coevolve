@@ -287,6 +287,16 @@ AReaL时，Hydra按真实文件定位caller，却按symlink路径计算相对con
 旧attempt与错误保留；恢复须用新的冻结源码/显式运行收据，不重置旧失败记录。
 node3的CPU monitor输出必须放在其拥有的run目录内，而非node4拥有的runs根。
 两节点只给当前process设置精确共享upstream的Git信任，不改global配置。
+修复后的显式retry在node3运行：
+`runs/alfworld_solver_fast_v5_r1_s42/`，service
+`coevolve-9b-solver-fast-v5-r1-s42`和`coevolve-9b-solver-fast-v5-r1-monitor`；
+冻结代码为`runs/source-snapshots/solver-fast-v5-r1-31c66f4/`。
+`INFRASTRUCTURE_RETRY.json`绑定旧失败记录并最多授权两个新attempt。
+环境和模型已ready，20:32UTC累计20个native step，其中12次Actor更新全部
+非零，critic target仍在[0,1]，manifest匹配、没有controller重启。
+前12次Actor阶段均值35.33s、critic34.84s、rollout等待11.72s；
+batch从8增到12，不能只按单步时间判断快慢，也不能提前宣称完整6/2实验
+加速/质量成功。结果输出在该run的`result.json`，不是runs根。
 
 v4已完成80个native step、75次非零Actor更新，critic targets始终[0,1]，
 训练只有一个attempt。step79评测连续因HTTP400失败，根因不是权重加载：
@@ -322,6 +332,25 @@ checkpoint及当前GPU释放。主gate结果为`runs/alfworld_solver_fast_v4_res
 此前v1双seed平均-2pp、v2平均0pp仍是必须报告的负结果；v4同时改变了训练池、
 预算和LR，不能据此识别唯一关键因素。当前已可研究MA-SAO，但不能把两侧
 分别变强直接当作交替训练更强，更不能与旧低预算顺序臂作不匹配比较。
+
+进入MA准备阶段，node4已完成
+[强Solver训练证据probe](../examples/alfworld_strong_solver_train_probe_v1.json)
+从已验证的W79采集legacy train 0--239的当前失败轨迹，与node3训练并行。
+240/240条轨迹完整，191/240成功（79.58%，仅训练诊断），耗时17.97分钟；
+1条环境`agent invalid action`保留，完成与释放收据齐全，剩余GPU进程只有
+用户filler。它不是相对W0的配对提升结果。
+固定空harness、greedy、每episode总4096 tokens，只用于训练反馈与
+counterpart-refresh实现，不打开新的report/test、不算作MA优势。
+这些train goal已从Engineer的24/70评测中排除。旧packet baseline的token/
+serving协议不同，不能直接把两个train准确率相减；若需要配对必须重采相同
+协议的W0。新的
+[强SAO/MA共同前缀探索协议](../examples/alfworld_strong_sao_ma_v1.json)
+声明相同E15/W0起点、H2-W1-W2对W1-H2-W2、每W块80步和H2的32步。
+两臂optimizer重置次数相同，MA critic只用train calibration。
+**不启用旧replay/interaction/recycling**：正确terminal模式明确要求fresh
+完整轨迹，不能为接入旧MA组件重新打开已修正的bootstrap错误。
+24/70仍是用过的development数据，不是新sealed test；当前只是预算匹配的
+强续训探索，不预先声称到收敛或MA更强。完整说明见[MA方案](MA_SAO.md)。
 
 复现数据准备（仓库根目录，无模型调用）：
 ```bash
