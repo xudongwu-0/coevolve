@@ -315,6 +315,23 @@ E0/E1使用相同8个压缩packet、相同decode种子和候选数。metadata-on
 report goal。主要目标是固定证据下候选质量的平均E1−E0变化，而不是挑出一个
 比no-patch好的E0提案；不声称测试了未见failure packet的迁移能力。
 数据位于`assets/alfworld_engineer_fast_v1/`。评测流水线仍需完成实际GPU验证。
+[评测协议](../examples/alfworld_engineer_fast_evaluation_v1.json)在训练前固定：
+仅比较step15/31，selection至少+2pp才打开该候选的report，report目标为
+平均E1−E0至少+3pp且题级95%下界大于0；重复和非法提案均保留在8个候选
+的分母内。协议是快速探索，不作多seed稳定性或独立confirmatory声明。
+
+[有限H训练worker](../whale_local/sao_bridge/alfworld_engineer_training.py)供系统
+service执行：冻结配置、数据、provenance与源码，最多两个训练attempt，失败
+attempt原样归档；完成训练只写`TRAINING_COMPLETE.json`和
+`training_complete_pending_evaluation`，不冒充Engineer能力验证完成。
+```bash
+PYTHONPATH=whale_local /dev/shm/sao-venv-ppo/bin/python -B \
+  -m sao_bridge.alfworld_engineer_training \
+  --config examples/alfworld_engineer_fast_v1_s42.json
+```
+systemd需保留`Restart=on-failure`、`RestartSec=30s`、
+`RestartPreventExitStatus=78`与精确unit级进程所有权。三个重试/归档/完成恢复
+回归测试通过，训练与评测为独立阶段，后者尚不能因训练service退出0而跳过。
 
 另已把train-only catalogue接入Engineer launcher和官方reward adapter：可选
 `training_split/training_catalogue/training_catalogue_sha256/solver_weights_sha256`
