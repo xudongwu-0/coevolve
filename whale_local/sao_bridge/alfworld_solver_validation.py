@@ -401,6 +401,7 @@ def run(spec_path: Path) -> dict:
             "launch.py",
             "resources.py",
             "train.py",
+            "terminal_actor.py",
         )
     }
     manifest = root / "source_manifest.json"

@@ -2411,3 +2411,13 @@ It is exploratory validation, not held-out AIME. AIME test stays sealed until a 
     question95% lower bounds positive. The sealed AIME split stays closed.
     Runtime manifests now cover the boundary helper and all related math
     evaluation code, and optimizer-window telemetry excludes filler.
+
+    The first live v3 startup failed before any optimizer update because
+    controller-side data contains RTensor handles, not materialized torch
+    tensors. CPU GAE tests alone did not cover that boundary. Both training
+    units were stopped with filler untouched, and the no-update roots were
+    archived. Boundary handling now runs inside an importable FSDP worker
+    subclass, after RPC materialization and native batching, before native
+    GAE. An actual worker batching/unpacking regression was added; the
+    targeted suite passed65 tests and9 subtests. Fresh roots, unchanged
+    scientific specs and new frozen source manifests are required for retry.

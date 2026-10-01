@@ -329,7 +329,7 @@ def run(spec_path: Path) -> dict:
         name: file_sha(Path(__file__).with_name(name))
         for name in (
             "math_solver_validation.py", "large_train.py", "large_workflow.py",
-            "train.py", "checkpoint.py", "common.py", "phase_data.py",
+            "train.py", "terminal_actor.py", "checkpoint.py", "common.py", "phase_data.py",
             "evaluation.py", "retool.py", "analysis.py", "launch.py",
             "resources.py", "gpu_telemetry.py",
         )

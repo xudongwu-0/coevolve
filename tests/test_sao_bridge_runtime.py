@@ -16,7 +16,8 @@ import yaml
 
 from sao_bridge.common import INITIAL_SOURCE
 from sao_bridge.service import create_app
-from sao_bridge.train import make_config, upstream_trainer, zero_terminal_value
+from sao_bridge.train import make_config, upstream_trainer
+from sao_bridge.terminal_actor import TerminalFSDPPPOActor, zero_terminal_value
 from sao_bridge.verify import compare
 
 
@@ -189,6 +190,18 @@ class TerminalBootstrapTests(unittest.TestCase):
         torch.testing.assert_close(
             self.valid_returns(trajectory, True), torch.ones(4),
         )
+
+    def test_worker_batches_materialized_trajectories_before_boundary_fix(self):
+        worker = TerminalFSDPPPOActor.__new__(TerminalFSDPPPOActor)
+        worker.actor = self.actor()
+        results = worker.compute_advantages([
+            self.trajectory(5, 5, 1.0),
+            self.trajectory(6, 6, 0.0),
+        ])
+        self.assertEqual(len(results), 2)
+        for result, reward in zip(results, (1.0, 0.0)):
+            valid = result["returns"][result["loss_mask"].bool()]
+            torch.testing.assert_close(valid, torch.full_like(valid, reward))
 
     def test_critic_free_and_invalid_attention(self):
         trajectory = self.trajectory(5, 6)

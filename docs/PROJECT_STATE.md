@@ -104,7 +104,8 @@ seed42的step29评估曾把单题4096-token预算耗尽误当作基础设施异�
 这证明边界处理存在bug，但不能直接证明它解释了全部质量差异。
 
 新`terminal_episodes=true`只接受完整fresh concat Solver轨迹或完整Engineer
-动作，在GAE前显式把最终动作之后的state value置零；有效action-state value、
+动作，在worker端RTensor实化后、GAE前把最终动作之后的state value置零；
+有效action-state value、
 行为logprob和loss mask不改。旧默认false用于兼容历史配置，critic-free模式
 无需额外修改。回归覆盖padding不变性、0/1/-1 terminal reward、工具观察mask
 和输入不被修改；原生SAO loss及上游patch保持不变。
@@ -127,6 +128,10 @@ seed42的step29评估曾把单题4096-token预算耗尽误当作基础设施异�
 `examples/dev_solver_only_v3_terminal_scale_s43.json`和
 `examples/dev_solver_only_v3_pair_gate.json`。控制器冻结边界修复等全部相关源码
 哈希，记录真实optimizer窗口GPU利用率，不停止filler。
+首次live启动在第一个optimizer更新前暴露RTensor controller/worker边界错误；
+已停止训练unit并保留filler，失败root完整归档。修复移到FSDP worker端，
+原生batch/unpack回归加入后为65 tests、9 subtests通过；正式协议从新root重启，
+不复用失败attempt的rollout。
 
 当前顺序验证入口：
 

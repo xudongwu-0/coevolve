@@ -60,29 +60,6 @@ def make_config(model: Path, run: Path, role: str, steps: int, batch_size: int) 
     return copy.deepcopy(config)
 
 
-def zero_terminal_value(trajectory: dict) -> dict:
-    import torch
-
-    if "values" not in trajectory:
-        return trajectory
-    values = trajectory["values"]
-    attention = trajectory["attention_mask"]
-    if values.ndim != 2 or values.shape != attention.shape:
-        raise ValueError("Terminal critic values must match the 2-D attention mask")
-    lengths = attention.sum(-1, keepdim=True).long()
-    positions = torch.arange(attention.shape[-1], device=attention.device)
-    if (
-        torch.any(lengths < 2)
-        or not torch.equal(attention, positions.unsqueeze(0) < lengths)
-    ):
-        raise ValueError("Terminal trajectories require nonempty right-padded sequences")
-    values = values.clone()
-    # The last token's value is the state AFTER the final action, not an
-    # action-state training target. It must be zero even without batch padding.
-    values.scatter_(-1, lengths - 1, 0.0)
-    return {**trajectory, "values": values}
-
-
 @contextmanager
 def upstream_trainer(config, dataset, *, terminal_episodes: bool = False):
     from areal import PPOTrainer
@@ -102,6 +79,21 @@ def upstream_trainer(config, dataset, *, terminal_episodes: bool = False):
                 cleanup.callback(scheduler.delete_workers, reverse_order=True)
                 return scheduler
 
+            def _create_train_engine(self, actor_config, allocation):
+                if not terminal_episodes:
+                    return super()._create_train_engine(actor_config, allocation)
+                from areal.utils.environ import is_single_controller
+                from .terminal_actor import TerminalFSDPPPOActor
+
+                if allocation.backend != "fsdp":
+                    raise ValueError("Terminal episode handling currently requires FSDP")
+                if is_single_controller():
+                    actor = TerminalFSDPPPOActor.as_controller(actor_config, self.scheduler)
+                else:
+                    actor = TerminalFSDPPPOActor(actor_config)
+                actor.create_process_group(parallel_strategy=allocation.parallel)
+                return actor
+
             def _create_critic(self, critic_config, allocation):
                 if not os.environ.get("MA_SAO_CONTEXT_FILE"):
                     return super()._create_critic(critic_config, allocation)
@@ -116,15 +108,6 @@ def upstream_trainer(config, dataset, *, terminal_episodes: bool = False):
             config, train_dataset=dataset, valid_dataset=None,
         ) as trainer:
             trainer.saver.freq_ctl = StepFrequency(trainer.saver.freq_ctl)
-            if terminal_episodes:
-                compute_advantages = trainer.actor.compute_advantages
-
-                def terminal_advantages(batch):
-                    return compute_advantages([
-                        zero_terminal_value(trajectory) for trajectory in batch
-                    ])
-
-                trainer.actor.compute_advantages = terminal_advantages
             warmup = int(os.environ.get("MA_SAO_CRITIC_WARMUP_STEPS", "0"))
             if warmup:
                 skip_actor_updates(trainer.actor, warmup)
