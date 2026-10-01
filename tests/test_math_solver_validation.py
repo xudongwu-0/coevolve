@@ -13,6 +13,7 @@ from sao_bridge.math_solver_validation import (
 )
 from sao_bridge.math_solver_pair_gate import evaluate_pair
 from sao_bridge.common import write_json
+from sao_bridge.retool import harness_spec
 
 
 def evaluation(values):
@@ -68,6 +69,13 @@ class SolverValidationTests(unittest.TestCase):
             selection, report = validation_rows(spec)
         self.assertEqual(len(selection), 4)
         self.assertEqual(len(report), 8)
+
+    def test_validation_uses_current_six_setting_h0(self):
+        from sao_bridge.math_solver_validation import INITIAL_SOURCE
+
+        parsed = harness_spec(INITIAL_SOURCE)
+        self.assertEqual(parsed["MAX_TURNS"], 4)
+        self.assertEqual(parsed["TOOL_OUTPUT_LIMIT"], 2048)
 
     def test_checkpoint_interval_must_divide_total_steps(self):
         with tempfile.TemporaryDirectory() as temporary:

@@ -10,11 +10,12 @@ import socket
 import time
 
 from .analysis import paired_difference, paired_lower_bound
-from .common import INITIAL_SOURCE, file_sha, read_json, write_json
+from .common import file_sha, read_json, write_json
 from .evaluation import Sampler, evaluate
 from .launch import Launcher
 from .phase_data import solver_dataset
 from .resources import gpu_release_audit, stop_known
+from .retool import INITIAL_SOURCE
 
 
 REQUIRED_KEYS = {
