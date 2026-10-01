@@ -474,13 +474,14 @@ rule are under
 
 ### Adaptive co-resident GPU filler
 
-`sao_bridge.adaptive_gpu_filler` replaces the static 55%-memory, 82%--94%-duty
-filler on node3/node4 while retaining the authorized
-`bruli-h200-load.service`. A complete unit template and lifecycle manager now
-live in `scripts/systemd/`; the compatibility drop-in is needed only when
-manually migrating an older legacy unit. `resources.stop_known()` still stops
-an identity-checked legacy filler, but recognizes the adaptive supervisor as
-cooperative and leaves it active when a training launcher claims the node.
+The standalone `/mnt/3fs/xudong/gpu-utilization/adaptive_gpu_filler.py`
+replaces the static 55%-memory, 82%--94%-duty filler on node3/node4 while
+retaining the authorized `bruli-h200-load.service`. Its complete unit,
+lifecycle manager, tests and operations guide all live outside this repository
+in `/mnt/3fs/xudong/gpu-utilization/`. `resources.stop_known()` still stops an
+identity-checked legacy filler, but recognizes the exact external adaptive
+script as cooperative and leaves it active when a training launcher claims the
+node.
 
 The supervisor samples both `nvidia-smi --query-compute-apps` and per-process
 `nvidia-smi pmon`, excluding only its own exact child PIDs. Each GPU has an
@@ -514,9 +515,10 @@ Node4 canary evidence:
 * Terminating one verified worker changed its PID automatically. Terminating
   the verified supervisor incremented systemd `NRestarts` and rebuilt all
   eight workers.
-* A 20-second high-duty TF32 workload completed 55,584 batches with the
-  service active versus 56,414 with it stopped: 98.53% throughput, or 1.47%
-  observed overhead including detection handoff.
+* The final standalone policy's order-balanced 30-second TF32 ABBA measured
+  84,221.5 mean batches active versus 84,900 stopped: 99.20% throughput, or
+  0.80% observed overhead including detection handoff. This is a compute proxy,
+  not a complete PPO/vLLM end-to-end A/B.
 * The real sealed vLLM launch recorded `cooperative=true, stopped=false` and
   moved all eight filler workers to the small shared state during model-load
   idle periods. Filler duty remains separate from algorithm GPU telemetry.
@@ -535,14 +537,16 @@ The self-contained installer validates, deploys, enables boot start, starts the
 service and checks its exact identity:
 
 ```bash
-sudo scripts/systemd/manage-adaptive-gpu-filler.sh install
+cd /mnt/3fs/xudong/gpu-utilization
+sudo ./manage-adaptive-gpu-filler.sh install
 ```
 
 Use the same manager for `status`, `verify`, `start`, temporary `stop`,
 persistent `pause`, `resume`, `restart`, and `uninstall`. Full operating,
 development, reservation, troubleshooting and expected-utilization guidance is
-in `scripts/systemd/README.md`. Do not use a name-based kill to remove GPU
-processes.
+in `/mnt/3fs/xudong/gpu-utilization/README.md`. The effective service contains
+no `coevolve` path or Python import dependency. Do not use a name-based kill to
+remove GPU processes.
 
 ## Environment and official assets
 

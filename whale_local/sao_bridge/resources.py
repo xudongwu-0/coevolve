@@ -1,4 +1,4 @@
-"""Identity-check the authorized filler and stop only its legacy implementation."""
+"""Identity-check the standalone filler and stop only its legacy implementation."""
 from __future__ import annotations
 
 import argparse
@@ -12,7 +12,7 @@ from .common import write_json
 
 UNIT = "bruli-h200-load.service"
 SCRIPT = "/mnt/3fs/models/bruli/gpu-utilization-20260925/gpu_load.py"
-ADAPTIVE_MODULE = "sao_bridge.adaptive_gpu_filler"
+ADAPTIVE_SCRIPT = "/mnt/3fs/xudong/gpu-utilization/adaptive_gpu_filler.py"
 RESEARCH_HOSTS = frozenset({"dev-NDH200-025", "dev-NDH200-026"})
 
 
@@ -39,7 +39,7 @@ def filler_kind(record: dict, worker: bool = True) -> str | None:
         and suffix[2].isdigit() and 0 <= int(suffix[2]) < 8
     ) if worker else suffix == ["supervisor"]
     adaptive_suffix = (
-        cmd[4:] if cmd[:4] == ["/usr/bin/python3", "-B", "-m", ADAPTIVE_MODULE] else []
+        cmd[3:] if cmd[:3] == ["/usr/bin/python3", "-B", ADAPTIVE_SCRIPT] else []
     )
     adaptive = (
         len(adaptive_suffix) == 7

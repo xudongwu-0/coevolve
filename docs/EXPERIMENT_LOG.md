@@ -2140,7 +2140,9 @@ It is exploratory validation, not held-out AIME. AIME test stays sealed until a 
     condition marker and survives reboot and reinstall. A default
     `reservation.json` path is now wired into the unit for per-GPU yields.
     The complete development, deployment, operations, reservation, expected
-    utilization and troubleshooting guide is `scripts/systemd/README.md`.
+    utilization and troubleshooting guide was initially
+    `scripts/systemd/README.md`; entry83 supersedes that repository-local
+    deployment with the standalone external folder.
 
     Node4 canary migrated to the full unit with no drop-in. Terminating the
     exact verified supervisor changed PID after the5s systemd delay and
@@ -2152,3 +2154,35 @@ It is exploratory validation, not held-out AIME. AIME test stays sealed until a 
     85.25% mean on node3 and85.5% on node4, with every GPU at85% or86% and
     about791MiB filler memory. Focused regressions now pass44 tests; shell
     syntax, rendered-unit verification and systemd verification also pass.
+83. **Standalone filler relocation (2026-10-01).** The complete adaptive
+    runtime, unit template, manager, tests and operator README were moved out
+    of `coevolve` to `/mnt/3fs/xudong/gpu-utilization/`. The rendered service
+    now executes `/usr/bin/python3 -B
+    /mnt/3fs/xudong/gpu-utilization/adaptive_gpu_filler.py supervisor`,
+    requires only the standalone code and state mounts, and has no coevolve,
+    virtualenv or PYTHONPATH runtime dependency. The worker launcher uses its
+    resolved standalone script path instead of a Python module import.
+
+    Coevolve retains only the exact service identity matcher required by
+    training launch/release audits. It now authorizes the standalone absolute
+    command plus the existing unit cgroup and `bruli` UID; similarly named
+    scripts or processes remain foreign. Standalone policy/unit tests moved
+    with the runtime rather than introducing an external path dependency into
+    repository tests. This relocation supersedes the repository-local paths
+    recorded in entry82.
+
+    After migration, node4 again passed two-level recovery: terminating one
+    exact worker changed PID under the same supervisor, and terminating the
+    supervisor changed PID with `NRestarts=1`. Both effective units contain no
+    coevolve path, remain active/enabled, and coevolve's updated resource audit
+    identifies eight standalone workers per node.
+
+    A final-policy ABBA coexistence measurement used four identical30s,
+    4,096-matrix TF32 trials at95% duty on node4 GPU0. Active trials completed
+    83,103 and85,340 batches; service-off trials completed84,868 and84,932.
+    Active/off means were84,221.5/84,900, ratio99.20%, or0.80% observed
+    overhead. Both active handoff receipts require the external PID, yielded
+    decision, no filler worker and zero filler buffers. This measures a
+    compute-heavy proxy including initial handoff, not full PPO/vLLM
+    end-to-end speed; low-SM workloads eligible for shared mode require their
+    own A/B or an explicit reservation.
