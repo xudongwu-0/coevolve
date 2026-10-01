@@ -1,4 +1,4 @@
-"""Configure and call the upstream SAO-patched AReaL PPOTrainer, without new losses."""
+"""Configure native SAO losses and explicit local trajectory boundary semantics."""
 from __future__ import annotations
 
 import argparse
@@ -60,8 +60,31 @@ def make_config(model: Path, run: Path, role: str, steps: int, batch_size: int) 
     return copy.deepcopy(config)
 
 
+def zero_terminal_value(trajectory: dict) -> dict:
+    import torch
+
+    if "values" not in trajectory:
+        return trajectory
+    values = trajectory["values"]
+    attention = trajectory["attention_mask"]
+    if values.ndim != 2 or values.shape != attention.shape:
+        raise ValueError("Terminal critic values must match the 2-D attention mask")
+    lengths = attention.sum(-1, keepdim=True).long()
+    positions = torch.arange(attention.shape[-1], device=attention.device)
+    if (
+        torch.any(lengths < 2)
+        or not torch.equal(attention, positions.unsqueeze(0) < lengths)
+    ):
+        raise ValueError("Terminal trajectories require nonempty right-padded sequences")
+    values = values.clone()
+    # The last token's value is the state AFTER the final action, not an
+    # action-state training target. It must be zero even without batch padding.
+    values.scatter_(-1, lengths - 1, 0.0)
+    return {**trajectory, "values": values}
+
+
 @contextmanager
-def upstream_trainer(config, dataset):
+def upstream_trainer(config, dataset, *, terminal_episodes: bool = False):
     from areal import PPOTrainer
 
     with ExitStack() as cleanup:
@@ -93,6 +116,15 @@ def upstream_trainer(config, dataset):
             config, train_dataset=dataset, valid_dataset=None,
         ) as trainer:
             trainer.saver.freq_ctl = StepFrequency(trainer.saver.freq_ctl)
+            if terminal_episodes:
+                compute_advantages = trainer.actor.compute_advantages
+
+                def terminal_advantages(batch):
+                    return compute_advantages([
+                        zero_terminal_value(trajectory) for trajectory in batch
+                    ])
+
+                trainer.actor.compute_advantages = terminal_advantages
             warmup = int(os.environ.get("MA_SAO_CRITIC_WARMUP_STEPS", "0"))
             if warmup:
                 skip_actor_updates(trainer.actor, warmup)

@@ -85,6 +85,17 @@ class AlfworldSolverValidationTests(unittest.TestCase):
             spec = validate_spec(self.base_spec(Path(temporary)))
         self.assertEqual(spec["total_steps"], 2)
         self.assertEqual(spec["critic_updates_per_step"], 1)
+        self.assertFalse(spec["terminal_episodes"])
+
+    def test_terminal_mode_requires_complete_concat_episodes(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            spec = self.base_spec(Path(temporary))
+            with self.assertRaisesRegex(ValueError, "require concat"):
+                validate_spec({**spec, "terminal_episodes": True})
+            normalized = validate_spec({
+                **spec, "terminal_episodes": True, "solver_trajectory_style": "concat",
+            })
+        self.assertTrue(normalized["terminal_episodes"])
 
     def test_no_patch_assignments_partition_train_tasks(self):
         assignments = no_patch_assignments(Path("/tmp/no-patch.json"))
@@ -139,6 +150,7 @@ class AlfworldSolverValidationTests(unittest.TestCase):
             "save_interval_steps": 4,
             "critic_updates_per_step": 1,
             "critic_mode": "none",
+            "terminal_episodes": True,
             "solver_trajectory_style": "concat",
             "actor_gradient_checkpointing": False,
             "critic_gradient_checkpointing": False,
@@ -147,6 +159,7 @@ class AlfworldSolverValidationTests(unittest.TestCase):
         self.assertEqual(result["save_interval_steps"], 4)
         self.assertEqual(result["critic_updates_per_step"], 1)
         self.assertEqual(result["critic_mode"], "none")
+        self.assertTrue(result["terminal_episodes"])
         self.assertEqual(result["solver_trajectory_style"], "concat")
         self.assertFalse(result["actor_gradient_checkpointing"])
         self.assertFalse(result["critic_gradient_checkpointing"])

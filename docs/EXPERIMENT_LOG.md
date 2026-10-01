@@ -2364,3 +2364,50 @@ It is exploratory validation, not held-out AIME. AIME test stays sealed until a 
     Further work must diagnose sequential SAO sample efficiency/credit
     assignment and predeclare the next experiment rather than claim that
     successful execution has already proved 9B learning.
+88. **Padding-dependent terminal bootstrap reproduced; 4B-first scale
+    protocol declared (2026-10-01).** A CPU reproduction using the actual
+    native PPOActor found that a completed episode with reward 1 and final
+    state value 3 has return 4 when it fills its batch width, but return 1
+    when the same episode has padding. Native GAE initializes its final
+    bootstrap with `values[:, -1] * (seqlen == batch_width)`, which does not
+    establish whether an application episode terminated. In the completed
+    9B run, each rank held two episodes and the logged no-EOS ratio was
+    consistently 0.5; cold-start value targets could exceed the binary reward.
+    This is a reproducible implementation error, not yet a causal explanation
+    for all observed held-out quality differences.
+
+    The local trainer now has an explicit, default-off `terminal_episodes`
+    control. For complete episodes it zeros only the post-final-action state
+    value before native advantage computation, leaving every action-state
+    value and native loss unchanged. Fresh Solver episodes must use concat;
+    unverified replay/partial-turn trajectories are rejected. The control is
+    wired through both Solver and Engineer wrappers and persisted receipts.
+    Tests reproduce the old padding dependence and verify exact Monte-Carlo
+    returns for rewards 0/1/-1, padded and unpadded episodes, masked tool
+    observations, critic-free operation and unchanged input values.
+
+    The user's updated order is 4B Solver algorithm/scale validation, then
+    9B Solver, then 9B Engineer. Previously positive 4B Chess and SearchQA
+    Solver results remain evidence of learnability; the recent stricter
+    math calibration failure does not erase them. Prepared 9B terminal-fix
+    configurations are deferred, not running.
+
+    Predeclared 4B v3 uses the same initial 4B/h0, LR 2e-6, critic LR 1e-5,
+    batch64, temperature1, staleness1 and eight critic-only warm-up steps.
+    Exact concat plus correct terminal boundaries are enabled; learned
+    critic K=2 is retained. Training covers 15,360 distinct questions in
+    240 steps (232 actor), versus 4,608 questions in v2, preserving the
+    384-question held-out train tail. Checkpoints every24 steps retain the
+    old23/47/71 comparison points and add a longer scale curve, without
+    optimizer resets. These checkpoint comparisons are exploratory and
+    do not separately identify concat versus terminal-boundary effects.
+
+    Ten checkpoints share a Bonferroni selection budget on256 questions
+    at mean@2; only the selected model is reported on512 separate questions
+    at mean@2. These report questions were previously used, so this is
+    development replication rather than a pristine confirmatory test.
+    The stronger promotion gate requires both trained models selected,
+    each report gain at least2pp, mean gain at least5pp and both paired
+    question95% lower bounds positive. The sealed AIME split stays closed.
+    Runtime manifests now cover the boundary helper and all related math
+    evaluation code, and optimizer-window telemetry excludes filler.

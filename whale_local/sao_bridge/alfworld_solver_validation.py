@@ -48,6 +48,7 @@ def validate_spec(spec: dict) -> dict:
     normalized.setdefault("actor_gradient_checkpointing", True)
     normalized.setdefault("critic_gradient_checkpointing", True)
     normalized.setdefault("selection_min_delta", 0.02)
+    normalized.setdefault("terminal_episodes", False)
     integer_keys = (
         "seed", "actor_steps", "critic_warmup_steps", "batch_size",
         "actor_gpus", "rollout_gpus", "save_interval_steps", "samples",
@@ -60,13 +61,18 @@ def validate_spec(spec: dict) -> dict:
             if key == "critic_warmup_steps" and normalized[key] == 0:
                 continue
             raise ValueError(f"{key} must be a positive integer")
-    for key in ("actor_gradient_checkpointing", "critic_gradient_checkpointing"):
+    for key in (
+        "actor_gradient_checkpointing", "critic_gradient_checkpointing",
+        "terminal_episodes",
+    ):
         if type(normalized[key]) is not bool:
             raise ValueError(f"{key} must be boolean")
     if normalized["critic_mode"] not in {"learned", "none"}:
         raise ValueError("critic_mode must be learned or none")
     if normalized["solver_trajectory_style"] not in {"individual", "concat"}:
         raise ValueError("solver_trajectory_style must be individual or concat")
+    if normalized["terminal_episodes"] and normalized["solver_trajectory_style"] != "concat":
+        raise ValueError("Terminal Solver episodes require concat trajectory style")
     if normalized["critic_mode"] == "none" and normalized["critic_warmup_steps"]:
         raise ValueError("Critic-free training cannot use critic warm-up")
     if not 0 <= float(normalized["selection_min_delta"]) <= 1:
@@ -340,6 +346,7 @@ def _run_training(root: Path, launch: Launcher, spec: dict) -> dict:
         "save_interval_steps": spec["save_interval_steps"],
         "critic_updates_per_step": spec["critic_updates_per_step"],
         "critic_mode": spec["critic_mode"],
+        "terminal_episodes": spec["terminal_episodes"],
         "solver_trajectory_style": spec["solver_trajectory_style"],
         "actor_gradient_checkpointing": spec["actor_gradient_checkpointing"],
         "critic_gradient_checkpointing": spec["critic_gradient_checkpointing"],
@@ -491,6 +498,7 @@ def run(spec_path: Path) -> dict:
                 "rollout_gpus": spec["rollout_gpus"],
                 "critic_updates_per_step": spec["critic_updates_per_step"],
                 "critic_mode": spec["critic_mode"],
+                "terminal_episodes": spec["terminal_episodes"],
                 "solver_trajectory_style": spec["solver_trajectory_style"],
                 "checkpoint_history": history,
             },

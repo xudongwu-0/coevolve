@@ -10,8 +10,9 @@
 目标不是只提高解题模型的权重，而是训练一个 Engineer，使其能够根据真实
 失败轨迹提出可执行、可采纳、能在未见任务上提高表现的 harness 修改。
 先验证 Harness-R1 的官方方法，再在相同起点、奖励和预算下比较 SAO / MA-SAO。
-当前主证明目标是9B Solver与9B Engineer；4B用于算法实现、critic稳定性和
-速度校准，不再作为启动9B的硬前置门。
+最终主证明目标是9B Solver与9B Engineer。按2026-10-01 11:20 UTC的新指令，
+当前先在4B Solver上修复算法、扩样本并验证更强提升，再进入9B Solver，
+随后验证9B Engineer；不能把某次4B校准失败说成推翻历史4B正向结果。
 
 **ALFWorld已经证明train候选到未见dev任务的global Harness提升，但尚未证明
 SAO更新后的Engineer权重比E0更会改Harness，也尚未证明9B Solver权重侧SAO
@@ -44,9 +45,8 @@ SAO更新后的Engineer权重比E0更会改Harness，也尚未证明9B Solver权
 1. 固定数学H0，只训练4B Solver。双seed各用8步critic-only warm-up、
    64步actor、batch64，共4,608条真实轨迹；在独立reward split上从
    3个预声明checkpoint中保守选择，再在512题mean@2 report上配对比较。
-2. 4B仍按原冻结gate诚实报告：两个seed都选中训练checkpoint且不退步，
-   平均至少+3pp，并至少一个seed的题级95%区间下界大于0。但无论该gate
-   是否通过，都不再无限阻塞9B；它只校准warm-up、更新健康度和执行速度。
+2. 4B v2仍按原冻结gate诚实报告：两个seed都选中训练checkpoint且不退步，
+   平均至少+3pp，并至少一个seed的题级95%区间下界大于0。
    该实验现已结束且gate失败：两个seed均未通过selection LCB，故都保留W0、
    未打开训练checkpoint的独立report。仅作探索性描述，最终selection点
    seed42为+1.37pp、seed43为+5.08pp，后者LCB仍为-0.20pp。
@@ -94,6 +94,39 @@ seed42的step29评估曾把单题4096-token预算耗尽误当作基础设施异�
 截至11:08 UTC，当前训练/评测队列均已结束，没有新一轮研究GPU任务在跑。
 两节点adaptive filler receipt仍新鲜，平均总利用率node3为87.13%、node4为
 86.50%，外部实验SM均为0；这是补载，不是算法利用率。
+
+### 当前4B v3修复与扩规模协议
+
+已用原生AReaL GAE复现一个边界错误：同一个已经结束、reward=1的episode，
+若末尾critic value=3，在batch中未padding时return=4，有padding时return=1。
+原因是上游把`seqlen == batch_width`当作未终止依据；9B v1每rank两个episode，
+`no_eos_ratios`恰为0.5，冷启动critic target也曾超过二元奖励范围。
+这证明边界处理存在bug，但不能直接证明它解释了全部质量差异。
+
+新`terminal_episodes=true`只接受完整fresh concat Solver轨迹或完整Engineer
+动作，在GAE前显式把最终动作之后的state value置零；有效action-state value、
+行为logprob和loss mask不改。旧默认false用于兼容历史配置，critic-free模式
+无需额外修改。回归覆盖padding不变性、0/1/-1 terminal reward、工具观察mask
+和输入不被修改；原生SAO loss及上游patch保持不变。
+
+4B v3双seed已预声明：
+
+- 保持原4B的W0/h0、LR、batch64、8步critic warm-up、learned critic K=2、
+  temperature和staleness；启用exact concat及terminal boundary修复。
+- 共240步，其中232步actor；15,360条不同train题，比v2的4,608条增加3.33倍。
+  不以重复相同题伪装扩数据；保留384题train尾部report，不碰AIME sealed split。
+- 每24步保存，共10个checkpoint。step23/47/71与v2提供同预算的探索性比较，
+  其余点用于观察scale曲线；这不是将两个修复因素完全分离的因子实验。
+- selection为256题mean@2，对10个checkpoint作Bonferroni校正；只对选中的
+  checkpoint打开独立512题mean@2 report。已有report被使用过，因此属于
+  development复验，不能称为新、未触碰的confirmatory test。
+- 更强门槛：两个seed均选中训练checkpoint、每seed至少+2pp、平均至少+5pp、
+  两个题级95%区间下界均大于0。通过后才运行已准备的9B v2协议。
+
+配置见`examples/dev_solver_only_v3_terminal_scale_s42.json`、
+`examples/dev_solver_only_v3_terminal_scale_s43.json`和
+`examples/dev_solver_only_v3_pair_gate.json`。控制器冻结边界修复等全部相关源码
+哈希，记录真实optimizer窗口GPU利用率，不停止filler。
 
 当前顺序验证入口：
 

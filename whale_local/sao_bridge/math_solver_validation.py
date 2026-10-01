@@ -7,11 +7,13 @@ import os
 from pathlib import Path
 import shutil
 import socket
+import threading
 import time
 
 from .analysis import paired_difference, paired_lower_bound
 from .common import file_sha, read_json, write_json
 from .evaluation import Sampler, evaluate
+from .gpu_telemetry import monitor as monitor_gpus, summarize_active_training
 from .launch import Launcher
 from .phase_data import solver_dataset
 from .resources import gpu_release_audit, stop_known
@@ -34,6 +36,7 @@ def validate_spec(spec: dict) -> dict:
         "save_interval_steps", "selection_questions", "selection_samples",
         "report_dev_offset", "report_dev_questions", "report_train_tail",
         "report_samples", "max_training_attempts", "actor_gpus", "rollout_gpus",
+        "critic_updates_per_step",
     )
     defaults = {
         "selection_questions": 256,
@@ -45,6 +48,12 @@ def validate_spec(spec: dict) -> dict:
         "max_training_attempts": 2,
         "actor_gpus": 4,
         "rollout_gpus": 4,
+        "critic_updates_per_step": 2,
+        "critic_mode": "learned",
+        "solver_trajectory_style": "individual",
+        "terminal_episodes": False,
+        "actor_gradient_checkpointing": True,
+        "critic_gradient_checkpointing": True,
     }
     for key, value in defaults.items():
         normalized.setdefault(key, value)
@@ -56,9 +65,24 @@ def validate_spec(spec: dict) -> dict:
         "selection_questions", "selection_samples", "report_dev_questions",
         "report_samples", "max_training_attempts",
         "actor_gpus", "rollout_gpus",
+        "critic_updates_per_step",
     ):
         if normalized[key] < 1:
             raise ValueError(f"{key} must be positive")
+    for key in (
+        "terminal_episodes", "actor_gradient_checkpointing",
+        "critic_gradient_checkpointing",
+    ):
+        if type(normalized[key]) is not bool:
+            raise ValueError(f"{key} must be boolean")
+    if normalized["critic_mode"] not in {"learned", "none"}:
+        raise ValueError("critic_mode must be learned or none")
+    if normalized["critic_mode"] == "none" and normalized["critic_warmup_steps"]:
+        raise ValueError("Critic-free training cannot use critic warm-up")
+    if normalized["solver_trajectory_style"] not in {"individual", "concat"}:
+        raise ValueError("solver_trajectory_style must be individual or concat")
+    if normalized["terminal_episodes"] and normalized["solver_trajectory_style"] != "concat":
+        raise ValueError("Terminal Solver episodes require concat trajectory style")
     total_steps = normalized["actor_steps"] + normalized["critic_warmup_steps"]
     if total_steps % normalized["save_interval_steps"]:
         raise ValueError("save_interval_steps must divide warm-up plus actor steps")
@@ -266,6 +290,14 @@ def _training_attempt(root: Path, spec: dict, launch: Launcher) -> dict:
         "rollout_gpus": spec["rollout_gpus"],
         "critic_warmup_steps": spec["critic_warmup_steps"],
         "save_interval_steps": spec["save_interval_steps"],
+        **{
+            key: spec[key]
+            for key in (
+                "critic_updates_per_step", "critic_mode", "solver_trajectory_style",
+                "terminal_episodes", "actor_gradient_checkpointing",
+                "critic_gradient_checkpointing",
+            )
+        },
     }
     write_json(root / "train_spec.json", phase_spec)
     process = launch.module(
@@ -294,9 +326,13 @@ def run(spec_path: Path) -> dict:
         raise ValueError("Cannot change a persisted solver-validation specification")
     write_json(frozen_spec, spec)
     manifest = {
-        "math_solver_validation.py": file_sha(Path(__file__)),
-        "large_train.py": file_sha(Path(__file__).with_name("large_train.py")),
-        "large_workflow.py": file_sha(Path(__file__).with_name("large_workflow.py")),
+        name: file_sha(Path(__file__).with_name(name))
+        for name in (
+            "math_solver_validation.py", "large_train.py", "large_workflow.py",
+            "train.py", "checkpoint.py", "common.py", "phase_data.py",
+            "evaluation.py", "retool.py", "analysis.py", "launch.py",
+            "resources.py", "gpu_telemetry.py",
+        )
     }
     manifest_path = root / "source_manifest.json"
     if manifest_path.is_file() and read_json(manifest_path) != manifest:
@@ -305,6 +341,14 @@ def run(spec_path: Path) -> dict:
     selection_rows, report_rows = validation_rows(spec)
     stop_known(require_exclusive=True)
     launch = Launcher(root)
+    telemetry_stop = threading.Event()
+    telemetry_path = root / "gpu_process_samples.jsonl"
+    telemetry = threading.Thread(
+        target=monitor_gpus,
+        args=(telemetry_path, telemetry_stop, 5.0),
+        daemon=True,
+    )
+    telemetry.start()
     try:
         _status(root, "baseline_selection", started)
         baseline_selection = _evaluate_model(
@@ -367,6 +411,10 @@ def run(spec_path: Path) -> dict:
                 "critic_warmup_steps": spec["critic_warmup_steps"],
                 "batch_size": spec["batch_size"],
                 "generated_training_episodes": spec["total_steps"] * spec["batch_size"],
+                "critic_updates_per_step": spec["critic_updates_per_step"],
+                "critic_mode": spec["critic_mode"],
+                "solver_trajectory_style": spec["solver_trajectory_style"],
+                "terminal_episodes": spec["terminal_episodes"],
                 "checkpoint_history": history,
             },
             "test_split_opened": False,
@@ -382,6 +430,14 @@ def run(spec_path: Path) -> dict:
         raise
     finally:
         launch.close()
+        telemetry_stop.set()
+        telemetry.join(timeout=10)
+        if telemetry_path.is_file():
+            utilization = summarize_active_training(
+                telemetry_path, root / "train/training_active.json",
+            )
+            if utilization is not None:
+                write_json(root / "gpu_optimizer_utilization_summary.json", utilization)
         write_json(root / "gpu_release_audit.json", gpu_release_audit())
 
 

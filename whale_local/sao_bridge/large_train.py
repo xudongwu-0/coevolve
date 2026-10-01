@@ -1,4 +1,4 @@
-"""One H or W phase using the unchanged upstream SAO optimization loop."""
+"""One H or W phase using native SAO with explicit trajectory boundary controls."""
 from __future__ import annotations
 
 import argparse
@@ -43,6 +43,11 @@ def validate_training_rows(spec: dict, rows: list[dict]) -> None:
         raise ValueError("Every consumed training row must have a nonempty string ID")
     if len(sample_ids) != len(set(sample_ids)):
         raise ValueError("The declared step budget would consume duplicate training IDs")
+    if spec.get("terminal_episodes") and any(
+        row.get("replay") or row.get("recycled_ids") or row.get("warmup")
+        for row in rows[:required]
+    ):
+        raise ValueError("Terminal episode mode requires fresh complete trajectories")
 
 
 def consumed_row_ledger(spec: dict, rows: list[dict]) -> dict:
@@ -145,9 +150,14 @@ def configure(spec: dict, run: Path) -> dict:
     trajectory_style = spec.get("solver_trajectory_style", "individual")
     if trajectory_style not in {"individual", "concat"}:
         raise ValueError("Solver trajectory style must be individual or concat")
-    for key in ("actor_gradient_checkpointing", "critic_gradient_checkpointing"):
+    for key in (
+        "actor_gradient_checkpointing", "critic_gradient_checkpointing",
+        "terminal_episodes",
+    ):
         if key in spec and type(spec[key]) is not bool:
             raise ValueError(f"{key} must be boolean")
+    if spec.get("terminal_episodes") and role == "solver" and trajectory_style != "concat":
+        raise ValueError("Terminal Solver episodes require concat trajectory style")
     context_tokens = spec.get("context_tokens", 8192)
     if type(context_tokens) is not int or context_tokens <= spec["tokens"]:
         raise ValueError("Training context must leave room for prompts and output tokens")
@@ -273,7 +283,10 @@ def main():
     started = time.monotonic()
     active_started_at = None
     active_finished_at = None
-    with upstream_trainer(config, Dataset.from_list(rows)) as trainer:
+    with upstream_trainer(
+        config, Dataset.from_list(rows),
+        terminal_episodes=spec.get("terminal_episodes", False),
+    ) as trainer:
         trainer.stats_logger = MetricsRecorder(trainer.stats_logger, run / "metrics.jsonl")
         active_started_at = time.time()
         write_json(run / "training_active.json", {
@@ -340,6 +353,7 @@ def main():
             critic_updates * spec["steps"] if critic_mode == "learned" else 0
         ),
         "critic_mode": critic_mode,
+        "terminal_episodes": spec.get("terminal_episodes", False),
         "critic_updates_per_step": critic_updates,
         "actor_gradient_checkpointing": spec.get(
             "actor_gradient_checkpointing", True

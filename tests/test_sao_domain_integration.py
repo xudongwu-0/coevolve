@@ -230,6 +230,10 @@ class DomainIntegrationTests(unittest.TestCase):
                     **spec,
                     "solver_trajectory_style": "invalid",
                 }, Path(temporary))
+            with self.assertRaisesRegex(ValueError, "require concat"):
+                configure({**spec, "terminal_episodes": True}, Path(temporary))
+            with self.assertRaisesRegex(ValueError, "must be boolean"):
+                configure({**spec, "terminal_episodes": 1}, Path(temporary))
             with self.assertRaisesRegex(ValueError, "leave room"):
                 configure({**spec, "context_tokens": 4096}, Path(temporary))
             with self.assertRaisesRegex(ValueError, "data-parallel size"):
@@ -259,6 +263,11 @@ class DomainIntegrationTests(unittest.TestCase):
                 validate_training_rows(
                     spec,
                     [{"id": "one"}, {"id": "one"}],
+                )
+            with self.assertRaisesRegex(ValueError, "fresh complete"):
+                validate_training_rows(
+                    {**spec, "terminal_episodes": True},
+                    [{"id": "one", "recycled_ids": ["past"]}, {"id": "two"}],
                 )
 
 

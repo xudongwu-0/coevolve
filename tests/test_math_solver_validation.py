@@ -69,6 +69,29 @@ class SolverValidationTests(unittest.TestCase):
             selection, report = validation_rows(spec)
         self.assertEqual(len(selection), 4)
         self.assertEqual(len(report), 8)
+        self.assertFalse(spec["terminal_episodes"])
+        self.assertEqual(spec["critic_updates_per_step"], 2)
+
+    def test_terminal_mode_and_critic_controls(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            spec = self.base_spec(Path(temporary))
+            with self.assertRaisesRegex(ValueError, "require concat"):
+                validate_spec({**spec, "terminal_episodes": True})
+            normalized = validate_spec({
+                **spec, "terminal_episodes": True, "solver_trajectory_style": "concat",
+            })
+            with self.assertRaisesRegex(ValueError, "Critic-free"):
+                validate_spec({**spec, "critic_mode": "none"})
+            with self.assertRaisesRegex(ValueError, "must be boolean"):
+                validate_spec({**spec, "terminal_episodes": 1})
+        self.assertTrue(normalized["terminal_episodes"])
+
+    def test_scaling_cannot_consume_held_out_tail(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            spec = self.base_spec(Path(temporary))
+            spec.update(actor_steps=49, critic_warmup_steps=1, save_interval_steps=25)
+            with self.assertRaisesRegex(ValueError, "held-out train tail"):
+                validation_rows(validate_spec(spec))
 
     def test_validation_uses_current_six_setting_h0(self):
         from sao_bridge.math_solver_validation import INITIAL_SOURCE
