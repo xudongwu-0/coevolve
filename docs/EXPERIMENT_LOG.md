@@ -2635,3 +2635,34 @@ It is exploratory validation, not held-out AIME. AIME test stays sealed until a 
     Training is not repeated, and task sets, sampling seeds, token budgets,
     checkpoint candidates and promotion gates remain unchanged.
     Focused CPU validation:51 tests and25 subtests passed.
+
+95. **First matched 9B SAO Engineer improvement passes the independent
+    report gate (2026-10-01).** All target jobs completed after the bounded
+    port repair, with no regenerated Engineer proposals. On70 goal-disjoint
+    report tasks, the mean over the same8 proposals rises from E0 72.1429%
+    to step15 80.0000%: +7.8571pp, question-cluster95%CI
+    [+4.4643,+11.2500]pp. Both models have8/8 valid proposals. The common
+    no-patch Solver score is75.7143%, so E15 also gives+4.2857pp over no-patch;
+    this is useful editing, not only less harmful editing or abstention.
+    There are44 improved and11 regressed question means.
+
+    Step15 has11 Actor updates after5 critic-only warmup steps. Later
+    step31 remains a negative selection result with3/8 invalid proposals.
+    The original gate and useful-editing diagnostic both pass. Scope:
+    one training seed, the same8 train-evidence prompts, and unseen target
+    tasks; not unseen-packet transfer or seed-level robustness.
+    The142-file final evidence audit independently recomputes the paired
+    report and verifies66 completed jobs, frozen sources and recovery
+    caches. Full evaluation wall time104.63 minutes includes failure and
+    repair overhead; the18.59-minute recovery segment is not total runtime.
+    Fresh GPU release audit confirms no non-filler processes remain.
+
+    The conditional GRPO fallback is not needed for this positive SAO-H
+    result; no new GRPO run occurred. MA-SAO still waits for a positive
+    9B Solver baseline. A distinct node3 Solver v5 is prepared:6 learner+
+    2 rollout GPUs, batch12,8 critic-only+40 Actor steps, LR1e-6/1e-5,
+    checkpoints23/47. V4's measured serial Actor/critic times are28.37/
+    27.92 seconds per Actor batch; rollout wait averages4.26 seconds with
+    near-zero median. The proposed rebalance, lower LR and longer critic
+    calibration are a joint exploratory recipe, not a speed claim or an
+    ablation. It retains fresh W0/H0 and the original goal-isolated gate.

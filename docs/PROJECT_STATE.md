@@ -21,9 +21,10 @@
 结果明确标记exploratory，继续保留固定起点、独立任务评测和基础设施失败记录。
 Engineer准备与验证不再等待Solver的双seed门槛；MA-SAO仍须先有两侧学习证据。
 
-**ALFWorld已经证明train候选到未见dev任务的global Harness提升，但尚未证明
-SAO更新后的Engineer权重比E0更会改Harness，也尚未证明9B Solver权重侧SAO
-能通过held-out gate；在这两项顺序基线成立前，MA-SAO继续锁定。**
+**ALFWorld现已有单seed匹配评测证据：SAO更新后的9B Engineer在独立70个
+任务上，候选mean@8由E0的72.14%提升到E15的80.00%，+7.86pp，题级95%区间
+[+4.46,+11.25]pp，且优于no-patch的75.71%。这不是只找到一个好的E0 patch。
+9B Solver权重侧仍未通过held-out gate；在两侧基线成立前，MA-SAO继续锁定。**
 
 - 旧 SAO / MA-SAO 实验的主要收益来自 Solver 权重；多次交替实验始终保留 h0。
 - 32条数据的4B Harness-R1小试未通过输出/执行门槛，不能评价有效RL学习。
@@ -43,6 +44,10 @@ SAO更新后的Engineer权重比E0更会改Harness，也尚未证明9B Solver权
   全部完成。seed42独立report为74%→72%，seed43为79%→77%，平均-2pp；
   两个题级95%区间都跨零，预声明pair gate失败。速度修复和非零梯度
   不能替代held-out学习收益，当前仍不能宣称SAO已经提升9B Solver。
+- 最新9B Engineer快速实验选择step15，即11次Actor更新后的权重；E0/E15
+  各8/8合法候选，在相同训练证据与decode预算下通过独立report门槛。
+  这是单seed、固定8个训练failure prompts下的未见任务收益，不是多seed
+  稳健性或未见failure-packet迁移结论。step31退化与3/8非法输出也保留。
 
 不要把“启动成功”“参数发生变化”“合法patch”“训练reward为正”
 或“GPU显示100%”替代最终实验目标。
@@ -254,6 +259,23 @@ LR改为Actor 2e-6、critic 1e-5，保持learned critic、K1、concat和terminal
 report至少+3pp、题级95%下界大于0；通过也不代表多seed稳定或正式确认，
 更不能隐藏既有负结果。另一节点优先准备/验证Engineer，不重复这个seed。
 
+Engineer验证完成后，node3的下一项为不同方向的
+[v5保守更新/资源重平衡](../examples/alfworld_solver_fast_v5_s42.json)，不是v4的
+重复seed：fresh W0/H0，8步critic校准+40步Actor，batch12，6 learner+
+2 rollout GPU，Actor LR1e-6，critic LR1e-5，checkpoint23/47。共576个不同
+train goal，Actor使用480个；评测任务、mean@2与探索gate不变。
+动机来自v4原生计时：Actor/critic更新分别均值28.37/27.92秒，是串行阶段；
+rollout等待均值4.26秒、中位数约0.001秒。应先把更多GPU给学习端，而不是
+继续增加rollout卡。6/2的速度和质量提升尚须实测，不能用配置推断成功。
+这是同时调整分配、batch、LR、warmup和步数的探索，不是单因素消融。
+若复用v4的共同W0评测，必须绑定原配置/模型/结果SHA，保存显式reuse receipt，
+不得将缓存当作新采样或新计算；训练始终从官方W0重新开始。
+v5使用独立的detached Git worktree执行冻结版本，主仓库仍可开发下一个方案。
+worktree仅共享只读模型/数据、已固定的upstream依赖以及节点runtime cache；
+其controller、子进程和CPU monitor的`PYTHONPATH`都必须指向同一worktree。
+upstream依赖仍是共享的，运行期间不得修改；不能只冻结入口却让子进程加载
+主仓库的新实现。运行收据记录worktree、commit和所共享依赖的身份。
+
 v4已完成80个native step、75次非零Actor更新，critic targets始终[0,1]，
 训练只有一个attempt。step79评测连续因HTTP400失败，根因不是权重加载：
 生成的tool-call arguments含不完整JSON，下一轮vLLM重渲染历史时触发
@@ -331,7 +353,7 @@ E0/E1使用相同8个压缩packet、相同decode种子和候选数。metadata-on
 全部legacy train goal及selection/report相互亲缘后，得到24个selection和70个
 report goal。主要目标是固定证据下候选质量的平均E1−E0变化，而不是挑出一个
 比no-patch好的E0提案；不声称测试了未见failure packet的迁移能力。
-数据位于`assets/alfworld_engineer_fast_v1/`。评测流水线仍需完成实际GPU验证。
+数据位于`assets/alfworld_engineer_fast_v1/`。评测流水线现已完成实际GPU验证。
 [评测协议](../examples/alfworld_engineer_fast_evaluation_v1.json)在训练前固定：
 仅比较step15/31，selection至少+2pp才打开该候选的report，report目标为
 平均E1−E0至少+3pp且题级95%下界大于0；重复和非法提案均保留在8个候选
@@ -356,7 +378,7 @@ critic checkpoint完整，单attempt，完成时源码身份匹配。critic targ
 [0,1]区间。optimizer窗口真实实验SM33.16%、filler7.99%，filler始终active；
 峰值显存127,844MiB，不能据压缩prompt就盲目把3-way learner改成2-way。
 证据为`runs/alfworld_engineer_fast_v1_s42/TRAINING_NATIVE_AUDIT.json`。
-这仍只证明训练机械过程正确，尚不证明E1优于E0。
+这些native数据只证明训练机械过程正确；能力结论来自下述独立匹配评测。
 
 [匹配评测器](../whale_local/sao_bridge/alfworld_engineer_eval.py)已实现独立持久入口：
 ```bash
@@ -390,9 +412,27 @@ target job后，部分worker因`EADDRINUSE`启动失败。已确认固定worker�
 实际恢复已启动为node3的`coevolve-9b-engineer-fast-v1-eval-r1.service`，
 保留并核验91个文件SHA；六个未完成job使用12xxx--15xxx/22xxx--25xxx的
 已锁定非ephemeral端口后全部完成。24题mean@8 selection为E0 69.27%、
-step15 76.56%、step31 67.19%；按原规则选择step15，正在独立70题report。
-这只是模型选择结果，不应提前当作Engineer泛化提升。step31三条非法候选
-仍保留在分母，所有24个提案均未重新采样。
+step15 76.56%、step31 67.19%；按原规则选择step15。step31三条非法候选仍保留
+在分母，所有24个提案均未重新采样。
+
+**独立70题report已完成，原gate与useful-editing诊断均通过：**
+
+| 指标 | E0 | step15（11次Actor更新） |
+|---|---:|---:|
+| 相同8个提案的目标任务mean成功率 | 72.14% | 80.00% |
+| 相对共同no-patch（75.71%） | -3.57pp | +4.29pp |
+| 合法提案 | 8/8 | 8/8 |
+
+E15−E0为+7.86pp，题级bootstrap 95%区间[+4.46,+11.25]pp；44个题级均值
+改善、11个退步。不是只修复输出格式、丢弃失败提案或变得更会弃权的收益。
+但bootstrap条件于这8个提案，不覆盖训练seed或未见failure packet。
+恢复段18.59分钟，首次评测身份建立到完成共104.63分钟，后者包含失败、重启
+和修复等待，不能用恢复段elapsed冒充端到端耗时。
+66个完成job、142个证据文件SHA及独立重算的paired result保存在
+`runs/alfworld_engineer_fast_v1_s42/evaluation/FINAL_EVIDENCE_AUDIT.json`；
+`COMPLETE.json`和更新于其后的`RELEASED.json`确认GPU已交还仍active的filler。
+本轮不需要触发“SAO-H失败后再复现GRPO”的条件分支；未运行GRPO，
+更不能把这个结果称为GRPO复现。当前主要未解目标是9B Solver。
 
 另已把train-only catalogue接入Engineer launcher和官方reward adapter：可选
 `training_split/training_catalogue/training_catalogue_sha256/solver_weights_sha256`
