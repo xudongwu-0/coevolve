@@ -64,6 +64,34 @@ class DomainIntegrationTests(unittest.TestCase):
         self.assertEqual(len({(r["id"], r["sample_index"]) for r in result["results"]}), 16)
         self.assertEqual(result["results"][1]["rollout_seed"], 42 + 1 + 1009)
 
+    def test_domain_evaluation_limits_whole_episode_concurrency(self):
+        active = 0
+        peak = 0
+
+        async def episode(row, spec, generate, total_tokens, seed):
+            nonlocal active, peak
+            active += 1
+            peak = max(peak, active)
+            await asyncio.sleep(0.01)
+            active -= 1
+            return {
+                "id": row["id"], "reward": 1.0, "tokens": 1,
+                "tool_calls": 1, "tool_errors": 0, "truncated": False,
+                "boxed": True,
+            }
+
+        domain = self.domain()
+        domain.run_episode = episode
+        rows = [{"id": f"{index:08x}"} for index in range(6)]
+        with patch("sao_bridge.evaluation.get_domain", return_value=domain):
+            asyncio.run(evaluate(
+                None,
+                rows,
+                "h1",
+                episode_concurrency=2,
+            ))
+        self.assertEqual(peak, 2)
+
     def test_reward_service_dispatches_domain_and_preserves_invalid_penalty(self):
         async def run(root):
             sampler = SimpleNamespace(generated_tokens=0)

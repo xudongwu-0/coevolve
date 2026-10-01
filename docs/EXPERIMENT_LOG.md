@@ -2295,3 +2295,13 @@ It is exploratory validation, not held-out AIME. AIME test stays sealed until a 
     official environment,8 vLLM replicas, explicit seed and exact no-patch;
     its1/2 score is only an infrastructure check. No task at or above400 was
     opened.
+
+    The first dual-seed formal startup then exposed a scale-only concurrency
+    bug before either baseline completed: the sampler limited concurrent LLM
+    requests to32, but all160 episode coroutines called `start_sample` before
+    acquiring that semaphore, overflowing the environment worker and returning
+    HTTP406. Both services were stopped, their no-result roots were archived,
+    and filler remained active. The shared evaluator now gates the entire
+    episode lifetime with the declared environment concurrency; a regression
+    test observes a hard peak of2 for6 concurrent test episodes. Formal runs
+    must restart from fresh roots because the source manifest changed.

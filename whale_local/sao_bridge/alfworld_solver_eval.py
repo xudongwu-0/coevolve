@@ -172,6 +172,7 @@ def run(config_path: Path) -> dict:
                         samples=config["samples"],
                         seed=config["seed"],
                         domain="alfworld",
+                        episode_concurrency=config["environment_concurrency"],
                     )
                 finally:
                     await sampler.close()

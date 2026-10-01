@@ -89,9 +89,23 @@ def stable_id_seed_offset(sample_id: str) -> int:
     return value % 1000000
 
 
-async def evaluate(sampler, rows, source, *, tokens=4096, samples=1, seed=42, domain="math"):
+async def evaluate(
+    sampler,
+    rows,
+    source,
+    *,
+    tokens=4096,
+    samples=1,
+    seed=42,
+    domain="math",
+    episode_concurrency: int | None = None,
+):
     if not rows or samples < 1:
         raise ValueError("Evaluation requires nonempty questions and samples")
+    if episode_concurrency is not None and (
+        type(episode_concurrency) is not int or episode_concurrency < 1
+    ):
+        raise ValueError("Episode concurrency must be a positive integer")
     task = get_domain(domain)
     spec = task.harness_spec(source)
     started = time.monotonic()
@@ -103,8 +117,20 @@ async def evaluate(sampler, rows, source, *, tokens=4096, samples=1, seed=42, do
         )
         for row in rows for sample in range(samples)
     ]
+    semaphore = asyncio.Semaphore(episode_concurrency or len(task_specs))
+
+    async def run_episode(row, rollout_seed):
+        async with semaphore:
+            return await task.run_episode(
+                row,
+                spec,
+                sampler,
+                total_tokens=tokens,
+                seed=rollout_seed,
+            )
+
     results = await asyncio.gather(*(
-        task.run_episode(row, spec, sampler, total_tokens=tokens, seed=rollout_seed)
+        run_episode(row, rollout_seed)
         for row, _, rollout_seed in task_specs
     ))
     for result, (_, sample, rollout_seed) in zip(results, task_specs):
