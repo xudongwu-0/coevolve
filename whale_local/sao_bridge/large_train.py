@@ -184,8 +184,12 @@ def configure(spec: dict, run: Path) -> dict:
         max_model_len=context_tokens, max_num_seqs=spec["batch_size"] * 2, gpu_memory_utilization=0.7,
         enforce_eager=False, gdn_prefill_backend=spec.get("gdn_prefill_backend"),
     )
-    # A single final save per phase; periodic 8 GB saves dominated short phases.
-    cfg["saver"].update(freq_steps=spec["steps"])
+    # Most phases need only the final checkpoint. Solver-validation campaigns can
+    # predeclare sparse checkpoints for held-out checkpoint selection.
+    save_interval = int(spec.get("save_interval_steps", spec["steps"]))
+    if save_interval < 1 or spec["steps"] % save_interval:
+        raise ValueError("Checkpoint interval must divide the declared step budget")
+    cfg["saver"].update(freq_steps=save_interval)
     env = cfg["actor"]["scheduling_spec"][0]["env_vars"]
     env.update(VLLM_PLUGINS="", TOKENIZERS_PARALLELISM="false",
                LITELLM_LOCAL_MODEL_COST_MAP="True",
@@ -256,6 +260,7 @@ def main():
         )
     root = run / "engine/checkpoints" / getpass.getuser() / spec["experiment"] / spec["phase"]
     checkpoints = {}
+    checkpoint_history = {}
     metrics = [json.loads(line) for line in (run / "metrics.jsonl").read_text().splitlines()]
     if [row["global_step"] for row in metrics] != list(range(spec["steps"])):
         raise RuntimeError("Native optimizer metrics do not match the declared step budget")
@@ -267,13 +272,18 @@ def main():
         if int(found[-1].name.split("globalstep")[-1]) != spec["steps"] - 1:
             raise RuntimeError(f"{role} checkpoint omits final optimizer updates")
         checkpoints[role] = str(found[-1])
+        checkpoint_history[role] = [
+            {"global_step": int(path.name.split("globalstep")[-1]), "path": str(path)}
+            for path in found
+            if list(path.glob("*.safetensors"))
+        ]
     write_json(run / "trained.json", {
         "checkpoints": checkpoints, "actor_steps": spec["steps"] - warmup,
         "critic_only_warmup_steps": warmup,
         "critic_steps": 2 * spec["steps"], "elapsed_seconds": time.monotonic() - started,
         "upstream": provenance, "role": spec["role"], "phase": spec["phase"],
         "central_critic": bool(spec.get("central_context")),
-        "stage_optimizer_reset": True,
+        "stage_optimizer_reset": True, "checkpoint_history": checkpoint_history,
     })
 
 
