@@ -2213,3 +2213,85 @@ It is exploratory validation, not held-out AIME. AIME test stays sealed until a 
     active in both samples. These are short diagnostic windows, not final
     throughput estimates. The filler is never stopped or killed by the
     adaptive-aware training allocator.
+85. **9B promoted to the primary proof target; speed root cause isolated
+    (2026-10-01).** Stage A remains a frozen two-seed calibration and will be
+    reported as designed, but it is no longer a hard prerequisite that may
+    indefinitely block 9B. The required sequential evidence is now a fixed
+    no-patch 9B Solver gate followed by an equal-budget 9B Engineer E0/E1
+    capability gate; MA-SAO stays locked until both pass.
+
+    Historical 9B ALFWorld metrics show that environment concurrency is not
+    the current wall-clock bottleneck. On a representative second optimizer
+    step, asynchronous rollout wait was already0.0s, while actor update took
+    885.2s and the two critic updates took1801.3s; value/log-prob recomputation
+    added about137s. A deeper code/receipt audit then found the dominant token
+    amplification: four episodes were exported as166 cumulative-prefix turn
+    sequences and the actor reported about2.16M tokens. Per-episode receipts
+    show individual-prefix/final-conversation token ratios from4.7x to31.2x;
+    over12 persisted episodes the aggregate is1,736,474 versus90,153 tokens,
+    or19.26x.
+    AReaL already constructs an exact-token parent chain and preserves every
+    assistant span's sampled log-probability and loss mask, including tool-call
+    conversations; only the final local export still requested `individual`.
+    The first speed qualification therefore keeps the proven4+4 asynchronous
+    layout and tests exact-token `concat` plus K=1, initially retaining
+    gradient checkpointing for a safe memory baseline. A learned-critic run
+    remains the primary SAO baseline. Critic-free terminal-return PPO is a
+    separately labelled ablation, not a relabelling of learned-critic SAO.
+
+    A persistent 9B controller now enforces exact empty-patch assignments,
+    train/selection/report separation (0–239/240–299/300–399), same-seed
+    paired W0/W1 evaluation, sparse checkpoint selection, bounded
+    infrastructure retry, source manifests and release audits. Tasks400–499
+    remain sealed. The controller has passed pure configuration/selection
+    tests but must not launch a formal run until the underlying speed controls
+    are wired into the native trainer and a live evaluator/speed smoke passes.
+
+    The temporary all-GPU filler reservation used for clean telemetry was
+    removed after measurement. Both systemd units remain active in adaptive
+    shared mode: they yield at high external SM and apply only low duty during
+    eligible idle gaps. In matched five-minute steady 4B windows, node4
+    experiment/filler SM averaged58.10%/3.29% and node3 averaged58.73%/3.55%;
+    all49 samples per node were valid and both units stayed active. Future
+    strict throughput A/B windows may use bounded reservations, but routine
+    training does not stop or kill the filler.
+86. **4B calibration failed its frozen gate; exact-concat 9B speed smoke
+    passed (2026-10-01).** Both4B services completed72 optimizer steps with
+    zero restarts and evaluated all three predeclared checkpoints. Neither
+    seed cleared the Bonferroni-adjusted selection lower bound, so both
+    correctly retained W0 and no trained-checkpoint report was opened. The
+    final exploratory selection deltas were+1.37pp for seed42 and+5.08pp for
+    seed43; seed43's lower bound was still-0.20pp. The frozen two-seed gate
+    therefore failed. This does not block the already-promoted9B proof, and
+    it is not valid to report the exploratory average as an independent
+    improvement.
+
+    The first learned-critic9B exact-concat smoke then completed one real
+    batch of8 no-patch ALFWorld episodes. It exported exactly8 trajectories
+    and42,996 actor tokens, versus166 trajectories and2,164,206 actor tokens
+    in the representative historical batch4 individual-prefix step. Actor
+    update fell from885.2s to12.84s; critic fell from1801.3s for K=2 to13.16s
+    for K=1. Including the first50.18s rollout but excluding checkpoint save,
+    the core step fell from about2826s to85s while batch doubled, or roughly
+    66x episode throughput. Actor+critic checkpoint save still took191.3s,
+    so sparse saves remain mandatory.
+
+    The smoke used4 actor+4 rollout GPUs and kept actor/critic gradient
+    checkpointing enabled. Peak node memory was102,540MiB; actor plus critic
+    backward consumed only26.0s while rollout consumed50.2s. Disabling
+    checkpointing can no longer improve steady throughput enough to justify
+    its OOM risk, so the formal baseline keeps it enabled. The critic's first
+    unclipped grad norm was324.2, confirming that critic-only warm-up remains
+    necessary before actor updates.
+
+    The new explicit-seed evaluator required two infrastructure fixes before
+    its live smoke was valid. First, the shared evaluator assumed the first
+    eight characters of every row ID were hexadecimal; ALFWorld semantic IDs
+    now preserve the old hex behavior and otherwise use a stable SHA-256
+    offset. Second, the ALFWorld controller URL had only been placed in child
+    launch environments even though episodes execute in the evaluator parent;
+    it is now bound to both. Both failed directories were archived and contain
+    no scientific result. The third smoke completed tasks0 and1 with the
+    official environment,8 vLLM replicas, explicit seed and exact no-patch;
+    its1/2 score is only an infrastructure check. No task at or above400 was
+    opened.

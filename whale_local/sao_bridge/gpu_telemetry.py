@@ -129,8 +129,23 @@ def monitor(path: Path, stop: threading.Event, interval: float = 5.0) -> None:
         stop.wait(interval)
 
 
-def summarize(path: Path) -> dict:
+def summarize(
+    path: Path,
+    *,
+    start_time: float | None = None,
+    end_time: float | None = None,
+) -> dict:
     rows = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+    if start_time is not None:
+        rows = [
+            row for row in rows
+            if float(row.get("sampled_at", float("-inf"))) >= start_time
+        ]
+    if end_time is not None:
+        rows = [
+            row for row in rows
+            if float(row.get("sampled_at", float("inf"))) <= end_time
+        ]
     valid = [row for row in rows if "error" not in row]
     if not valid:
         raise ValueError("GPU telemetry has no valid samples")
@@ -138,7 +153,7 @@ def summarize(path: Path) -> dict:
     def mean(key: str) -> float:
         return sum(float(row[key]) for row in valid) / len(valid)
 
-    return {
+    summary = {
         "samples": len(rows),
         "valid_samples": len(valid),
         "error_samples": len(rows) - len(valid),
@@ -151,6 +166,51 @@ def summarize(path: Path) -> dict:
             "include the adaptive filler and must not be reported as algorithm utilization"
         ),
     }
+    active = [
+        row for row in valid
+        if float(row["mean_experiment_sm_percent"]) >= 5.0
+    ]
+    summary["experiment_active_samples"] = len(active)
+    summary["experiment_active_sample_fraction"] = len(active) / len(valid)
+    if active:
+        summary["mean_experiment_sm_percent_when_active"] = sum(
+            float(row["mean_experiment_sm_percent"]) for row in active
+        ) / len(active)
+        summary["mean_filler_sm_percent_when_experiment_active"] = sum(
+            float(row["mean_filler_sm_percent"]) for row in active
+        ) / len(active)
+    if all(len(row.get("gpus", [])) == 8 for row in valid):
+        summary["peak_memory_used_mib_by_gpu"] = [
+            max(row["gpus"][gpu]["memory_used_mib"] for row in valid)
+            for gpu in range(8)
+        ]
+        summary["peak_memory_used_mib"] = max(
+            summary["peak_memory_used_mib_by_gpu"]
+        )
+        summary["mean_power_watts_by_gpu"] = [
+            sum(row["gpus"][gpu]["power_watts"] for row in valid) / len(valid)
+            for gpu in range(8)
+        ]
+    return summary
+
+
+def summarize_active_training(
+    telemetry_path: Path,
+    marker_path: Path,
+) -> dict | None:
+    if not marker_path.is_file():
+        return None
+    marker = json.loads(marker_path.read_text())
+    if marker.get("status") != "completed":
+        return None
+    try:
+        return summarize(
+            telemetry_path,
+            start_time=marker["started_at_unix"],
+            end_time=marker["finished_at_unix"],
+        )
+    except ValueError as exc:
+        return {"status": "invalid", "error": repr(exc)}
 
 
 def main() -> None:

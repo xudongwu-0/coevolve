@@ -10,7 +10,8 @@
 目标不是只提高解题模型的权重，而是训练一个 Engineer，使其能够根据真实
 失败轨迹提出可执行、可采纳、能在未见任务上提高表现的 harness 修改。
 先验证 Harness-R1 的官方方法，再在相同起点、奖励和预算下比较 SAO / MA-SAO。
-最终希望小模型（优先4B）具有这种能力。
+当前主证明目标是9B Solver与9B Engineer；4B用于算法实现、critic稳定性和
+速度校准，不再作为启动9B的硬前置门。
 
 **ALFWorld已经证明train候选到未见dev任务的global Harness提升，但尚未证明
 SAO更新后的Engineer权重比E0更会改Harness，也尚未证明9B Solver权重侧SAO
@@ -39,12 +40,17 @@ SAO更新后的Engineer权重比E0更会改Harness，也尚未证明9B Solver权
 1. 固定数学H0，只训练4B Solver。双seed各用8步critic-only warm-up、
    64步actor、batch64，共4,608条真实轨迹；在独立reward split上从
    3个预声明checkpoint中保守选择，再在512题mean@2 report上配对比较。
-2. 4B gate要求两个seed都选中训练checkpoint且不退步，平均至少+3pp，
-   并至少一个seed的题级95%区间下界大于0。通过后才启动9B ALFWorld
-   Solver，Harness固定为空patch。
-3. 9B Solver通过后，才扩大9B Engineer SAO，并在完全相同packet、prompt、
+2. 4B仍按原冻结gate诚实报告：两个seed都选中训练checkpoint且不退步，
+   平均至少+3pp，并至少一个seed的题级95%区间下界大于0。但无论该gate
+   是否通过，都不再无限阻塞9B；它只校准warm-up、更新健康度和执行速度。
+   该实验现已结束且gate失败：两个seed均未通过selection LCB，故都保留W0、
+   未打开训练checkpoint的独立report。仅作探索性描述，最终selection点
+   seed42为+1.37pp、seed43为+5.08pp，后者LCB仍为-0.20pp。
+3. 当前主线是固定空Harness的9B ALFWorld Solver双seed验证。先做短
+   speed/OOM资格测试，再扩大真实工具episode数并做selection/report隔离。
+4. 9B Solver通过后，才扩大9B Engineer SAO，并在完全相同packet、prompt、
    decoding seed、候选数和全局held-out任务上做E0/E1能力A/B。
-4. 若SAO-H失败，先按官方Harness-R1的组内GRPO目标做同预算复现；只有
+5. 若SAO-H失败，先按官方Harness-R1的组内GRPO目标做同预算复现；只有
    9B Solver和Engineer两侧都证明可训练后，才解锁MA-SAO与交替频率研究。
 
 持久服务为`coevolve-4b-solver-v2-s42.service`（node4）和
@@ -52,12 +58,27 @@ SAO更新后的Engineer权重比E0更会改Harness，也尚未证明9B Solver权
 `STATUS.json`、训练attempt、checkpoint选择、`COMPLETE.json`/`FAILED.json`
 和GPU释放审计；客户端断线不终止预声明工作。
 
+当前顺序验证入口：
+
+- `whale_local/sao_bridge/math_solver_validation.py`：4B固定H0双split单seed控制器；
+  `math_solver_pair_gate.py`聚合双seed。
+- `whale_local/sao_bridge/alfworld_solver_validation.py`：9B固定no-patch
+  baseline、训练、checkpoint selection与独立report控制器；
+  `alfworld_solver_pair_gate.py`聚合双seed。
+- `whale_local/sao_bridge/alfworld_solver_eval.py`：显式seed、官方环境、
+  exact no-patch的W0/W1 paired evaluator。
+- `whale_local/sao_bridge/gpu_telemetry.py`：按精确PID区分实验/filler，
+  同时记录峰值显存；算法利用率必须取`mean_experiment_sm_percent`。
+
 GPU利用率必须分开报告。新增per-process telemetry把精确识别的adaptive
 filler PID与其它实验PID分开。4B启动阶段曾观测到表面72.75% SM中仅
 1.94%来自实验、71.88%来自filler；进入真实optimizer后，node3短窗为
 总50.0%、实验48.22%、filler 0%，同时filler unit仍保持active。由此证明
 不能用`nvidia-smi`总利用率冒充算法利用率，也证明训练活跃时filler会自动
-完全让载，无需停止用户的服务。
+完全让载，无需停止用户的服务。隔离吞吐测量结束后应恢复adaptive shared
+模式：高SM训练阶段duty自动归零，异步空档只做低幅补载；只在严格A/B窗口
+临时使用有时限的reservation。恢复shared后的匹配5分钟稳态窗口中，node4
+实验/filler SM为58.10%/3.29%，node3为58.73%/3.55%，两边49个样本均有效。
 
 ## 2. 模型角色与算法边界
 
@@ -413,12 +434,21 @@ target必须返回真正的OpenAI `tool_calls`，文本看似XML不是等价证�
    MA83/100；MA−顺序+5pp但LCB=0，material superiority未建立。
 3. MA−顺序须至少+5pp且one-sided 95% LCB>0才允许cadence搜索；sealed结果
    未通过，因此不搜索频率，也不能据此选择checkpoint或超参数。
-4. 下一算法瓶颈是Solver weight-side样本效率：每轮只有8个长工具episode、
-   0/1稀疏奖励和长程credit assignment。先提高有效on-policy episode数与
-   reward/advantage信息密度，再考虑WebShop扩展。
-5. WebShop尚未准备；小商品库预览与论文配置须区分，Java/JNI/检索索引和
+4. 当前主算法瓶颈是9B Solver weight-side样本效率与反向吞吐。历史每轮仅
+   8个长工具episode；稳定step中actor约885秒、K=2 critic约1801秒，而
+   异步rollout等待已接近0。更深一层的根因是Solver按turn导出时反复训练
+   累计对话前缀；历史4个episode可膨胀到166条sequence和约216万actor
+   token。AReaL原生exact-token concat资格测试已把`n_seqs`从166降到8、
+   actor token降到42,996；actor为12.84秒、K=1 critic为13.16秒，首批
+   rollout为50.18秒，峰值显存102,540MiB。相对历史非checkpoint核心step，
+   batch翻倍后的episode吞吐约66倍。GC-on时反向已短于rollout，因此正式
+   4+4基线保留gradient checkpointing，避免为几秒收益增加OOM风险。
+5. 主9B基线采用learned critic；critic-free terminal-return只能作为明确
+   标注的速度/归因ablation，不能冒充原始learned-critic SAO。Engineer侧
+   因单回合terminal reward可并行比较该ablation。
+6. WebShop尚未准备；小商品库预览与论文配置须区分，Java/JNI/检索索引和
    `webshop_goal_seed=233`/task manifest匹配后才能报告。
-6. WHALE同起点复现须恢复原始Solver/h0/检索器/判分/数据协议；
+7. WHALE同起点复现须恢复原始Solver/h0/检索器/判分/数据协议；
    当前SearchQA W4+BM25+alias EM不满足。部分原始中间数据未公开，需披露重建限制。
 
 正式SearchQA接受门槛：clean执行、至少+0.5pp独立dev收益、

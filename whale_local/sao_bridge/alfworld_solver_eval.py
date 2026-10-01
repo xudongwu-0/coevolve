@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import hashlib
+import os
 from pathlib import Path
 import threading
 import time
@@ -14,6 +15,15 @@ from .evaluation import Sampler, evaluate
 from .gpu_telemetry import monitor, summarize
 from .launch import Launcher
 from .resources import gpu_release_audit, stop_known
+
+
+def bind_environment(launch: Launcher, controller_url: str, timeout: float) -> None:
+    values = {
+        "SAO_ALFWORLD_CONTROLLER_URL": controller_url,
+        "SAO_ALFWORLD_HTTP_TIMEOUT": str(timeout),
+    }
+    launch.env.update(values)
+    os.environ.update(values)
 
 
 def validate_config(config: dict) -> dict:
@@ -118,9 +128,10 @@ def run(config_path: Path) -> dict:
             if time.monotonic() >= deadline:
                 raise TimeoutError("ALFWorld environment readiness timed out")
             time.sleep(1)
-        launch.env["SAO_ALFWORLD_CONTROLLER_URL"] = controller_url
-        launch.env["SAO_ALFWORLD_HTTP_TIMEOUT"] = str(
-            config.get("environment_http_timeout", 900)
+        bind_environment(
+            launch,
+            controller_url,
+            config.get("environment_http_timeout", 900),
         )
         with launch.vllm(
             config["solver_model"],

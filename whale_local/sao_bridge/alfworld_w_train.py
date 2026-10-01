@@ -11,6 +11,10 @@ import time
 from .alfworld_h_train import monitor_gpus
 from .budget import model_digests
 from .common import ensure_model_runtime_metadata, read_json, write_json
+from .gpu_telemetry import (
+    summarize as summarize_gpu_processes,
+    summarize_active_training,
+)
 from .joint_context import joint_context_audit
 from .launch import Launcher
 from .resources import gpu_release_audit, stop_known
@@ -82,6 +86,18 @@ def training_spec(config: dict, run: Path) -> dict:
         "rollout_gpus": config.get("rollout_gpus", 4),
         "recycle_pool": config.get("recycle_pool"),
         "critic_warmup_steps": config.get("critic_warmup_steps", 0),
+        "save_interval_steps": config.get("save_interval_steps", config["steps"]),
+        "critic_updates_per_step": config.get("critic_updates_per_step", 2),
+        "critic_mode": config.get("critic_mode", "learned"),
+        "solver_trajectory_style": config.get(
+            "solver_trajectory_style", "individual"
+        ),
+        "actor_gradient_checkpointing": config.get(
+            "actor_gradient_checkpointing", True
+        ),
+        "critic_gradient_checkpointing": config.get(
+            "critic_gradient_checkpointing", True
+        ),
         "gdn_prefill_backend": "triton",
     }
 
@@ -109,7 +125,7 @@ def main() -> None:
     telemetry_stop = threading.Event()
     telemetry = threading.Thread(
         target=monitor_gpus,
-        args=(run / "gpu_samples.jsonl", telemetry_stop,
+        args=(run / "gpu_process_samples.jsonl", telemetry_stop,
               float(config.get("monitor_interval_seconds", 5))),
         daemon=True,
     )
@@ -187,6 +203,22 @@ def main() -> None:
         launch.close()
         telemetry_stop.set()
         telemetry.join(timeout=10)
+        telemetry_path = run / "gpu_process_samples.jsonl"
+        if telemetry_path.is_file():
+            try:
+                utilization = summarize_gpu_processes(telemetry_path)
+            except ValueError as exc:
+                utilization = {"status": "invalid", "error": repr(exc)}
+            write_json(run / "gpu_utilization_summary.json", utilization)
+            active_utilization = summarize_active_training(
+                telemetry_path,
+                run / "optimizer/training_active.json",
+            )
+            if active_utilization is not None:
+                write_json(
+                    run / "gpu_optimizer_utilization_summary.json",
+                    active_utilization,
+                )
         write_json(run / "RELEASED.json", {
             "released_at": time.time(),
             **gpu_release_audit(),

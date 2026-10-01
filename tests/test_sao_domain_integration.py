@@ -9,7 +9,7 @@ from unittest.mock import patch
 import httpx
 
 from sao_bridge.domain_api import get_domain
-from sao_bridge.evaluation import create_app, evaluate
+from sao_bridge.evaluation import create_app, evaluate, stable_id_seed_offset
 from sao_bridge.experiment import propose
 from sao_bridge.large_train import (
     configure, validate_capacity_audit, validate_training_rows,
@@ -19,6 +19,17 @@ from sao_bridge import retool
 
 
 class DomainIntegrationTests(unittest.TestCase):
+    def test_evaluation_seed_supports_semantic_ids(self):
+        self.assertEqual(stable_id_seed_offset("00000001-row"), 1)
+        self.assertEqual(
+            stable_id_seed_offset("alfworld-1"),
+            stable_id_seed_offset("alfworld-1"),
+        )
+        self.assertNotEqual(
+            stable_id_seed_offset("alfworld-1"),
+            stable_id_seed_offset("alfworld-2"),
+        )
+
     def domain(self):
         def parse(source):
             if source not in {"h0", "h1"}:
@@ -166,6 +177,31 @@ class DomainIntegrationTests(unittest.TestCase):
                 "PYTORCH_ALLOC_CONF"], "expandable_segments:True")
             self.assertTrue(config["actor"]["use_decoupled_loss"])
             self.assertEqual(config["gconfig"]["n_samples"], 1)
+            optimized = configure({
+                **spec,
+                "critic_updates_per_step": 1,
+                "actor_gradient_checkpointing": False,
+                "critic_gradient_checkpointing": False,
+                "solver_trajectory_style": "concat",
+            }, Path(temporary))
+            self.assertFalse(optimized["actor"]["gradient_checkpointing"])
+            self.assertFalse(optimized["critic"]["gradient_checkpointing"])
+            actor_only = configure(
+                {**spec, "critic_mode": "none"},
+                Path(temporary),
+            )
+            self.assertIsNone(actor_only["critic"])
+            with self.assertRaisesRegex(ValueError, "centralized critic"):
+                configure({
+                    **spec,
+                    "critic_mode": "none",
+                    "central_context": "/context.json",
+                }, Path(temporary))
+            with self.assertRaisesRegex(ValueError, "trajectory style"):
+                configure({
+                    **spec,
+                    "solver_trajectory_style": "invalid",
+                }, Path(temporary))
             with self.assertRaisesRegex(ValueError, "leave room"):
                 configure({**spec, "context_tokens": 4096}, Path(temporary))
             with self.assertRaisesRegex(ValueError, "data-parallel size"):

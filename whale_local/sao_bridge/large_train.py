@@ -130,12 +130,24 @@ class MetricsRecorder:
         with self.path.open("a") as stream:
             stream.write(json.dumps({
                 "epoch": epoch, "step": step, "global_step": global_step,
+                "recorded_at_unix": time.time(),
                 "metrics": data,
             }, default=float) + "\n")
 
 
 def configure(spec: dict, run: Path) -> dict:
     role = spec["role"]
+    critic_mode = spec.get("critic_mode", "learned")
+    if critic_mode not in {"learned", "none"}:
+        raise ValueError("Critic mode must be learned or none")
+    if critic_mode == "none" and spec.get("central_context"):
+        raise ValueError("A centralized critic context requires a learned critic")
+    trajectory_style = spec.get("solver_trajectory_style", "individual")
+    if trajectory_style not in {"individual", "concat"}:
+        raise ValueError("Solver trajectory style must be individual or concat")
+    for key in ("actor_gradient_checkpointing", "critic_gradient_checkpointing"):
+        if key in spec and type(spec[key]) is not bool:
+            raise ValueError(f"{key} must be boolean")
     context_tokens = spec.get("context_tokens", 8192)
     if type(context_tokens) is not int or context_tokens <= spec["tokens"]:
         raise ValueError("Training context must leave room for prompts and output tokens")
@@ -157,11 +169,19 @@ def configure(spec: dict, run: Path) -> dict:
     cfg["cluster"]["n_gpus_per_node"] = actor_gpus + rollout_gpus
     cfg["actor"]["backend"] = f"fsdp:d{actor_gpus}p1t1"
     cfg["actor"]["weight_update_mode"] = spec.get("weight_update_mode", "disk")
+    cfg["actor"]["gradient_checkpointing"] = spec.get(
+        "actor_gradient_checkpointing", True
+    )
     cfg["rollout"]["backend"] = f"vllm:d{rollout_gpus}p1t1"
     cfg["actor"]["optimizer"]["lr"] = spec["lr"]
-    cfg["critic"]["optimizer"]["lr"] = spec.get("critic_lr", 5 * spec["lr"])
-    cfg["critic"]["path"] = spec.get("critic_model", spec["model"])
-    cfg["critic"]["gradient_checkpointing"] = True
+    if critic_mode == "learned":
+        cfg["critic"]["optimizer"]["lr"] = spec.get("critic_lr", 5 * spec["lr"])
+        cfg["critic"]["path"] = spec.get("critic_model", spec["model"])
+        cfg["critic"]["gradient_checkpointing"] = spec.get(
+            "critic_gradient_checkpointing", True
+        )
+    else:
+        cfg["critic"] = None
     cfg["gconfig"].update(
         max_new_tokens=spec["tokens"], max_tokens=context_tokens,
         temperature=spec.get("temperature", 0.7 if role == "editor" else 1.0),
@@ -170,7 +190,8 @@ def configure(spec: dict, run: Path) -> dict:
     if type(microbatch_tokens) is not int or microbatch_tokens <= 0:
         raise ValueError("Microbatch token limit must be a positive integer")
     cfg["actor"]["mb_spec"]["max_tokens_per_mb"] = microbatch_tokens
-    cfg["critic"]["mb_spec"]["max_tokens_per_mb"] = microbatch_tokens + 2048
+    if cfg["critic"] is not None:
+        cfg["critic"]["mb_spec"]["max_tokens_per_mb"] = microbatch_tokens + 2048
     cfg["rollout"].update(
         max_head_offpolicyness=spec.get(
             "max_head_offpolicyness", spec.get("staleness", 4)
@@ -220,11 +241,17 @@ def main():
     run = Path(spec["run"]).resolve()
     run.mkdir(parents=True, exist_ok=True)
     provenance = verify_upstreams()
-    os.environ["SAO_CRITIC_K"] = "2"
+    critic_mode = spec.get("critic_mode", "learned")
+    critic_updates = spec.get("critic_updates_per_step", 2)
+    if type(critic_updates) is not int or critic_updates < 1:
+        raise ValueError("Critic updates per step must be a positive integer")
+    os.environ["SAO_CRITIC_K"] = str(critic_updates)
     os.environ["SAO_LOCAL_ADMIN_TOKEN"] = secrets.token_urlsafe(32)
     warmup = int(spec.get("critic_warmup_steps", 0))
     if not 0 <= warmup < spec["steps"]:
         raise ValueError("Critic warm-up must leave at least one actor update")
+    if critic_mode == "none" and warmup:
+        raise ValueError("Critic-free training cannot use critic warm-up")
     os.environ["MA_SAO_CRITIC_WARMUP_STEPS"] = str(warmup)
     if spec.get("central_context"):
         os.environ["MA_SAO_CONTEXT_FILE"] = str(Path(spec["central_context"]).resolve())
@@ -241,30 +268,59 @@ def main():
     cfg_path = run / "trainer.yaml"
     cfg_path.write_text(yaml.safe_dump(configure(spec, run), sort_keys=False))
     config, _ = load_expr_config(["--config", str(cfg_path)], PPOConfig)
+    if (config.critic is None) != (critic_mode == "none"):
+        raise RuntimeError("Resolved critic configuration does not match critic_mode")
     started = time.monotonic()
+    active_started_at = None
+    active_finished_at = None
     with upstream_trainer(config, Dataset.from_list(rows)) as trainer:
         trainer.stats_logger = MetricsRecorder(trainer.stats_logger, run / "metrics.jsonl")
-        trainer.train(
-            workflow="sao_bridge.large_workflow.MathWorkflow",
-            workflow_kwargs={
-                "role": spec["role"], "tokenizer": spec["model"],
-                "gconfig": config.gconfig, "harness_path": spec["harness"],
-                "receipts_dir": str(run / "receipts"),
-                "evaluator_url": spec.get("evaluator_url"),
-                "total_tokens": spec["tokens"],
-                "interaction_credit": spec.get("interaction_credit", 0.0),
-                "recycle_pool": spec.get("recycle_pool"),
-                "domain": spec.get("domain", "math"),
-                "context_tokens": spec.get("context_tokens", 8192),
-            },
-        )
+        active_started_at = time.time()
+        write_json(run / "training_active.json", {
+            "status": "running",
+            "started_at_unix": active_started_at,
+        })
+        try:
+            trainer.train(
+                workflow="sao_bridge.large_workflow.MathWorkflow",
+                workflow_kwargs={
+                    "role": spec["role"], "tokenizer": spec["model"],
+                    "gconfig": config.gconfig, "harness_path": spec["harness"],
+                    "receipts_dir": str(run / "receipts"),
+                    "evaluator_url": spec.get("evaluator_url"),
+                    "total_tokens": spec["tokens"],
+                    "interaction_credit": spec.get("interaction_credit", 0.0),
+                    "recycle_pool": spec.get("recycle_pool"),
+                    "domain": spec.get("domain", "math"),
+                    "context_tokens": spec.get("context_tokens", 8192),
+                    "solver_trajectory_style": spec.get(
+                        "solver_trajectory_style", "individual"
+                    ),
+                },
+            )
+        except BaseException as exc:
+            active_finished_at = time.time()
+            write_json(run / "training_active.json", {
+                "status": "failed",
+                "started_at_unix": active_started_at,
+                "finished_at_unix": active_finished_at,
+                "error": repr(exc),
+            })
+            raise
+        active_finished_at = time.time()
+        write_json(run / "training_active.json", {
+            "status": "completed",
+            "started_at_unix": active_started_at,
+            "finished_at_unix": active_finished_at,
+        })
     root = run / "engine/checkpoints" / getpass.getuser() / spec["experiment"] / spec["phase"]
     checkpoints = {}
     checkpoint_history = {}
     metrics = [json.loads(line) for line in (run / "metrics.jsonl").read_text().splitlines()]
     if [row["global_step"] for row in metrics] != list(range(spec["steps"])):
         raise RuntimeError("Native optimizer metrics do not match the declared step budget")
-    for role in ("actor", "critic"):
+    checkpoint_roles = ("actor",) if critic_mode == "none" else ("actor", "critic")
+    for role in checkpoint_roles:
         found = sorted((root / role).glob("epoch*globalstep*"),
                        key=lambda p: int(p.name.split("globalstep")[-1]))
         if not found or not list(found[-1].glob("*.safetensors")):
@@ -280,7 +336,25 @@ def main():
     write_json(run / "trained.json", {
         "checkpoints": checkpoints, "actor_steps": spec["steps"] - warmup,
         "critic_only_warmup_steps": warmup,
-        "critic_steps": 2 * spec["steps"], "elapsed_seconds": time.monotonic() - started,
+        "critic_steps": (
+            critic_updates * spec["steps"] if critic_mode == "learned" else 0
+        ),
+        "critic_mode": critic_mode,
+        "critic_updates_per_step": critic_updates,
+        "actor_gradient_checkpointing": spec.get(
+            "actor_gradient_checkpointing", True
+        ),
+        "critic_gradient_checkpointing": (
+            spec.get("critic_gradient_checkpointing", True)
+            if critic_mode == "learned"
+            else None
+        ),
+        "solver_trajectory_style": spec.get(
+            "solver_trajectory_style", "individual"
+        ),
+        "training_active_started_at_unix": active_started_at,
+        "training_active_finished_at_unix": active_finished_at,
+        "elapsed_seconds": time.monotonic() - started,
         "upstream": provenance, "role": spec["role"], "phase": spec["phase"],
         "central_critic": bool(spec.get("central_context")),
         "stage_optimizer_reset": True, "checkpoint_history": checkpoint_history,

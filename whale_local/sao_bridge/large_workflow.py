@@ -19,8 +19,12 @@ from .replay import interaction_reward, replay_interaction
 class MathWorkflow(RolloutWorkflow):
     def __init__(self, role, tokenizer, gconfig, harness_path, receipts_dir,
                  evaluator_url=None, total_tokens=4096, interaction_credit=0.0,
-                 recycle_pool=None, domain="math", context_tokens=8192):
+                 recycle_pool=None, domain="math", context_tokens=8192,
+                 solver_trajectory_style="individual"):
+        if solver_trajectory_style not in {"individual", "concat"}:
+            raise ValueError("Solver trajectory style must be individual or concat")
         self.role = role
+        self.solver_trajectory_style = solver_trajectory_style
         self.tokenizer = load_hf_tokenizer(tokenizer)
         self.gconfig = gconfig
         self.domain = get_domain(domain)
@@ -142,7 +146,11 @@ class MathWorkflow(RolloutWorkflow):
         if not completions:
             raise RuntimeError("Episode generated no policy action")
         client.set_reward(completions[-1].id, reward)
-        client.apply_reward_discount(turn_discount=1.0)
+        trajectory_style = (
+            self.solver_trajectory_style if self.role == "solver" else "concat"
+        )
+        if trajectory_style == "individual":
+            client.apply_reward_discount(turn_discount=1.0)
         calls = []
         for interaction in client.export_interactions(style="individual").values():
             response = interaction.model_response
@@ -154,6 +162,11 @@ class MathWorkflow(RolloutWorkflow):
                 "versions": response.output_versions, "stop_reason": response.stop_reason,
                 "temperature": self.gconfig.temperature,
             })
+        fresh_interactions = client.export_interactions(style=trajectory_style)
+        if trajectory_style == "concat" and len(fresh_interactions) != 1:
+            raise RuntimeError(
+                "A linear episode must export exactly one concatenated trajectory"
+            )
         recycled_ids = list(data.get("recycled_ids") or [])
         write_json(self.receipts / (uuid.uuid4().hex + ".json"), {
             **episode, "id": data["id"], "role": self.role, "reward": reward,
@@ -163,11 +176,13 @@ class MathWorkflow(RolloutWorkflow):
             "harness_source": self.harness["source"],
             "elapsed_seconds": time.monotonic() - started,
             "generated_tokens": sum(len(call["response_ids"]) for call in calls),
+            "trajectory_style": trajectory_style,
+            "exported_fresh_trajectories": len(fresh_interactions),
             "recycled_partner_episodes": recycled_ids,
         })
-        # One exact sequence per turn: re-rendered tool-call JSON need not reproduce the
-        # sampled tokens, so concatenating turns could misalign behavior log-probabilities.
-        result = client.export_interactions(style="individual" if self.role == "solver" else "concat")
+        # AReaL's concat client links the exact sampled token tensors, rather than
+        # re-rendering assistant tool-call messages.
+        result = dict(fresh_interactions)
         if recycled_ids:
             from .replay import recycled_interactions
             for episode_id in recycled_ids:

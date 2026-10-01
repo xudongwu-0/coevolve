@@ -79,6 +79,16 @@ class Sampler:
         await self.client.aclose()
 
 
+def stable_id_seed_offset(sample_id: str) -> int:
+    if not isinstance(sample_id, str) or not sample_id:
+        raise ValueError("Evaluation row ID must be a nonempty string")
+    try:
+        value = int(sample_id[:8], 16)
+    except ValueError:
+        value = int(hashlib.sha256(sample_id.encode()).hexdigest()[:8], 16)
+    return value % 1000000
+
+
 async def evaluate(sampler, rows, source, *, tokens=4096, samples=1, seed=42, domain="math"):
     if not rows or samples < 1:
         raise ValueError("Evaluation requires nonempty questions and samples")
@@ -86,7 +96,11 @@ async def evaluate(sampler, rows, source, *, tokens=4096, samples=1, seed=42, do
     spec = task.harness_spec(source)
     started = time.monotonic()
     task_specs = [
-        (row, sample, seed + int(row["id"][:8], 16) % 1000000 + 1009 * sample)
+        (
+            row,
+            sample,
+            seed + stable_id_seed_offset(row["id"]) + 1009 * sample,
+        )
         for row in rows for sample in range(samples)
     ]
     results = await asyncio.gather(*(

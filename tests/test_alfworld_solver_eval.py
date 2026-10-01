@@ -2,14 +2,28 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "whale_local"))
-from sao_bridge.alfworld_solver_eval import validate_config
+from sao_bridge.alfworld_solver_eval import bind_environment, validate_config
 from sao_bridge.common import write_json
 
 
 class AlfworldSolverEvaluationTests(unittest.TestCase):
+    def test_environment_binding_reaches_parent_and_children(self):
+        launch = type("Launch", (), {"env": {}})()
+        with patch.dict("os.environ", {}, clear=True):
+            bind_environment(launch, "http://127.0.0.1:28000/api", 123)
+            self.assertEqual(
+                launch.env["SAO_ALFWORLD_CONTROLLER_URL"],
+                "http://127.0.0.1:28000/api",
+            )
+            self.assertEqual(
+                __import__("os").environ["SAO_ALFWORLD_HTTP_TIMEOUT"],
+                "123",
+            )
+
     def test_config_requires_distinct_official_task_ids(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
