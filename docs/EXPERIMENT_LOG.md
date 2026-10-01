@@ -2809,3 +2809,22 @@ It is exploratory validation, not held-out AIME. AIME test stays sealed until a 
     CPU preflight verifies192 H2 rows,640 W1 rows, E15's11829-token maximum
     versus16384 capacity, and198 train-only centralized-context tokens versus
     the1024 allowance. These are execution checks, not new learning outcomes.
+
+100. **2026-10-01 — strong arms executing and durable continuation wired.**
+    Node4 starts sequential H2; node3 starts MA W1 after the completed v5
+    exploration releases its GPUs. Both use the same published E15/W0/H1.
+    The first three Actor updates are observed on both nodes, not inferred
+    from loaded models. Sequential H2 subsequently completes32 steps/
+    27 nonzero Actor updates with an exact native audit and release.
+    MA W1 is observed at41 steps/36 nonzero Actor updates and continues.
+
+    Add whole-arm state handoff, checkpoint/proposal selection and
+    current-partner baseline refresh. The controller adopts the independently
+    running first phase, does not retrain it, preserves finite retry histories
+    and stops at a final freeze without reading report scores. Cached control
+    reports have explicit model/harness/question/decode bindings. H2 retains
+    all8 slots per model, including invalid/no-patch and duplicates. Fresh
+    current-W packets use checked official greedy train0--239 evidence,
+    weight digests and immutable raw baseline identities; all-pass calibration
+    is retained without invented traces.46 tests/23 subtests pass.
+    This is not yet a completed SAO-versus-MA result.

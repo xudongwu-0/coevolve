@@ -136,6 +136,24 @@ def generation_args(request: dict) -> SimpleNamespace:
     )
 
 
+def validate_job_task_ids(request: dict) -> list[int]:
+    task_ids = request["task_ids"]
+    purpose = request.get("purpose", "evaluation")
+    if purpose == "training_evidence" and request["kind"] == "baseline":
+        lower, upper = 0, 240
+    elif purpose == "evaluation":
+        lower, upper = 240, 400
+    else:
+        raise ValueError("Only explicit baseline jobs may collect training evidence")
+    if (
+        not isinstance(task_ids, list) or not task_ids
+        or any(type(index) is not int or not lower <= index < upper for index in task_ids)
+        or task_ids != sorted(set(task_ids))
+    ):
+        raise ValueError("Evaluation/training jobs must retain their sorted, unique task partition")
+    return task_ids
+
+
 def run_job(path: Path) -> dict:
     job = read_json(path)
     request = job["request"]
@@ -165,9 +183,7 @@ def run_job(path: Path) -> dict:
                 "patch": patch, "patch_sha256": contract_digest(patch) if patch is not None else None,
             }
         else:
-            task_ids = request["task_ids"]
-            if task_ids != sorted(set(task_ids)) or not all(240 <= index < 400 for index in task_ids):
-                raise ValueError("Evaluation jobs require sorted, unique development task IDs")
+            task_ids = validate_job_task_ids(request)
             runtime = output / "runtime"
             agentbench = prepare_agentbench_runtime(runtime / "AgentBench")
             os.environ.update(cpu_env(runtime))

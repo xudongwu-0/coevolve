@@ -89,6 +89,30 @@ the count of nonzero gradients. The native phase entry point is not, by itself,
 a completed arm: proposal selection, counterpart refresh and later phases still
 need their declared receipts and final report gate.
 
+`python -m sao_bridge.alfworld_strong_arm --protocol FROZEN_JSON --arm sequential`
+(or `--arm ma`) is the persistent **whole-arm** controller. It adopts the already
+launched first native phase without duplicating it, then performs the prescribed
+training/selection order. Run it under the same bounded systemd restart policy.
+It stops at `ARM_FROZEN.json`; it never opens report questions by itself.
+
+Post-phase selection is implemented in `alfworld_strong_select`: H2 uses eight
+matched prompts/seeds for the incumbent/E15/E31 continuation checkpoints,
+retains invalid/no-patch and duplicate slots, selects the Engineer by mean
+proposal performance, then chooses a deployed harness from that model,
+the incumbent harness and no-patch. W checkpoints are only considered after the
+full80-step phase. Shared/current control reports are bound to Solver path,
+harness hash, question IDs, seeds and decode settings. Runtime supplementation
+does not rewrite already-complete historical model metadata.
+
+After MA W1 actually changes W, `alfworld_strong_refresh` collects24 official
+greedy baseline cohorts of10 **train-only** tasks. It freezes the raw records,
+binds current Solver weight hashes and rebuilds compact prompts with the original
+builder settings. All-pass cohorts remain in calibration without fabricated
+failure prompts; if the entire training cohort has no failures, the controller
+stops for a protocol decision rather than fabricating an equal-budget H2.
+These per-turn-budget packets are not replaced by the earlier native
+total-token-budget diagnostic. No Solver behavior log-probabilities are invented.
+
 ## Objective and control
 
 The primary endpoint is final held-out task accuracy under the same declared

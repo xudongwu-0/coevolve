@@ -383,6 +383,15 @@ optimizer活动窗口76.05分钟，含模型启动的training为79.78分钟。
 6/2、batch12、更小LR和更少Actor更新共同改变，不能归因于唯一因素；新强
 SAO/MA仍使用已验证的v4级80步/75Actor配方。
 
+两臂第一块已真实启动（不是只准备配置）：node4
+`coevolve-strong-sao-v1-sequential-h2`从E15/critic15对W0续训，
+node3`coevolve-strong-ma-v1-w1`用共同H1与train-only centralized critic训练W0。
+顺序H2已经完成32步/27次非零Actor更新并释放GPU；MA W1已观察到41步/
+36次非零Actor更新，仍在运行。两侧filler始终active。
+整臂持久控制器会按冻结顺序继续proposal/checkpoint选择、必要的train-only
+counterpart refresh与后续W块，不重复首块，不提前打开report。
+这些执行器的46项CPU测试/23个subtests通过；两臂的最终比较尚未完成。
+
 复现数据准备（仓库根目录，无模型调用）：
 ```bash
 PYTHONPATH=whale_local python3 -m sao_bridge.alfworld_train_data \
