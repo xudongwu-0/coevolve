@@ -247,6 +247,27 @@ PYTHONPATH=whale_local python3 -m sao_bridge.alfworld_train_data \
 - `whale_local/sao_bridge/gpu_telemetry.py`：按精确PID区分实验/filler，
   同时记录峰值显存；算法利用率必须取`mean_experiment_sm_percent`。
 
+新增只读的`alfworld_solver_monitor.py`供9B双seed长期监管使用，不修改训练
+配置、不停止GPU进程，也不负责替代controller的systemd重启策略。它检查
+完整JSONL行、连续step、critic-only warmup、真实Actor更新、concat batch、
+terminal target范围、冻结源码/数据、最终actor/critic checkpoint及GPU释放。
+短暂controller失败给既有自动恢复留出10分钟，持续失败或不变量错误写出
+`attention_required`并退出；不能将失败算作零分或通过gate。
+
+在两个controller已生成`spec.json`及`source_manifest.json`后运行：
+```bash
+PYTHONPATH=whale_local python3 -B -m sao_bridge.alfworld_solver_monitor \
+  --protocol examples/alfworld_solver_v1_pair_gate.json \
+  --run runs/alfworld_solver_v3_train_only_scale_s42 \
+  --run runs/alfworld_solver_v3_train_only_scale_s43 \
+  --output runs/alfworld_solver_v3_pair_gate_result.json
+```
+默认每60秒写原子`*_monitor.json`，24小时超时，预声明gate和run身份存入
+不可变的`*_monitor_protocol.json`，重启监管也不能放宽gate。只有两边完整
+结束、当前尝试释放GPU且filler仍active后才发布pair result。应由持久系统
+service执行此CPU命令，不依赖编辑器连接。运行中源码应保持冻结；实验结束
+后合法修改源码，不应再对旧run重启这项“当前源码一致”检查。
+
 GPU利用率必须分开报告。新增per-process telemetry把精确识别的adaptive
 filler PID与其它实验PID分开。4B启动阶段曾观测到表面72.75% SM中仅
 1.94%来自实验、71.88%来自filler；进入真实optimizer后，node3短窗为
