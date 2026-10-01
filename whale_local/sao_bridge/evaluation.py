@@ -58,7 +58,13 @@ class Sampler:
                 response = await self.client.post(
                     url + "/chat/completions",
                     json=dict(body, max_tokens=room if max_tokens is None else min(max_tokens, room)))
-            response.raise_for_status()
+            try:
+                response.raise_for_status()
+            except httpx.HTTPStatusError as exc:
+                raise httpx.HTTPStatusError(
+                    f"{exc}: {response.text[:2000]}",
+                    request=exc.request, response=exc.response,
+                ) from exc
             result = response.json()
         self.requests += 1
         self.generated_tokens += result["usage"]["completion_tokens"]

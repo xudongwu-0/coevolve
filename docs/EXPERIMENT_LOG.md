@@ -2603,3 +2603,35 @@ It is exploratory validation, not held-out AIME. AIME test stays sealed until a 
     budgets are detected before GPU allocation and exit78. Old identity
     and failure/release receipts are archived rather than silently replaced.
     This is an infrastructure recovery, not an algorithm outcome.
+
+94. **Recover Engineer target evaluation; diagnose Solver malformed-call
+    failures (2026-10-01).** The node3 r1 evaluation service now runs the
+    locked-port fix under454a861. Its recovery receipt preserves91 file
+    hashes, all24 proposals, and the original attempts; exactly the six
+    incomplete target jobs received two extra attempts each. All six
+    finished on locked ports outside the ephemeral range. Selection mean@8
+    on24 tasks is E0 69.27%, step15 76.56%, step31 67.19%. Step15 is selected
+    under the unchanged rule; the70-task independent report is pending.
+    These selection scores are not a held-out improvement conclusion.
+
+    Solver v4 finished80 native steps and75 nonzero Actor updates, with
+    targets in[0,1] and one training attempt. Step79 evaluation repeatedly
+    failed because a generated tool-call argument was unterminated JSON;
+    the next vLLM history rendering raised JSONDecodeError/HTTP400. The
+    controller retry loop was stopped, without stopping the independent
+    filler. Native training audit, original sources and monitor identity
+    were saved before editing.
+
+    The adapter now records unroundtrippable generated argument JSON as
+    a terminal zero-reward model-format failure, preserving its raw message
+    and token accounting and cancelling the environment session. Ordinary
+    HTTP/environment errors still fail the evaluation explicitly, now with
+    the rejection body available. This is a declared conservative format
+    policy correction, not an infrastructure-only change: the official
+    worker could otherwise give feedback and continue after an invalid
+    call, but the current serving template cannot render that history.
+    Completed W0/step39 cached reports contain no malformed arguments in
+    7,886/3,099 tool calls, respectively. Their outcomes are unaffected.
+    Training is not repeated, and task sets, sampling seeds, token budgets,
+    checkpoint candidates and promotion gates remain unchanged.
+    Focused CPU validation:51 tests and25 subtests passed.

@@ -254,6 +254,23 @@ LR改为Actor 2e-6、critic 1e-5，保持learned critic、K1、concat和terminal
 report至少+3pp、题级95%下界大于0；通过也不代表多seed稳定或正式确认，
 更不能隐藏既有负结果。另一节点优先准备/验证Engineer，不重复这个seed。
 
+v4已完成80个native step、75次非零Actor更新，critic targets始终[0,1]，
+训练只有一个attempt。step79评测连续因HTTP400失败，根因不是权重加载：
+生成的tool-call arguments含不完整JSON，下一轮vLLM重渲染历史时触发
+`JSONDecodeError`。修复前native审计与完整源码存于run下的
+`TRAINING_NATIVE_AUDIT_BEFORE_EVAL_RECOVERY.json`和
+`recoveries/invalid-tool-arguments-r1/`，未重新训练。
+
+[ALFWorld适配器](../whale_local/sao_bridge/alfworld_domain.py)现将无法往返
+传输的非JSON/object工具参数记为当前episode的零分模型格式错误，保留原始
+assistant消息、token数和错误，并取消session；不修补动作、不把HTTP/环境
+异常填零。**这是显式、保守的格式错误终止规则，不是纯基础设施修复**：
+官方worker本来可反馈无效工具调用并继续，但该历史无法通过当前vLLM模板。
+合法工具调用和既有token-limit行为不变。已逐项审计完成的W0与step39缓存，
+分别7,886/3,099次工具调用没有这种格式错误，故缓存不受新规则影响。
+源码/monitor身份必须显式迁移并保留旧版本，不能声称全程源码哈希一致。
+51项CPU回归和25个subtests通过；独立report未完成前仍不宣称Solver提升。
+
 复现数据准备（仓库根目录，无模型调用）：
 ```bash
 PYTHONPATH=whale_local python3 -m sao_bridge.alfworld_train_data \
@@ -370,6 +387,12 @@ target job后，部分worker因`EADDRINUSE`启动失败。已确认固定worker�
 任何Engineer输出，也不修改任务、候选数、seed、token或模型选择门槛。
 恢复时跳过已缓存的Engineer模型加载；耗尽重试返回78，避免重复加载GPU模型
 后才再次发现预算耗尽。`infrastructure_recovery.json`冻结这次迁移及有限授权。
+实际恢复已启动为node3的`coevolve-9b-engineer-fast-v1-eval-r1.service`，
+保留并核验91个文件SHA；六个未完成job使用12xxx--15xxx/22xxx--25xxx的
+已锁定非ephemeral端口后全部完成。24题mean@8 selection为E0 69.27%、
+step15 76.56%、step31 67.19%；按原规则选择step15，正在独立70题report。
+这只是模型选择结果，不应提前当作Engineer泛化提升。step31三条非法候选
+仍保留在分母，所有24个提案均未重新采样。
 
 另已把train-only catalogue接入Engineer launcher和官方reward adapter：可选
 `training_split/training_catalogue/training_catalogue_sha256/solver_weights_sha256`

@@ -2,12 +2,15 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 from urllib.parse import urlsplit
 
 import httpx
 
 from .alfworld_train_data import task_count
+
+logger = logging.getLogger(__name__)
 
 INITIAL_SOURCE = '{"benchmark":"alfworld","actions":[]}\n'
 EDITOR_SYSTEM = "Use the official Harness-R1 ALFWorld failure-packet prompt supplied in each row."
@@ -63,6 +66,23 @@ def _terminal_reward(payload: dict) -> float:
     raise RuntimeError("terminal ALFWorld response omitted numeric reward")
 
 
+def _tool_argument_errors(calls: list[dict]) -> list[dict]:
+    errors = []
+    for index, call in enumerate(calls):
+        arguments = call["function"]["arguments"]
+        try:
+            decoded = json.loads(arguments)
+        except (json.JSONDecodeError, TypeError) as exc:
+            errors.append({"tool_call_index": index, "error": str(exc)})
+        else:
+            if not isinstance(decoded, dict):
+                errors.append({
+                    "tool_call_index": index,
+                    "error": "Tool arguments must encode a JSON object",
+                })
+    return errors
+
+
 async def run_episode(row: dict, spec: dict, generate, total_tokens=4096, seed=42) -> dict:
     del spec
     task_id = row.get("task_id", row.get("index"))
@@ -88,6 +108,21 @@ async def run_episode(row: dict, spec: dict, generate, total_tokens=4096, seed=4
     tool_errors = 0
     turns = 0
     status = None
+
+    def failed_episode(reason: str, *, truncated: bool) -> dict:
+        return {
+            "id": row.get("id", f"alfworld-{task_id}"),
+            "task_id": task_id, "task_split": task_split,
+            "reward": 0.0, "tokens": tokens,
+            "tool_calls": tool_calls, "tool_errors": tool_errors,
+            "truncated": truncated, "boxed": bool(tool_calls),
+            "status": reason, "turns": turns, "messages": messages,
+            "metrics": {
+                "score": 0.0, "truncated": truncated, "stop_reason": reason,
+            },
+            "stop_reason": reason,
+        }
+
     async with httpx.AsyncClient(timeout=timeout, trust_env=False) as client:
         try:
             response = await client.post(
@@ -104,21 +139,7 @@ async def run_episode(row: dict, spec: dict, generate, total_tokens=4096, seed=4
             while _running(status):
                 remaining = total_tokens - tokens
                 if remaining <= 0:
-                    return {
-                        "id": row.get("id", f"alfworld-{task_id}"),
-                        "task_id": task_id, "task_split": task_split,
-                        "reward": 0.0, "tokens": tokens,
-                        "tool_calls": tool_calls, "tool_errors": tool_errors,
-                        "truncated": True, "boxed": bool(tool_calls),
-                        "status": "token_limit", "turns": turns,
-                        "messages": messages,
-                        "metrics": {
-                            "score": 0.0,
-                            "truncated": True,
-                            "stop_reason": "token_limit",
-                        },
-                        "stop_reason": "token_limit",
-                    }
+                    return failed_episode("token_limit", truncated=True)
                 completion = await generate(messages, tools, remaining, seed + turns)
                 choice = completion["choices"][0]
                 assistant = choice["message"]
@@ -131,6 +152,20 @@ async def run_episode(row: dict, spec: dict, generate, total_tokens=4096, seed=4
                 tool_calls += len(calls)
                 tool_errors += int(not calls)
                 messages.append(assistant)
+                argument_errors = _tool_argument_errors(calls)
+                if argument_errors:
+                    # Invalid JSON cannot round-trip through the serving chat template.
+                    tool_errors += len(argument_errors)
+                    logger.warning(
+                        "ALFWorld task %s generated invalid tool arguments: %s",
+                        task_id, argument_errors,
+                    )
+                    result = failed_episode(
+                        "invalid_tool_arguments",
+                        truncated=choice.get("finish_reason") == "length",
+                    )
+                    result["invalid_tool_arguments"] = argument_errors
+                    return result
                 response = await client.post(
                     base + "/interact",
                     headers={"session_id": session_id},
@@ -159,4 +194,7 @@ async def run_episode(row: dict, spec: dict, generate, total_tokens=4096, seed=4
                         base + "/cancel", headers={"session_id": session_id}, json={},
                     )
                 except httpx.HTTPError:
-                    pass
+                    logger.warning(
+                        "Could not cancel ALFWorld session %s", session_id,
+                        exc_info=True,
+                    )
