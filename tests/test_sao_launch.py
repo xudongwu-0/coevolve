@@ -12,9 +12,47 @@ import psutil
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "whale_local"))
 from sao_bridge.launch import Launcher
+from sao_bridge.common import SAO
 
 
 class OwnershipTests(unittest.TestCase):
+    def test_frozen_worktree_resolves_upstreams_before_hydra_import(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            snapshot = root / "nested/worktrees/frozen"
+            (snapshot / "third_party").mkdir(parents=True)
+            (snapshot / "whale_local").mkdir()
+            (snapshot / "third_party/sao").symlink_to(SAO.resolve(), target_is_directory=True)
+            config = root / "training/trainer.yaml"
+            config.parent.mkdir()
+            config.write_text("fixture: canonical-upstream\n")
+            with (
+                patch("sao_bridge.launch.ROOT", snapshot),
+                patch("sao_bridge.launch.require_research_node"),
+            ):
+                launcher = Launcher(root)
+            try:
+                self.assertEqual(launcher.env["PYTHONPATH"].split(":"), [
+                    str(snapshot / "whale_local"),
+                    str((SAO / "vendor/AReaL").resolve()),
+                    str(SAO.resolve()),
+                ])
+                subprocess.run(
+                    [
+                        sys.executable, "-B", "-c",
+                        "import sys; from areal.api.cli_args import parse_cli_args; "
+                        "config, path = parse_cli_args(['--config', sys.argv[1]]); "
+                        "assert config.fixture == 'canonical-upstream'; "
+                        "assert str(path) == sys.argv[1]",
+                        str(config),
+                    ],
+                    env={**launcher.env, "CUDA_VISIBLE_DEVICES": ""},
+                    check=True, capture_output=True, text=True, timeout=60,
+                )
+            finally:
+                launcher.close()
+                Path(launcher.env["TMPDIR"]).rmdir()
+
     def test_retry_preserves_previous_process_log(self):
         with tempfile.TemporaryDirectory() as temporary:
             launcher = object.__new__(Launcher)

@@ -2666,3 +2666,34 @@ It is exploratory validation, not held-out AIME. AIME test stays sealed until a 
     near-zero median. The proposed rebalance, lower LR and longer critic
     calibration are a joint exploratory recipe, not a speed claim or an
     ablation. It retains fresh W0/H0 and the original goal-isolated gate.
+
+96. **9B Solver v4 also passes; both SAO learning prerequisites are now
+    established at the requested exploratory standard (2026-10-01).**
+    Selection59-task mean@2: W0 66.9492%, step39 66.1017%, step79 79.6610%.
+    The selected step79 independently improves91-task mean@2 from78.0220%
+    to89.5604%, +11.5385pp, paired question95%CI[+3.2967,+19.7802]pp.
+    There are23 improved and8 regressed question means. All original
+    single-seed gate checks pass. One selection and two report episodes
+    contain malformed tool arguments; all are retained as explicit zero
+    model-format outcomes. No infrastructure errors are assigned rewards.
+
+    The final native evidence audit recomputes the comparison, verifies
+    immutable pre-recovery training/cache hashes,80 optimizer steps/
+    75 Actor updates, and a fresh GPU release receipt. Total wall time
+    from the original launch is199.82 minutes, not the22.96-minute
+    restarted controller segment. V1's paired-seed mean-2pp and v2's mean0pp
+    remain negative evidence. V4 jointly changes training pool, scale and
+    LR; its success is neither a causal ablation nor seed robustness.
+
+    The Engineer prerequisite already passed in entry95. New MA-SAO work
+    may now proceed, but requires genuinely matched starts and budgets;
+    adding the separately measured gains does not prove co-adaptation.
+
+    A separate v5 speed/stability direction uses a detached worktree.
+    Its first two attempts made zero native updates: Hydra resolved a
+    shared-upstream symlink differently from its relative config base.
+    Canonicalize dependency PYTHONPATH entries before import, retaining
+    the frozen worktree bridge. A real CPU Hydra regression covers this
+    failure. The node3 monitor also needs an output inside its owned run,
+    not the node4-owned parent. Preserve these failed startup attempts;
+    recovery uses an explicitly linked new run, not erased retry history.

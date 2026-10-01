@@ -40,10 +40,10 @@ class Launcher:
             # Children use the running interpreter's venv (a node-local tmpfs copy imports
             # vLLM ~6x faster than the shared 3FS copy; code, models and data stay shared).
             os.environ, PATH=str(Path(sys.prefix) / "bin") + ":" + os.environ["PATH"],
-            PYTHONPATH=":".join(map(str, (
+            PYTHONPATH=":".join(str(path.resolve()) for path in (
                 ROOT / "whale_local", ROOT / "third_party/sao/vendor/AReaL",
                 ROOT / "third_party/sao",
-            ))),
+            )),
             VLLM_PLUGINS="", OMP_NUM_THREADS="4", PYTHONUNBUFFERED="1",
             HF_HUB_OFFLINE="1", HF_HUB_DISABLE_TELEMETRY="1",
             TOKENIZERS_PARALLELISM="false", WANDB_MODE="disabled",

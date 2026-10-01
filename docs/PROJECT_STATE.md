@@ -24,7 +24,9 @@ Engineer准备与验证不再等待Solver的双seed门槛；MA-SAO仍须先有�
 **ALFWorld现已有单seed匹配评测证据：SAO更新后的9B Engineer在独立70个
 任务上，候选mean@8由E0的72.14%提升到E15的80.00%，+7.86pp，题级95%区间
 [+4.46,+11.25]pp，且优于no-patch的75.71%。这不是只找到一个好的E0 patch。
-9B Solver权重侧仍未通过held-out gate；在两侧基线成立前，MA-SAO继续锁定。**
+9B Solver v4也已通过原单seed门槛：固定空harness，独立91题mean@2从
+78.02%提升到89.56%，+11.54pp，题级95%区间[+3.30,+19.78]pp。
+两侧学习证据现在成立，可以进入新的公平SAO/MA-SAO对比；尚未证明MA更强。**
 
 - 旧 SAO / MA-SAO 实验的主要收益来自 Solver 权重；多次交替实验始终保留 h0。
 - 32条数据的4B Harness-R1小试未通过输出/执行门槛，不能评价有效RL学习。
@@ -43,7 +45,10 @@ Engineer准备与验证不再等待Solver的双seed门槛；MA-SAO仍须先有�
 - 新的fixed-no-patch 9B Solver双seed验证已于2026-10-01 06:40:35 UTC
   全部完成。seed42独立report为74%→72%，seed43为79%→77%，平均-2pp；
   两个题级95%区间都跨零，预声明pair gate失败。速度修复和非零梯度
-  不能替代held-out学习收益，当前仍不能宣称SAO已经提升9B Solver。
+  不能替代held-out学习收益；这项早期失败不因后来v4成功而改写。
+- 最新9B Solver v4的75次Actor更新通过goal隔离的独立report；23个题级均值
+  改善、8个退步。这是快速单seed探索的正证据，不能覆盖早期双seed负结果，
+  也不代表对训练seed稳健，或已校正自适应方法搜索。
 - 最新9B Engineer快速实验选择step15，即11次Actor更新后的权重；E0/E15
   各8/8合法候选，在相同训练证据与decode预算下通过独立report门槛。
   这是单seed、固定8个训练failure prompts下的未见任务收益，不是多seed
@@ -275,6 +280,13 @@ worktree仅共享只读模型/数据、已固定的upstream依赖以及节点run
 其controller、子进程和CPU monitor的`PYTHONPATH`都必须指向同一worktree。
 upstream依赖仍是共享的，运行期间不得修改；不能只冻结入口却让子进程加载
 主仓库的新实现。运行收据记录worktree、commit和所共享依赖的身份。
+首次v5启动的两个attempt均在任何native update之前失败：通过symlink导入
+AReaL时，Hydra按真实文件定位caller，却按symlink路径计算相对config目录。
+[Launcher](../whale_local/sao_bridge/launch.py)现先canonicalize依赖的PYTHONPATH；
+主worktree的本地代码路径仍保留，回归测试用真实Hydra解析外部配置。
+旧attempt与错误保留；恢复须用新的冻结源码/显式运行收据，不重置旧失败记录。
+node3的CPU monitor输出必须放在其拥有的run目录内，而非node4拥有的runs根。
+两节点只给当前process设置精确共享upstream的Git信任，不改global配置。
 
 v4已完成80个native step、75次非零Actor更新，critic targets始终[0,1]，
 训练只有一个attempt。step79评测连续因HTTP400失败，根因不是权重加载：
@@ -291,7 +303,25 @@ assistant消息、token数和错误，并取消session；不修补动作、不�
 合法工具调用和既有token-limit行为不变。已逐项审计完成的W0与step39缓存，
 分别7,886/3,099次工具调用没有这种格式错误，故缓存不受新规则影响。
 源码/monitor身份必须显式迁移并保留旧版本，不能声称全程源码哈希一致。
-51项CPU回归和25个subtests通过；独立report未完成前仍不宣称Solver提升。
+51项CPU回归和25个subtests通过。恢复后selection中1条、report中2条格式
+错误轨迹均按零分保留，并非删除样本；其它HTTP/环境错误仍导致显式失败。
+
+**v4完整结果已发布并由独立monitor通过原gate：**
+
+| split | W0 | step39 | step79 |
+|---|---:|---:|---:|
+| selection59题mean@2 | 66.95% | 66.10% | 79.66% |
+| report91题mean@2 | 78.02% | 未打开 | 89.56% |
+
+step79独立report +11.54pp，题级95%区间[+3.30,+19.78]pp。首次launch到完成
+199.82分钟，包含训练、评测和失败修复；恢复controller的22.96分钟不是整体
+耗时。最终审计
+`runs/alfworld_solver_fast_v4_s42/FINAL_NATIVE_EVIDENCE_AUDIT.json`独立重算配对
+report，并确认原训练、缓存SHA未变化，80步/75次Actor更新、两个完整
+checkpoint及当前GPU释放。主gate结果为`runs/alfworld_solver_fast_v4_result.json`。
+此前v1双seed平均-2pp、v2平均0pp仍是必须报告的负结果；v4同时改变了训练池、
+预算和LR，不能据此识别唯一关键因素。当前已可研究MA-SAO，但不能把两侧
+分别变强直接当作交替训练更强，更不能与旧低预算顺序臂作不匹配比较。
 
 复现数据准备（仓库根目录，无模型调用）：
 ```bash
@@ -432,7 +462,8 @@ E15−E0为+7.86pp，题级bootstrap 95%区间[+4.46,+11.25]pp；44个题级均�
 `runs/alfworld_engineer_fast_v1_s42/evaluation/FINAL_EVIDENCE_AUDIT.json`；
 `COMPLETE.json`和更新于其后的`RELEASED.json`确认GPU已交还仍active的filler。
 本轮不需要触发“SAO-H失败后再复现GRPO”的条件分支；未运行GRPO，
-更不能把这个结果称为GRPO复现。当前主要未解目标是9B Solver。
+更不能把这个结果称为GRPO复现。9B Solver随后也已通过v4门槛；当前主要未解
+目标转为匹配起点/预算的SAO与MA-SAO harness-weight-harness比较。
 
 另已把train-only catalogue接入Engineer launcher和官方reward adapter：可选
 `training_split/training_catalogue/training_catalogue_sha256/solver_weights_sha256`
