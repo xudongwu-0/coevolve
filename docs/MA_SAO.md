@@ -69,6 +69,26 @@ The matrix runner and train-only context support have CPU regression coverage.
 The full paired continuation is not yet a completed experiment; runtime receipts
 and subsequent entries in [the experiment log](EXPERIMENT_LOG.md) are authoritative.
 
+### Persistent native phase execution
+
+`python -m sao_bridge.alfworld_strong_phase --protocol FROZEN_JSON --arm sequential
+--phase h2 --root PHASE_ROOT --matrix-root COMMON_MATRIX_ROOT` waits for the
+common matrix's completion and GPU-release receipts, independently checks all
+task/sample seeds and scores, and publishes the shared initial state.
+The initial MA W1 phase waits for that state. Later phases require an explicit
+selected `--state`; they must not silently restart from the common prefix.
+
+The phase runner freezes its data/config/state, preserves failed attempt
+directories, takes an exclusive controller lease and permits at most the declared
+two native attempts. Run it under systemd `Restart=on-failure` with
+`RestartPreventExitStatus=78`; input-validation failures and exhausted attempts
+must not restart forever. Successful native phases are audited and reused, never
+silently retrained. `PHASE_COMPLETE.json` includes contiguous native steps,
+warmup isolation, exact Actor batch size, role-appropriate terminal targets and
+the count of nonzero gradients. The native phase entry point is not, by itself,
+a completed arm: proposal selection, counterpart refresh and later phases still
+need their declared receipts and final report gate.
+
 ## Objective and control
 
 The primary endpoint is final held-out task accuracy under the same declared

@@ -2779,3 +2779,33 @@ It is exploratory validation, not held-out AIME. AIME test stays sealed until a 
     bug. Systemd recovered without retraining; step23 then completed at
     59.32% selection mean@2. Step47 selection is still pending, so no final
     v5 quality or speed conclusion is available yet.
+
+99. **2026-10-01 — common native H1 selected; v5 exploration not promoted.**
+    Async matrix r2 completes all9 unique harnesses,24 selection tasks and
+    two Solver samples per task in806.25s. Independent auditing checks all
+    432 task/sample identities, paired decode seeds, binary rewards and4096
+    completion-token caps. The frozen rule selects proposal04:
+    83.33% versus68.75% no-patch on selection. Report remains unopened.
+    `common/INITIAL_STATE.json` and `FINAL_MATRIX_AUDIT.json` persist the
+    selected E15/W0/H1 and full historical prefix accounting. This selected
+    difference is not a held-out report improvement.
+
+    V5 completes48 native steps/40 nonzero Actor updates and releases node3.
+    Final selection: W0=66.95%, step23=59.32%, step47=67.80%.
+    The+0.85pp final candidate gain misses the+2pp promotion floor; retain W0.
+    No trained-model report is opened. Its report0pp is a retained-W0
+    identity comparison, not a negative evaluation of the trained model.
+    Frozen-worktree audit confirms source identity, budgets, target range
+    and release. Active native training is4562.918s; training including
+    startup is4787.047s. Per-active-Actor averages:35.196s Actor,
+    34.461s critic,11.586s rollout wait. Batch size and update budget differ
+    from v4, so neither raw step times nor this joint experiment isolate
+    the effect of6/2 allocation. The strong paired study keeps v4's recipe.
+
+    Add persistent native phase execution with input hashes, exclusive lease,
+    preserved bounded attempts, exact same-role checkpoint handoff and real
+    native metric audits.55 tests/20 subtests pass. The new audit also passes
+    against the completed real positive Engineer and Solver runs. Real-model
+    CPU preflight verifies192 H2 rows,640 W1 rows, E15's11829-token maximum
+    versus16384 capacity, and198 train-only centralized-context tokens versus
+    the1024 allowance. These are execution checks, not new learning outcomes.

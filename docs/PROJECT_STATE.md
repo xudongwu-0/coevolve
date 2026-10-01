@@ -366,6 +366,23 @@ burst48.32秒、heartbeat持续ALIVE、残留session=0、Solver生成次数=0；
 证据在`common/async_controller_preflight/COMPLETE.json`。下一次matrix恢复必须
 沿用原提案/seed/预算并保留上述失败目录。
 
+`selection-r2`已完成9个harness x24题x2样本，13.44分钟，全部432条结果的
+ID/seed/token cap/二元reward已独立核验，且已释放GPU、filler active。
+按事前规则选择`proposal04`为共同H1：selection83.33%，no-patch68.75%；
+这是**用于选优的selection结果**，不能当独立report增益。
+共同E15/W0/H1及原始前缀成本发布到`common/INITIAL_STATE.json`，
+`FINAL_MATRIX_AUDIT.json`保存审计。顺序臂H2和MA臂W1的持久phase入口已实现，
+真实E15 tokenizer容量验证为11829<=16384 tokens；MA W1的train-only critic
+context为198<=1024 tokens。尚不能声称两臂已训练完成或MA已更强。
+
+v5速度/稳定性分支已完成，**学习gate未通过**：selection W0为66.95%，
+step23为59.32%，step47为67.80%（仅+0.85pp，低于+2pp选择门槛），因此保留W0，
+**没有打开训练checkpoint的新report**。其`paired_report`的0pp只是W0对W0，
+不能说训练后report测出0pp。48个native step/40次非零Actor更新已审计，
+optimizer活动窗口76.05分钟，含模型启动的training为79.78分钟。
+6/2、batch12、更小LR和更少Actor更新共同改变，不能归因于唯一因素；新强
+SAO/MA仍使用已验证的v4级80步/75Actor配方。
+
 复现数据准备（仓库根目录，无模型调用）：
 ```bash
 PYTHONPATH=whale_local python3 -m sao_bridge.alfworld_train_data \
