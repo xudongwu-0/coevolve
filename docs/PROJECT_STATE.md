@@ -13,7 +13,8 @@
 最终希望小模型（优先4B）具有这种能力。
 
 **ALFWorld已经证明train候选到未见dev任务的global Harness提升，但尚未证明
-MA-SAO显著优于顺序SAO；Solver权重侧SAO也尚未产生可接受提升。**
+SAO更新后的Engineer权重比E0更会改Harness，也尚未证明9B Solver权重侧SAO
+能通过held-out gate；在这两项顺序基线成立前，MA-SAO继续锁定。**
 
 - 旧 SAO / MA-SAO 实验的主要收益来自 Solver 权重；多次交替实验始终保留 h0。
 - 32条数据的4B Harness-R1小试未通过输出/执行门槛，不能评价有效RL学习。
@@ -23,12 +24,40 @@ MA-SAO显著优于顺序SAO；Solver权重侧SAO也尚未产生可接受提升�
 - Agent-SFT Solver得到7/8是Solver收益，绝不能算作harness改写收益。
 - 正式ALFWorld H1在顺序/MA两臂分别得到+8pp（LCB+2pp）和+11pp
   （LCB+5pp）的未见dev收益；这是clean global Harness证据。
+- 两个被采纳H1都来自第一次optimizer更新前的behavior-version-0。因此该结果
+  证明E0候选搜索与筛选有效，不能归因于训练后的E1变强；E1产生的后续候选
+  没有超过H1。
 - 两臂W1/W2均未通过paired no-patch dev gate；最终都冻结为H1+官方W0。
 - 最终dev上MA为90/100、顺序为88/100，但MA−顺序仅+2pp且LCB=0，
   未达到预注册的+5pp，因此禁止搜索交替频率。
 
 不要把“启动成功”“参数发生变化”“合法patch”“训练reward为正”
 或“GPU显示100%”替代最终实验目标。
+
+### 当前顺序验证阶梯（2026-10-01冻结）
+
+1. 固定数学H0，只训练4B Solver。双seed各用8步critic-only warm-up、
+   64步actor、batch64，共4,608条真实轨迹；在独立reward split上从
+   3个预声明checkpoint中保守选择，再在512题mean@2 report上配对比较。
+2. 4B gate要求两个seed都选中训练checkpoint且不退步，平均至少+3pp，
+   并至少一个seed的题级95%区间下界大于0。通过后才启动9B ALFWorld
+   Solver，Harness固定为空patch。
+3. 9B Solver通过后，才扩大9B Engineer SAO，并在完全相同packet、prompt、
+   decoding seed、候选数和全局held-out任务上做E0/E1能力A/B。
+4. 若SAO-H失败，先按官方Harness-R1的组内GRPO目标做同预算复现；只有
+   9B Solver和Engineer两侧都证明可训练后，才解锁MA-SAO与交替频率研究。
+
+持久服务为`coevolve-4b-solver-v2-s42.service`（node4）和
+`coevolve-4b-solver-v2-s43.service`（node3）。它们写原子
+`STATUS.json`、训练attempt、checkpoint选择、`COMPLETE.json`/`FAILED.json`
+和GPU释放审计；客户端断线不终止预声明工作。
+
+GPU利用率必须分开报告。新增per-process telemetry把精确识别的adaptive
+filler PID与其它实验PID分开。4B启动阶段曾观测到表面72.75% SM中仅
+1.94%来自实验、71.88%来自filler；进入真实optimizer后，node3短窗为
+总50.0%、实验48.22%、filler 0%，同时filler unit仍保持active。由此证明
+不能用`nvidia-smi`总利用率冒充算法利用率，也证明训练活跃时filler会自动
+完全让载，无需停止用户的服务。
 
 ## 2. 模型角色与算法边界
 

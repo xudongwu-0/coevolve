@@ -2186,3 +2186,30 @@ It is exploratory validation, not held-out AIME. AIME test stays sealed until a 
     compute-heavy proxy including initial handoff, not full PPO/vLLM
     end-to-end speed; low-SM workloads eligible for shared mode require their
     own A/B or an explicit reservation.
+84. **Sequential SAO hardening protocol started (2026-10-01).** The next
+    research order is frozen to avoid using MA mechanisms to rescue an
+    unqualified sequential baseline: (A) fixed-H0 4B Solver, (B) fixed
+    no-patch 9B ALFWorld Solver, (C) same-budget 9B Engineer E0/E1 capability,
+    and only then (D) MA-SAO. If C fails, reproduce the official Harness-R1
+    group-relative GRPO objective before attributing failure to the model or
+    task.
+
+    Stage A uses two predeclared seeds, 8 critic-only warm-up steps followed by
+    64 actor steps at batch64, for4,608 authentic trajectories per seed.
+    Checkpoints are saved after total steps24,48,72; selection uses the
+    disjoint256-question reward split at mean@2 with a
+    Bonferroni-adjusted paired lower bound; the untouched report is512
+    questions at mean@2. The pair gate requires both seeds to select a trained
+    checkpoint and not regress, mean gain at least+3pp, and at least one seed
+    with a positive question-bootstrap95% lower bound. Test/AIME stays sealed.
+    Runs are persistent systemd services on node3/node4 and retry only bounded
+    infrastructure failures.
+
+    A per-process GPU telemetry path now separates the exact adaptive-filler
+    PIDs from all exclusive experiment PIDs. During an early node4 trainer
+    startup sample, total SM was72.75% but only1.94% belonged to the
+    experiment and71.88% to filler. During an active node3 optimizer window,
+    total was50.0%, experiment48.22%, filler0%; the filler unit remained
+    active in both samples. These are short diagnostic windows, not final
+    throughput estimates. The filler is never stopped or killed by the
+    adaptive-aware training allocator.
