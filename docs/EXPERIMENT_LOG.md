@@ -2479,3 +2479,38 @@ It is exploratory validation, not held-out AIME. AIME test stays sealed until a 
     `assets/alfworld_solver_train_only_v1/protocol_preflight.json`.
     Both live4B source manifests were reverified unchanged.9B remains gated
     on stronger4B evidence; its v2 control is still valid and unstarted.
+
+90. **Corrected/scaled4B Solver passes its stronger dual-seed gate
+    (2026-10-01 14:15 UTC).** FixedH0,512 report questions, mean@2:
+
+    | seed | selected step | W0 report | candidate report | delta | question-level95%CI |
+    |---|---|---|---|---|---|
+    |42|143|41.5039%|56.5430%|+15.0391pp|[+11.6211,+18.4570]pp|
+    |43|191|38.1836%|51.5625%|+13.3789pp|[+9.8633,+16.9922]pp|
+
+    Mean delta+14.2090pp. All predeclared checks passed: trained checkpoint
+    selected in both seeds, each delta>=+2pp, mean>=+5pp, both question-level
+    lower bounds>0. The report remains reused development data, not a new
+    confirmatory test or population-level training-seed significance result.
+    Terminal correction, exact concat and scaling were combined; do not claim
+    a factor-separated causal attribution or compare gains across benchmarks.
+
+    Both completed240 steps/15,360 unique training tasks and10 actor/critic
+    checkpoint pairs. All measured critic targets stayed in[0,1]; warm-up
+    actor isolation and real subsequent updates were verified. Optimizer
+    windows took117.69/117.52 minutes, with58.40%/57.55% true experiment SM
+    and1.82%/1.94% filler SM; filler remained active throughout.
+
+    Seed42 had one evaluation-only restart at13:54:23 UTC, when step119
+    replica6 exited before its health endpoint was ready. Existing training
+    and completed evaluation caches were reused; no scientific settings
+    changed. Original replica stderr was overwritten by the old launcher on
+    retry, so the underlying startup cause is unknown. Later tool-parser
+    warnings are not that startup failure. The recovery receipt preserves
+    the observed facts; final controller elapsed_seconds is not full-trial
+    duration after restart. Subsequent same-name process logs are now
+    archived under previous_logs before opening the new log.
+
+    The4B prerequisite is satisfied. Next execute the frozen9B v2 same-budget
+    terminal-fix control, then the goal-isolated scale protocol; Engineer and
+    MA-SAO remain gated.

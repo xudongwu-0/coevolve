@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 import subprocess
 import tempfile
+import threading
 import time
 import sys
 import unittest
@@ -14,6 +15,30 @@ from sao_bridge.launch import Launcher
 
 
 class OwnershipTests(unittest.TestCase):
+    def test_retry_preserves_previous_process_log(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            launcher = object.__new__(Launcher)
+            launcher.root = Path(temporary)
+            launcher.env = {}
+            launcher.children = []
+            launcher.owned_identities = {}
+            launcher.owned_by_root = {}
+            launcher._audit_lock = threading.Lock()
+            launcher.check = Mock()
+            process = Mock(pid=os.getpid(), args=["fixture"])
+            process.poll.return_value = None
+            log = launcher.root / "evaluation.log"
+            log.write_bytes(b"original startup error\n")
+            with patch("sao_bridge.launch.subprocess.Popen", return_value=process):
+                launcher.start(["fixture"], gpus="", name="evaluation")
+                log.write_bytes(b"second attempt\n")
+                launcher.start(["fixture"], gpus="", name="evaluation")
+            archived = sorted(
+                path.read_bytes() for path in (launcher.root / "previous_logs").glob("*.log")
+            )
+            self.assertEqual(archived, [b"original startup error\n", b"second attempt\n"])
+            self.assertEqual(log.read_bytes(), b"")
+
     def test_default_cuda_allocator_uses_expandable_segments(self):
         with tempfile.TemporaryDirectory() as temporary, patch.dict(
             os.environ, {}, clear=False

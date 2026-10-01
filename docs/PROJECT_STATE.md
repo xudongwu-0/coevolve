@@ -11,7 +11,7 @@
 失败轨迹提出可执行、可采纳、能在未见任务上提高表现的 harness 修改。
 先验证 Harness-R1 的官方方法，再在相同起点、奖励和预算下比较 SAO / MA-SAO。
 最终主证明目标是9B Solver与9B Engineer。按2026-10-01 11:20 UTC的新指令，
-当前先在4B Solver上修复算法、扩样本并验证更强提升，再进入9B Solver，
+4B Solver修复加扩规模已通过更强双seed门槛，当前转向9B Solver，
 随后验证9B Engineer；不能把某次4B校准失败说成推翻历史4B正向结果。
 
 **ALFWorld已经证明train候选到未见dev任务的global Harness提升，但尚未证明
@@ -91,7 +91,7 @@ seed42的step29评估曾把单题4096-token预算耗尽误当作基础设施异�
 训练attempt、checkpoint选择、`COMPLETE.json`/`FAILED.json`和GPU释放审计；
 客户端断线不终止这些工作，但队列完成不等于研究目标完成，也不会自动设计下一轮。
 检查这些unit必须使用`systemctl`，不是`systemctl --user`。
-截至11:08 UTC，当前训练/评测队列均已结束，没有新一轮研究GPU任务在跑。
+历史11:08 UTC快照中，当时训练/评测队列均已结束，没有研究GPU任务在跑。
 两节点adaptive filler receipt仍新鲜，平均总利用率node3为87.13%、node4为
 86.50%，外部实验SM均为0；这是补载，不是算法利用率。
 
@@ -140,9 +140,39 @@ step（seed42/43），全部critic target严格在[0,1]；前8步没有actor更�
 （58/60次采样，无采样错误；只是早期窗口，非全程数据）。
 训练系统unit为`coevolve-4b-solver-v3-s42-r1`（node4）和
 `coevolve-4b-solver-v3-s43-r1`（node3），均零重启；filler始终active。
-完整240步和独立评测尚未结束，**不能将修复运行成功当作泛化提升**。
+完整240步和模型选择、report现已结束；见下方最终结果。
 补充controller远程handle不可运算的工厂接线回归，新增测试单独运行通过；
 不修改正在运行的冻结训练源码。
+
+### 4B v3最终结果：更强Solver门槛通过（2026-10-01 14:15 UTC）
+
+固定H0，数学development report为512题、每题2次生成：
+
+| seed | selection选中step | report W0 | report候选 | 配对提升 | 题级95%区间 |
+|---|---|---|---|---|---|
+| 42 | 143 | 41.50% | 56.54% | +15.04pp | [+11.62,+18.46]pp |
+| 43 | 191 | 38.18% | 51.56% | +13.38pp | [+9.86,+16.99]pp |
+
+平均**+14.21pp**；两seed均选中训练checkpoint、均超过+2pp、
+平均超过+5pp、两题级95%下界均大于0，预声明强门槛全部通过。
+结果：`runs/dev_solver_only_v3_pair_gate_result.json`。
+这提供了比前一轮同数学协议更强的Solver学习证据，但修复、concat与规模
+一起变化，尚不能把收益逐项归因；跨benchmark也不能直接比较提升幅度。
+report已有使用记录，仍是development复验，不能冒充全新confirmatory test，
+题级bootstrap不能替代大量训练seed上的统计显著性。
+
+两节点均完成240步、15360个不同train任务及10对actor/critic checkpoint，
+全部critic target在[0,1]，8步warm-up隔离正确，后续actor确实更新。
+optimizer窗口为117.69/117.52分钟，真实实验SM为58.40%/57.55%，
+filler为1.82%/1.94%，全程active。不是用filler占用率充当算法利用率。
+
+seed42在step119评测模型启动时发生一次replica退出，systemd自动恢复，
+没有重训、改seed、改题或改gate，旧评测缓存保留。原replica stderr被旧
+Launcher的`wb`重启日志覆盖，底层原因未知；不要把恢复后的tool-parser
+警告误当成启动故障原因。恢复receipt在该run的
+`evaluation_recovery_20261001T135423Z.json`。
+该run最终`elapsed_seconds`只覆盖重启后的controller，不能当全程耗时。
+后续Launcher会把同名旧日志先归档到`previous_logs/`，不再覆盖故障证据。
 
 ### 后续9B扩规模的数据与隔离准备（尚未启动9B训练）
 

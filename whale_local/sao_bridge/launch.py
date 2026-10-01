@@ -135,7 +135,15 @@ class Launcher:
         # Serialize Popen + ownership registration with GPU audits. Otherwise a new
         # worker can appear in nvidia-smi before its root is registered.
         with self._audit_lock:
-            with (self.root / f"{name}.log").open("wb") as log:
+            log_path = self.root / f"{name}.log"
+            if log_path.exists() or log_path.is_symlink():
+                archive_root = self.root / "previous_logs"
+                archive_root.mkdir(exist_ok=True)
+                previous = archive_root / f"{log_path.stem}-{time.time_ns()}.log"
+                if previous.exists() or previous.is_symlink():
+                    raise FileExistsError(previous)
+                log_path.rename(previous)
+            with log_path.open("wb") as log:
                 process = subprocess.Popen(
                     command, cwd=ROOT, env=dict(self.env, CUDA_VISIBLE_DEVICES=gpus),
                     stdout=log, stderr=subprocess.STDOUT,
