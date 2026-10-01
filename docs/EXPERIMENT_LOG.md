@@ -2124,3 +2124,31 @@ It is exploratory validation, not held-out AIME. AIME test stays sealed until a 
     runs list adaptive workers as remaining GPU PIDs; subsequent code now
     separates `verified_filler_pids` from `foreign_gpu_pids` so always-on
     utilization is not mistaken for leaked training work.
+82. **Agent-independent adaptive filler lifecycle (2026-10-01).** Replaced
+    the deployment dependency on a pre-existing legacy base unit plus manual
+    drop-in with a repository-owned complete unit template and one lifecycle
+    manager. `install` validates source, three CUDA runtime libraries, exactly
+    eight GPUs and the rendered unit; installs the full
+    `bruli-h200-load.service`; removes the compatibility drop-in; enables boot
+    start; starts it; waits for a PID-matching status receipt; and runs the
+    exact cgroup/user/command identity audit. The unit declares both required
+    mounts, `Restart=always`, a5s restart delay and control-group cleanup.
+
+    The manager also provides read-only `status`/`verify`, temporary
+    `stop`/`start`, persistent `pause`/`resume`, `restart`, `render`, and
+    state-preserving `uninstall`. Persistent pause is a node-local `PAUSED`
+    condition marker and survives reboot and reinstall. A default
+    `reservation.json` path is now wired into the unit for per-GPU yields.
+    The complete development, deployment, operations, reservation, expected
+    utilization and troubleshooting guide is `scripts/systemd/README.md`.
+
+    Node4 canary migrated to the full unit with no drop-in. Terminating the
+    exact verified supervisor changed PID after the5s systemd delay and
+    incremented `NRestarts` to1. `pause` stopped it, and a direct
+    `systemctl start` remained inactive because the condition marker existed;
+    `resume` cleared the marker and rebuilt eight verified workers. Node3 was
+    then migrated and both services are active, enabled, identity-verified
+    and drop-in-free. The latest empty-node snapshot after convergence was
+    85.25% mean on node3 and85.5% on node4, with every GPU at85% or86% and
+    about791MiB filler memory. Focused regressions now pass44 tests; shell
+    syntax, rendered-unit verification and systemd verification also pass.

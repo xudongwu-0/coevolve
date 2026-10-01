@@ -1,0 +1,40 @@
+[Unit]
+Description=CoEvolve training-aware adaptive H200 utilization filler
+Documentation=file://@REPO_ROOT@/scripts/systemd/README.md
+Wants=network-online.target
+After=network-online.target remote-fs.target
+RequiresMountsFor=@REPO_ROOT@ @BASE_DIR@
+ConditionPathExists=!@PAUSE_FILE@
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+User=bruli
+Group=bruli
+WorkingDirectory=@BASE_DIR@
+Environment=HOME=@NODE_DIR@/home
+Environment=TMPDIR=@NODE_DIR@/tmp
+Environment=XDG_CACHE_HOME=@NODE_DIR@/cache
+Environment=CUDA_CACHE_PATH=@NODE_DIR@/cache/cuda
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=PYTHONUNBUFFERED=1
+Environment=OMP_NUM_THREADS=1
+Environment=PYTHONPATH=@REPO_ROOT@/whale_local
+Environment=COEVOLVE_GPU_FILLER_VENDOR=@BASE_DIR@/vendor
+Environment=COEVOLVE_GPU_FILLER_RESERVATION=@RESERVATION_FILE@
+ExecStart=/usr/bin/python3 -B -m sao_bridge.adaptive_gpu_filler supervisor
+Restart=always
+RestartSec=5
+TimeoutStopSec=20
+KillMode=control-group
+LimitCORE=0
+UMask=0022
+NoNewPrivileges=yes
+ProtectHome=read-only
+ProtectSystem=strict
+ReadWritePaths=@NODE_DIR@
+StandardOutput=append:@NODE_DIR@/supervisor.log
+StandardError=inherit
+
+[Install]
+WantedBy=multi-user.target

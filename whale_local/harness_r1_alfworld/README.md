@@ -476,11 +476,11 @@ rule are under
 
 `sao_bridge.adaptive_gpu_filler` replaces the static 55%-memory, 82%--94%-duty
 filler on node3/node4 while retaining the authorized
-`bruli-h200-load.service`. The versioned systemd drop-in is
-`scripts/systemd/bruli-h200-load-adaptive.conf`. `resources.stop_known()` still
-stops an identity-checked legacy filler, but recognizes the adaptive
-supervisor as cooperative and leaves it active when a training launcher claims
-the node.
+`bruli-h200-load.service`. A complete unit template and lifecycle manager now
+live in `scripts/systemd/`; the compatibility drop-in is needed only when
+manually migrating an older legacy unit. `resources.stop_known()` still stops
+an identity-checked legacy filler, but recognizes the adaptive supervisor as
+cooperative and leaves it active when a training launcher claims the node.
 
 The supervisor samples both `nvidia-smi --query-compute-apps` and per-process
 `nvidia-smi pmon`, excluding only its own exact child PIDs. Each GPU has an
@@ -531,19 +531,18 @@ Status is written to
 The service never signals or terminates external PIDs. Its own GPU processes
 remain constrained to the exact systemd cgroup and `bruli` service user.
 
-Deployment requires an identity audit before replacing the legacy service:
+The self-contained installer validates, deploys, enables boot start, starts the
+service and checks its exact identity:
 
 ```bash
-PYTHONPATH="$PWD/whale_local" python -B -m sao_bridge.resources audit
-sudo install -D -m 0644 scripts/systemd/bruli-h200-load-adaptive.conf \
-  /etc/systemd/system/bruli-h200-load.service.d/adaptive-coexist.conf
-sudo systemctl daemon-reload
-sudo systemctl restart bruli-h200-load.service
+sudo scripts/systemd/manage-adaptive-gpu-filler.sh install
 ```
 
-After restart, require `filler_kind=adaptive`, `verified_unit=true`, and no
-unverified GPU process before treating deployment as successful. Do not use a
-name-based kill to remove GPU processes.
+Use the same manager for `status`, `verify`, `start`, temporary `stop`,
+persistent `pause`, `resume`, `restart`, and `uninstall`. Full operating,
+development, reservation, troubleshooting and expected-utilization guidance is
+in `scripts/systemd/README.md`. Do not use a name-based kill to remove GPU
+processes.
 
 ## Environment and official assets
 

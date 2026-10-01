@@ -1,5 +1,6 @@
 import copy
 from pathlib import Path
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -211,6 +212,38 @@ class AdaptiveFillerTests(unittest.TestCase):
             reserved, error = read_reservations(path, 8)
         self.assertEqual(reserved, set(range(8)))
         self.assertIn("invalid GPU indices", error)
+
+
+class AdaptiveFillerDeploymentTests(unittest.TestCase):
+    repo = Path(__file__).resolve().parents[1]
+    manager = repo / "scripts/systemd/manage-adaptive-gpu-filler.sh"
+
+    def test_complete_unit_has_boot_and_crash_recovery(self):
+        template = (
+            self.repo / "scripts/systemd/bruli-h200-load.service.in"
+        ).read_text()
+        self.assertIn("WantedBy=multi-user.target", template)
+        self.assertIn("Restart=always", template)
+        self.assertIn("RestartSec=5", template)
+        self.assertIn("KillMode=control-group", template)
+        self.assertIn("ConditionPathExists=!@PAUSE_FILE@", template)
+        self.assertIn("COEVOLVE_GPU_FILLER_RESERVATION=@RESERVATION_FILE@", template)
+
+    def test_manager_renders_self_contained_unit(self):
+        result = subprocess.run(
+            [str(self.manager), "render"],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+        self.assertNotIn("@REPO_ROOT@", result.stdout)
+        self.assertNotIn("@BASE_DIR@", result.stdout)
+        self.assertIn(
+            "ExecStart=/usr/bin/python3 -B -m "
+            "sao_bridge.adaptive_gpu_filler supervisor",
+            result.stdout,
+        )
+        self.assertIn(f"RequiresMountsFor={self.repo}", result.stdout)
 
 
 class CentralCriticTests(unittest.TestCase):

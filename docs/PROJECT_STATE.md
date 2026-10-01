@@ -316,6 +316,9 @@ packet-transductive、Solver no-patch、reward区选择后原样用于未见题�
 - `assets/alfworld_sao_masao_20260930/data/manifest.json`
 - `whale_local/harness_r1_alfworld/README.md`
 - `whale_local/sao_bridge/adaptive_gpu_filler.py`
+- `scripts/systemd/README.md`
+- `scripts/systemd/manage-adaptive-gpu-filler.sh`
+- `scripts/systemd/bruli-h200-load.service.in`
 - `scripts/systemd/bruli-h200-load-adaptive.conf`
 - `runs/alfworld_sao_masao_20260930/final_sealed_arm_comparison.json`
 
@@ -407,6 +410,9 @@ target必须返回真正的OpenAI `tool_calls`，文本看似XML不是等价证�
   开始新任务前仍须重新核验service、PID、端口和GPU占用，不能只依赖本文判断。
 - `bruli-h200-load.service`保持同一授权unit；adaptive supervisor不停止外部任务，
   只管理自己精确PID/cgroup下的worker。算法利用率报告必须排除filler duty。
+- 完整unit和生命周期管理器位于`scripts/systemd/`；一次`install`后由systemd
+  开机自启、5秒崩溃重启，支持临时`stop`、跨重启`pause`、`resume`与身份
+  `verify`。后续agent须先读同目录README，不能回退到手工legacy drop-in流程。
 - 保存已有权重、算法和分析；清理中间产物必须先有经过验证的保留清单。
   旧约826.5GB checkpoint inventory仅做过盘点，不能声称已安全清理。
 - 使用既有测试；仓库导出不是新的GPU实验。提交前禁止带入任何模型文件或凭据。
@@ -422,12 +428,12 @@ target必须返回真正的OpenAI `tool_calls`，文本看似XML不是等价证�
 **135 passed**；其后失败cache过滤的定向回归为**18 passed**。
 centralized-context、1-D trajectory、partial packet和精确消费ledger相关定向
 回归最新为**32 passed**。
-自适应filler策略、身份校验与ALFWorld回归为**42 passed**；实际GPU又通过
+自适应filler策略、身份校验与ALFWorld回归为**44 passed**；实际GPU又通过
 空闲85.25%利用率、外部负载让载/恢复、worker与supervisor故障恢复和
 98.53%合成训练吞吐比验证。最终full-yield/8GiB版本已在node3/node4
-active+enabled：空闲实测均值分别约86.4%和86.8%，release audit各识别8个
-verified filler且无foreign PID；node4外部SM=89%时本卡worker/context归零，
-外部进程退出后自动恢复。
+active+enabled；多次空闲快照约85%–88%，完整unit安装后的最新均值分别为
+85.25%和85.5%。release audit各识别8个verified filler且无foreign PID；
+node4外部SM=89%时本卡worker/context归零，外部进程退出后自动恢复。
 跳过项不代表通过GPU训练测试；本次没有重新训练模型。存在上游依赖的弃用警告。
 服务器Python环境为torch 2.10、transformers 5.7、vLLM 0.19.1；
 旧发布环境的requirements不能静默视为当前环境完全相同。
