@@ -2750,3 +2750,32 @@ It is exploratory validation, not held-out AIME. AIME test stays sealed until a 
     the expanded suite passes85 tests/32 subtests. Its older token-budget
     fixture now supplies structurally valid OpenAI tool arguments, preserving
     its intended budget test under the already-adopted format-error semantics.
+
+98. **2026-10-01 — fix real high-concurrency controller starvation.**
+    Matrix r1 registered all9 independent workers, applied8 distinct
+    `harness_overlay` configurations and reached a healthy inference server.
+    It then failed with start_sample404s after a burst of successful starts.
+    The pinned minimal controller uses blocking requests in async handlers;
+    queued heartbeats cannot update its60-second alive-worker clock.
+
+    A deterministic CPU reproduction of128 two-second forwarded starts
+    produces30 successes/98 false-dead404s under that controller. The new
+    run-local async bridge handles128 concurrent forwards while admitting
+    heartbeats, preserves session headers/response unwrapping and surfaces
+    genuine HTTP/transport failures. It is explicitly enabled for matrix
+    mode; no shared upstream or active v5 source was edited.
+    Unit coverage includes concurrency, cancellation, expired workers and
+    failure propagation (35 targeted tests/27 subtests passed).
+
+    Real official-worker validation on legacy train0--31:128 starts and128
+    cancellations succeeded, burst48.3235s, all workers alive, remaining
+    sessions0. It generated no Solver completions and is not a score.
+    `common/async_controller_preflight/COMPLETE.json` persists this evidence.
+    Preserve r1 as infrastructure failure and retry the exact frozen matrix
+    rather than assigning fallback rewards.
+
+    Separately, v5 finished48 native steps/40 nonzero Actor updates. Its
+    first step23 evaluation hit a vLLM transport ReadError, not this controller
+    bug. Systemd recovered without retraining; step23 then completed at
+    59.32% selection mean@2. Step47 selection is still pending, so no final
+    v5 quality or speed conclusion is available yet.

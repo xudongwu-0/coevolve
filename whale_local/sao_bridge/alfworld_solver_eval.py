@@ -239,7 +239,7 @@ def run(config_path: Path, *, harness_matrix: bool = False) -> dict:
                 "--controller-port", config.get("controller_port", 28000),
                 "--worker-port", config.get("worker_port", 28100),
                 "--concurrency", config["environment_concurrency"],
-            ] + (["--harness-matrix"] if harness_matrix else []),
+            ] + (["--harness-matrix", "--async-controller"] if harness_matrix else []),
             gpus="", name="environment",
         )
         controller_url = (

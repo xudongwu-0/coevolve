@@ -468,6 +468,7 @@ class AlfworldSolverEvaluationTests(unittest.TestCase):
             def environment(module, arguments, **kwargs):
                 self.assertEqual(module, "sao_bridge.alfworld_env_service")
                 self.assertIn("--harness-matrix", arguments)
+                self.assertIn("--async-controller", arguments)
                 run_root = Path(arguments[arguments.index("--run") + 1])
                 write_json(run_root / "READY.json", {"ready": True})
                 assignment_path = Path(arguments[arguments.index("--assignments") + 1])

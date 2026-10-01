@@ -56,6 +56,15 @@ including root-level `WHALE`, as well as assets, then CPU-import the runner befo
 starting a GPU unit. Looking only inside `third_party` misses the math reward
 dependency imported by the shared bridge.
 
+Matrix mode opts into the bridge's nonblocking local controller. The pinned
+minimal controller calls synchronous `requests` inside async FastAPI handlers:
+a large start burst prevents heartbeats from being processed and trips the
+60-second alive-worker deadline. Do not hide those404s as model failures or
+simply increase that deadline. The bridge keeps the official worker/session
+protocol and error responses, but awaits asynchronous worker forwarding.
+The original single-harness controller remains the default unless the new flag
+is explicit; running frozen experiments are not modified in place.
+
 The matrix runner and train-only context support have CPU regression coverage.
 The full paired continuation is not yet a completed experiment; runtime receipts
 and subsequent entries in [the experiment log](EXPERIMENT_LOG.md) are authoritative.

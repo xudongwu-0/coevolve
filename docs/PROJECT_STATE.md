@@ -357,6 +357,14 @@ serving协议不同，不能直接把两个train准确率相减；若需要配�
 另已补齐matrix与环境服务的显式shared-cohort接线，普通训练仍强制ID分区。
 85项CPU测试和32个subtests通过；恢复必须保留9个标签/8个原E15提案、
 原seed/预算和24题cohort，不能把零计算启动失败当作算法负结果。
+`selection-r1`真实注册9个worker、启动模型并通过HTTP健康检查，但随后并发
+start_sample触发404。根因是旧minimal controller在async路由中同步请求worker，
+阻塞heartbeat，超过60秒alive期限；不是9B能力问题，未产生完整候选分数。
+新bridge async controller不改共享upstream、不把错误填零。
+真实官方worker CPU压力验证：128次start+128次cancel全部成功，
+burst48.32秒、heartbeat持续ALIVE、残留session=0、Solver生成次数=0；
+证据在`common/async_controller_preflight/COMPLETE.json`。下一次matrix恢复必须
+沿用原提案/seed/预算并保留上述失败目录。
 
 复现数据准备（仓库根目录，无模型调用）：
 ```bash

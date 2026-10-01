@@ -145,6 +145,10 @@ def main() -> None:
         "--harness-matrix", action="store_true",
         help="Permit the same exact task cohort in independently named harness workers",
     )
+    parser.add_argument(
+        "--async-controller", action="store_true",
+        help="Use run-local nonblocking forwarding without changing official worker code",
+    )
     parser.add_argument("--controller-port", type=int, required=True)
     parser.add_argument("--worker-port", type=int, required=True)
     parser.add_argument("--concurrency", type=int, default=32)
@@ -212,10 +216,23 @@ def main() -> None:
     controller_url = f"http://127.0.0.1:{args.controller_port}/api"
     with ExitStack() as logs:
         controller_log = logs.enter_context((run / "controller.log").open("wb"))
-        controller = subprocess.Popen([
-            str(PYTHON), str(agentbench / "scripts/local_agentrl_controller.py"),
+        controller_entry = (
+            [sys.executable, str(Path(__file__).with_name("alfworld_controller.py"))]
+            if args.async_controller else
+            [str(PYTHON), str(agentbench / "scripts/local_agentrl_controller.py")]
+        )
+        controller_command = [
+            *controller_entry,
             "--host", "127.0.0.1", "--port", str(args.controller_port),
-        ], cwd=agentbench, env=env, stdout=controller_log, stderr=subprocess.STDOUT)
+        ]
+        write_json(run / "controller_command.json", {
+            "backend": "bridge_async" if args.async_controller else "official_sync",
+            "argv": controller_command,
+        })
+        controller = subprocess.Popen(
+            controller_command, cwd=agentbench, env=env,
+            stdout=controller_log, stderr=subprocess.STDOUT,
+        )
         workers = []
         for index, task_name in enumerate(task_names):
             port = args.worker_port + index
