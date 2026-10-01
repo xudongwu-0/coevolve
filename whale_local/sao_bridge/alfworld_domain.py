@@ -95,7 +95,20 @@ async def run_episode(row: dict, spec: dict, generate, total_tokens=4096, seed=4
             while _running(status):
                 remaining = total_tokens - tokens
                 if remaining <= 0:
-                    raise RuntimeError("ALFWorld solver exhausted its declared token budget")
+                    return {
+                        "id": row.get("id", f"alfworld-{task_id}"),
+                        "task_id": task_id, "reward": 0.0, "tokens": tokens,
+                        "tool_calls": tool_calls, "tool_errors": tool_errors,
+                        "truncated": True, "boxed": bool(tool_calls),
+                        "status": "token_limit", "turns": turns,
+                        "messages": messages,
+                        "metrics": {
+                            "score": 0.0,
+                            "truncated": True,
+                            "stop_reason": "token_limit",
+                        },
+                        "stop_reason": "token_limit",
+                    }
                 completion = await generate(messages, tools, remaining, seed + turns)
                 choice = completion["choices"][0]
                 assistant = choice["message"]

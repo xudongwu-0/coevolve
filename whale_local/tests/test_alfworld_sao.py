@@ -1,11 +1,13 @@
+import asyncio
 import json
+import os
 from pathlib import Path
 import tempfile
 import unittest
 from unittest.mock import patch
 
 from sao_bridge.alfworld_domain import (
-    _running, _terminal_reward, harness_spec,
+    _running, _terminal_reward, harness_spec, run_episode,
 )
 from sao_bridge.alfworld_env_service import task_definition
 from sao_bridge.alfworld_global_harness import (
@@ -403,6 +405,87 @@ class AlfworldSaoTest(unittest.TestCase):
         self.assertEqual(_terminal_reward({"metrics": {"score": 0.5}}), 0.5)
         with self.assertRaises(RuntimeError):
             _terminal_reward({"metrics": {}})
+
+    def test_solver_token_limit_is_a_truncated_model_failure(self):
+        class Response:
+            def __init__(self, payload, headers=None):
+                self._payload = payload
+                self.headers = headers or {}
+
+            def raise_for_status(self):
+                return None
+
+            def json(self):
+                return self._payload
+
+        class Client:
+            def __init__(self):
+                self.cancelled = False
+
+            async def __aenter__(self):
+                return self
+
+            async def __aexit__(self, *args):
+                return None
+
+            async def post(self, url, **kwargs):
+                if url.endswith("/start_sample"):
+                    return Response(
+                        {
+                            "messages": [{"role": "user", "content": "task"}],
+                            "tools": [{"type": "function"}],
+                            "status": "SampleStatus.RUNNING",
+                        },
+                        {"session_id": "session-1"},
+                    )
+                if url.endswith("/interact"):
+                    return Response({
+                        "messages": [{"role": "tool", "content": "continue"}],
+                        "status": "SampleStatus.RUNNING",
+                    })
+                if url.endswith("/cancel"):
+                    self.cancelled = True
+                    return Response({})
+                raise AssertionError(url)
+
+        async def generate(messages, tools, remaining, seed):
+            self.assertEqual(remaining, 1)
+            return {
+                "choices": [{
+                    "message": {
+                        "role": "assistant",
+                        "tool_calls": [{"type": "function"}],
+                    },
+                }],
+                "usage": {"completion_tokens": 1},
+            }
+
+        client = Client()
+        with (
+            patch.dict(
+                os.environ,
+                {"SAO_ALFWORLD_CONTROLLER_URL": "http://127.0.0.1:28000/api"},
+            ),
+            patch(
+                "sao_bridge.alfworld_domain.httpx.AsyncClient",
+                return_value=client,
+            ),
+        ):
+            result = asyncio.run(run_episode(
+                {"id": "alfworld-0", "task_id": 0, "task_name": "external"},
+                {},
+                generate,
+                total_tokens=1,
+                seed=42,
+            ))
+
+        self.assertEqual(result["reward"], 0.0)
+        self.assertEqual(result["tokens"], 1)
+        self.assertEqual(result["turns"], 1)
+        self.assertTrue(result["truncated"])
+        self.assertEqual(result["status"], "token_limit")
+        self.assertEqual(result["stop_reason"], "token_limit")
+        self.assertTrue(client.cancelled)
 
     def test_reward_metadata_and_infrastructure_classification(self):
         metadata = {

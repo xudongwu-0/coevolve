@@ -31,6 +31,10 @@ SAO更新后的Engineer权重比E0更会改Harness，也尚未证明9B Solver权
 - 两臂W1/W2均未通过paired no-patch dev gate；最终都冻结为H1+官方W0。
 - 最终dev上MA为90/100、顺序为88/100，但MA−顺序仅+2pp且LCB=0，
   未达到预注册的+5pp，因此禁止搜索交替频率。
+- 新的fixed-no-patch 9B Solver双seed验证已于2026-10-01 06:40:35 UTC
+  全部完成。seed42独立report为74%→72%，seed43为79%→77%，平均-2pp；
+  两个题级95%区间都跨零，预声明pair gate失败。速度修复和非零梯度
+  不能替代held-out学习收益，当前仍不能宣称SAO已经提升9B Solver。
 
 不要把“启动成功”“参数发生变化”“合法patch”“训练reward为正”
 或“GPU显示100%”替代最终实验目标。
@@ -46,17 +50,50 @@ SAO更新后的Engineer权重比E0更会改Harness，也尚未证明9B Solver权
    该实验现已结束且gate失败：两个seed均未通过selection LCB，故都保留W0、
    未打开训练checkpoint的独立report。仅作探索性描述，最终selection点
    seed42为+1.37pp、seed43为+5.08pp，后者LCB仍为-0.20pp。
-3. 当前主线是固定空Harness的9B ALFWorld Solver双seed验证。先做短
-   speed/OOM资格测试，再扩大真实工具episode数并做selection/report隔离。
+3. 固定空Harness的9B ALFWorld Solver首轮双seed验证已完成，但gate失败。
+   每seed为5步critic-only warm-up、25步actor、batch8，共240条不同train
+   任务；actor实际更新使用后200条。主线仍是诊断和加强顺序SAO，不得从
+   本轮selection正差值推断泛化提升，也不得把这次失败视为SAO理论不可训练。
 4. 9B Solver通过后，才扩大9B Engineer SAO，并在完全相同packet、prompt、
    decoding seed、候选数和全局held-out任务上做E0/E1能力A/B。
 5. 若SAO-H失败，先按官方Harness-R1的组内GRPO目标做同预算复现；只有
    9B Solver和Engineer两侧都证明可训练后，才解锁MA-SAO与交替频率研究。
 
-持久服务为`coevolve-4b-solver-v2-s42.service`（node4）和
-`coevolve-4b-solver-v2-s43.service`（node3）。它们写原子
-`STATUS.json`、训练attempt、checkpoint选择、`COMPLETE.json`/`FAILED.json`
-和GPU释放审计；客户端断线不终止预声明工作。
+### 最新9B Solver结果（fixed no-patch，2026-10-01）
+
+| seed | W0 selection | step9 / step19 / step29 selection | 选中step | 独立report W0→候选 | 配对delta及题级95%区间 |
+|---|---|---|---|---|---|
+| 42 | 61.67% | 65.00% / 56.67% / 56.67% | 9 | 74%→72% | -2pp，[-7,+3]pp |
+| 43 | 58.33% | 60.00% / 60.00% / 61.67% | 29 | 79%→77% | -2pp，[-11,+7]pp |
+
+selection为240–299的60题，report为300–399的100题；本轮未打开400–499。
+两个seed均清除selection的+2pp floor，但独立report均未满足不退步要求，
+平均delta和显著seed数也未过gate。selection的正差值只是模型选择信号。
+seed42后期selection下降是退化信号，尚不足以单独确认过拟合或确定根因。
+正式结果见服务器
+`runs/alfworld_solver_v1_pair_gate_result.json`及两个
+`runs/alfworld_solver_v1_exact_concat_s4{2,3}/COMPLETE.json`。
+
+两个训练阶段分别耗时52.36/52.50分钟；每个actor batch精确为8条concat
+轨迹，三个actor/critic checkpoint均完整保存。optimizer窗口中真实实验SM
+为40.21%/41.44%，filler为6.63%/6.60%，filler全过程active；
+显存峰值为134,988/129,332MiB。短smoke的约66倍episode吞吐不是完整
+训练加评测的端到端加速比，正式长episode的吞吐和显存须使用这些实测receipt。
+
+seed42的step29评估曾把单题4096-token预算耗尽误当作基础设施异常而重启。
+现已按其它域的既有语义返回零分、`truncated=true`并取消环境session；
+恢复后60题中3题被正确记为预算耗尽失败。训练未重跑，任务、seed、预算、
+候选checkpoint和选择规则未变。源码哈希迁移及旧manifest保存在该run的
+`TOKEN_BUDGET_SEMANTICS_MIGRATION.json`中，不能描述为全程同一源码哈希。
+此前完成的对照/selection及seed43评测没有预算耗尽，原结果保留。
+
+预声明有限工作由系统级systemd service执行，写原子`STATUS.json`、
+训练attempt、checkpoint选择、`COMPLETE.json`/`FAILED.json`和GPU释放审计；
+客户端断线不终止这些工作，但队列完成不等于研究目标完成，也不会自动设计下一轮。
+检查这些unit必须使用`systemctl`，不是`systemctl --user`。
+截至11:08 UTC，当前训练/评测队列均已结束，没有新一轮研究GPU任务在跑。
+两节点adaptive filler receipt仍新鲜，平均总利用率node3为87.13%、node4为
+86.50%，外部实验SM均为0；这是补载，不是算法利用率。
 
 当前顺序验证入口：
 
@@ -488,6 +525,8 @@ target必须返回真正的OpenAI `tool_calls`，文本看似XML不是等价证�
 **135 passed**；其后失败cache过滤的定向回归为**18 passed**。
 centralized-context、1-D trajectory、partial packet和精确消费ledger相关定向
 回归最新为**32 passed**。
+本轮ALFWorld预算耗尽、evaluator及domain集成回归为**34 passed**；
+live step29评估也已验证预算耗尽按零分计入，而不是使整批崩溃。
 外部filler策略/unit为**9 passed**，coevolve身份校验与ALFWorld回归为
 **35 passed**，合计仍为**44 passed**；实际GPU又通过
 空闲85.25%利用率、外部负载让载/恢复、worker与supervisor故障恢复和

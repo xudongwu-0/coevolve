@@ -2305,3 +2305,62 @@ It is exploratory validation, not held-out AIME. AIME test stays sealed until a 
     episode lifetime with the declared environment concurrency; a regression
     test observes a hard peak of2 for6 concurrent test episodes. Formal runs
     must restart from fresh roots because the source manifest changed.
+87. **Exact-concat 9B Solver finished; independent two-seed gate failed
+    (2026-10-01).** Both seeds completed 30 optimizer steps: five critic-only
+    warm-up steps and 25 actor steps, batch eight, learned critic K=1,
+    gradient checkpointing enabled, fixed empty harness. The schedule covered
+    240 distinct train tasks, of which the final 200 supplied actor updates.
+    Every actor batch contained exactly eight concat trajectories, all three
+    actor/critic checkpoints at global steps 9/19/29 were saved, and the two
+    training wrappers completed in 52.36/52.50 minutes. Nonzero actor gradients
+    and improving critic loss establish update health, not held-out benefit.
+
+    | Seed | W0 selection | Step 9 / 19 / 29 selection | Selected step | Independent report W0 / candidate | Delta and paired question 95% CI |
+    |---|---|---|---|---|---|
+    | 42 | 61.67% | 65.00% / 56.67% / 56.67% | 9 | 74% / 72% | -2pp [-7,+3]pp |
+    | 43 | 58.33% | 60.00% / 60.00% / 61.67% | 29 | 79% / 77% | -2pp [-11,+7]pp |
+
+    Selection used tasks 240-299 and a frozen +2pp floor; the independent
+    report used tasks 300-399. No task 400-499 was opened in this campaign.
+    Both seeds selected a trained checkpoint, but the non-degradation,
+    average +3pp, and significant-seed requirements all failed. The mean
+    report delta was -2pp. These intervals cover question uncertainty, not
+    training-seed population uncertainty. Seed 43 finished at 06:20:46 UTC
+    and seed 42 at 06:40:35 UTC; the final pair receipt is
+    `runs/alfworld_solver_v1_pair_gate_result.json`. Later selection decline
+    in seed 42 motivates diagnosis, but does not by itself prove overfitting.
+    Engineer capability and MA-SAO experiments remain gated.
+
+    Seed 42's step-29 evaluator exposed a further semantic bug: exhausting
+    the declared 4096-token episode budget raised an infrastructure exception
+    and repeatedly restarted the whole evaluation. The controller was stopped
+    without touching filler, and the domain now records that outcome as
+    zero reward with `truncated=true`, preserving token/turn/message accounting
+    and cancelling the live environment session. The targeted ALFWorld,
+    evaluator and domain suite passed 34 tests. The resumed 60-task evaluation
+    completed with 3/60 truncated failures and 56.67% accuracy. No training
+    was repeated and no task, decoding seed, token budget, checkpoint or
+    selection threshold changed. A named source-manifest migration receipt
+    and the original manifest were retained; the run is not byte-identical
+    throughout. Completed earlier evaluations had no exhausted episodes and
+    were retained. The selected early checkpoint's independent report still
+    failed, so this repair cannot be presented as a positive algorithm result.
+
+    Formal optimizer-window telemetry averaged experiment/filler SM of
+    40.21%/6.63% on node4 and 41.44%/6.60% on node3, with zero invalid samples.
+    Peak memory was 134,988 and 129,332 MiB respectively; filler remained
+    active throughout. The short smoke's approximately 66x episode throughput
+    must not be presented as a full training-plus-evaluation speedup.
+    A monitoring mistake queried system services with `systemctl --user`;
+    the apparent absent controller/filler units were not service failures.
+    The redundant user guardian was removed. Real controller restarts were
+    identified through its system cgroup and evaluator failure receipts.
+
+    At the 11:08 UTC status check, both finite experiment queues were complete
+    and no new experiment was running. Fresh filler receipts showed node3
+    87.13% and node4 86.50% total utilization, with external experiment SM zero.
+    These numbers are filler load only. The attached worker status dated
+    2026-09-29 belongs to an older MA-SAO run, not this Solver validation.
+    Further work must diagnose sequential SAO sample efficiency/credit
+    assignment and predeclare the next experiment rather than claim that
+    successful execution has already proved 9B learning.
