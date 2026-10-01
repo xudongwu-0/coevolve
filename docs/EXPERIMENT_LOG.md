@@ -2421,3 +2421,19 @@ It is exploratory validation, not held-out AIME. AIME test stays sealed until a 
     GAE. An actual worker batching/unpacking regression was added; the
     targeted suite passed65 tests and9 subtests. Fresh roots, unchanged
     scientific specs and new frozen source manifests are required for retry.
+
+    Live verification under commit `7d765e5` succeeded on both nodes:
+    seed42/43 reached15/16 optimizer records; every measured critic target
+    was in[0,1]. The first8 steps had no actor-update metric, followed by7/8
+    positive actor-gradient steps, exactly64 concatenated episodes per batch
+    and2 critic updates per rank. The audit and metric-prefix hashes are in
+    `runs/dev_solver_only_v3_live_terminal_validation.json`. Early optimizer
+    windows measured62.399%/64.069% non-filler SM versus0.485%/0.558% filler
+    SM (58/60 successful samples). Both `-r1` system controllers remained
+    active with zero restarts; both filler supervisors stayed active.
+    Added a controller-factory regression whose remote-handle stand-in has
+    no tensor arithmetic, testing both default and terminal modes. Its
+    isolated runtime file passed12 tests and11 subtests; the preceding
+    six-file suite passed65 tests and9 subtests before this one extra test.
+    This verifies execution and target correctness, NOT held-out improvement.
+    The240-step training and selection/report protocol remain in progress.

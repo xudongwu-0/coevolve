@@ -132,6 +132,17 @@ seed42的step29评估曾把单题4096-token预算耗尽误当作基础设施异�
 已停止训练unit并保留filler，失败root完整归档。修复移到FSDP worker端，
 原生batch/unpack回归加入后为65 tests、9 subtests通过；正式协议从新root重启，
 不复用失败attempt的rollout。
+worker修复已完成真实GPU验证：`7d765e5`代码在新root完成15/16个optimizer
+step（seed42/43），全部critic target严格在[0,1]；前8步没有actor更新，
+随后7/8步actor梯度均为非零，每batch恰为64条concat轨迹、critic K=2。
+证据：`runs/dev_solver_only_v3_live_terminal_validation.json`。
+两节点optimizer窗口真实实验SM为62.40%/64.07%，filler仅0.49%/0.56%
+（58/60次采样，无采样错误；只是早期窗口，非全程数据）。
+训练系统unit为`coevolve-4b-solver-v3-s42-r1`（node4）和
+`coevolve-4b-solver-v3-s43-r1`（node3），均零重启；filler始终active。
+完整240步和独立评测尚未结束，**不能将修复运行成功当作泛化提升**。
+补充controller远程handle不可运算的工厂接线回归，新增测试单独运行通过；
+不修改正在运行的冻结训练源码。
 
 当前顺序验证入口：
 

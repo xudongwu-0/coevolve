@@ -3,8 +3,9 @@ import os
 from pathlib import Path
 import sys
 import tempfile
+from types import SimpleNamespace
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "whale_local"))
@@ -100,6 +101,55 @@ class UpstreamConfigTests(unittest.TestCase):
                 with upstream_trainer(None, None):
                     self.fail("Constructor should not succeed")
         self.assertEqual(calls, [True])
+
+    def test_terminal_engine_factory_leaves_remote_tensor_handles_on_controller(self):
+        allocation = SimpleNamespace(backend="fsdp", parallel=object())
+        scheduler, config = object(), object()
+        remote = Mock(spec=["ndim", "shape"])
+        remote.ndim, remote.shape = 2, (1, 5)
+        batch = [{"attention_mask": remote, "values": remote}]
+
+        for terminal in (False, True):
+            with self.subTest(terminal=terminal):
+                native, rpc = Mock(), Mock()
+
+                class FactoryTrainer:
+                    def __init__(self, actor_config, **kwargs):
+                        self.scheduler = scheduler
+                        self.actor = self._create_train_engine(actor_config, allocation)
+                        self.saver = SimpleNamespace(freq_ctl=Mock())
+
+                    def _create_train_engine(self, actor_config, model_allocation):
+                        return native
+
+                    def __enter__(self):
+                        return self
+
+                    def __exit__(self, *args):
+                        return False
+
+                with (
+                    patch("areal.PPOTrainer", FactoryTrainer),
+                    patch("areal.utils.environ.is_single_controller", return_value=True),
+                    patch.dict(os.environ, {"MA_SAO_CRITIC_WARMUP_STEPS": "0"}),
+                    patch.object(
+                        TerminalFSDPPPOActor, "as_controller", return_value=rpc,
+                    ) as factory,
+                ):
+                    expected = rpc if terminal else native
+                    compute_advantages = expected.compute_advantages
+                    with upstream_trainer(config, None, terminal_episodes=terminal) as trainer:
+                        self.assertIs(trainer.actor, expected)
+                        self.assertIs(trainer.actor.compute_advantages, compute_advantages)
+                        trainer.actor.compute_advantages(batch)
+                    compute_advantages.assert_called_once_with(batch)
+                    if terminal:
+                        factory.assert_called_once_with(config, scheduler)
+                        rpc.create_process_group.assert_called_once_with(
+                            parallel_strategy=allocation.parallel,
+                        )
+                    else:
+                        factory.assert_not_called()
 
 
 class CheckpointTests(unittest.TestCase):
