@@ -333,6 +333,33 @@ systemd需保留`Restart=on-failure`、`RestartSec=30s`、
 `RestartPreventExitStatus=78`与精确unit级进程所有权。三个重试/归档/完成恢复
 回归测试通过，训练与评测为独立阶段，后者尚不能因训练service退出0而跳过。
 
+本轮H训练已完成32个native step，其中27次真实非零Actor更新；两个actor/
+critic checkpoint完整，单attempt，完成时源码身份匹配。critic targets范围
+约[-0.70000005,+0.40000001]，符合本轮有符号delta reward，而不是Solver的
+[0,1]区间。optimizer窗口真实实验SM33.16%、filler7.99%，filler始终active；
+峰值显存127,844MiB，不能据压缩prompt就盲目把3-way learner改成2-way。
+证据为`runs/alfworld_engineer_fast_v1_s42/TRAINING_NATIVE_AUDIT.json`。
+这仍只证明训练机械过程正确，尚不证明E1优于E0。
+
+[匹配评测器](../whale_local/sao_bridge/alfworld_engineer_eval.py)已实现独立持久入口：
+```bash
+PYTHONPATH=whale_local /dev/shm/sao-venv-ppo/bin/python -B \
+  -m sao_bridge.alfworld_engineer_eval \
+  --spec examples/alfworld_engineer_fast_evaluation_v1.json
+```
+它等待native training audit，再以3个Engineer单卡实例并行生成E0/step15/step31
+的相同8个提案，同时5卡Solver采集94个稀疏任务的共同baseline；随后释放
+Engineer并补齐8卡Solver完成selection与selected report。使用官方
+`evaluate_patch`的原生`task_ids`支持，不必为24/70个目标评测整个连续superset。
+同一patch的确定性target缓存可共用，但重复提案仍按原次数计入均值。
+传输或环境失败只做最多两次有记录的重试，绝不采用官方脚本的infra no-patch
+fallback作为分数；非法模型输出则明确记为no-patch并保留在分母。
+另报告相对no-patch的收益和`useful_editing_evidence`诊断，避免把纯粹学会
+输出非法patch/弃权、少伤害的收益误说成更强修改能力；这不重定义原相对gate。
+单元测试覆盖mean@8、70题report形状、稀疏ID、缓存/重试及controller流程。
+真实CPU环境用mock API验证了任务240/247的稀疏路由；零模型/GPU调用，不是
+准确率证据。收据在`runs/alfworld_engineer_eval_cpu_smoke_v1/validation.json`。
+
 另已把train-only catalogue接入Engineer launcher和官方reward adapter：可选
 `training_split/training_catalogue/training_catalogue_sha256/solver_weights_sha256`
 贯穿预检、run-local overlay、请求metadata和cache namespace。每次请求先检查

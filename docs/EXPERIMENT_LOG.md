@@ -2558,3 +2558,28 @@ It is exploratory validation, not held-out AIME. AIME test stays sealed until a 
     disjoint from all legacy training goals and each other. This evaluates
     global proposal quality conditioned on fixed evidence, not unseen-packet
     transfer.61 tests and22 subtests pass; GPU H evaluation is not yet done.
+
+92. **Fast single-seed Solver/Engineer run in parallel; Engineer training
+    completes (2026-10-01).** Node4 runs Solver fast-v4 under source5e599ba;
+    node3 runs Engineer fast-v1 underbb1f214. No duplicate-seed v3 jobs were
+    launched. Both retain active adaptive filler and per-process attribution.
+
+    Engineer completed32 native steps,5 critic-only plus27 nonzero Actor
+    updates, with two complete actor/critic checkpoints, one attempt, and
+    matching frozen sources. Signed targets ranged approximately-0.70000005
+    to+0.40000001. Optimizer-window true experiment SM33.16%, filler7.99%;
+    peak127,844MiB. Training completion is not an Engineer improvement result.
+
+    Matched E0/step15/step31 evaluation is now implemented: same8 compact
+    prompts, per-prompt decode seeds, generation cap and fixed Solver.
+    Official sparse-task evaluation scores only24 selection/70 report goals.
+    Duplicate or invalid proposals remain in the eight-proposal mean.
+    Successful deterministic target evaluations may be cached across identical
+    patches; failed transport/environment jobs are never assigned a no-patch
+    accuracy. Extra no-patch-relative diagnostics distinguish useful editing
+    from merely abstaining instead of harmful edits, without changing the
+    predeclared relative E1/E0 gate.
+
+    A real CPU-only environment check used a local mock API on tasks240/247
+    and verified exact sparse task mapping. It made zero real model/GPU calls
+    and does not contribute to any accuracy result.
