@@ -2437,3 +2437,45 @@ It is exploratory validation, not held-out AIME. AIME test stays sealed until a 
     six-file suite passed65 tests and9 subtests before this one extra test.
     This verifies execution and target correctness, NOT held-out improvement.
     The240-step training and selection/report protocol remain in progress.
+
+89. **Train-only ALFWorld scaling prepared while frozen4B jobs run
+    (2026-10-01; no9B model execution).** The legacy adapter had hard limits
+    of500 catalogue entries and240 unique training tasks. Added an explicit
+    checksum-bound training catalogue and run-local data overlays, retaining
+    the default official test-set behavior and its evaluation ID bounds.
+    The first catalogue-write attempt hit the shared dataset's read-only
+    permissions; the implementation was corrected to leave that directory
+    untouched rather than changing ownership or permissions.
+
+    All500 existing evaluation games and every `valid_seen`, `valid_unseen`,
+    and `valid_train` goal group are excluded. The eligible pool contains
+    2,296 game instances across880 goal groups; these are not2,296 unique
+    goals. Variant instances are ordered after initial goal coverage.
+    Metadata-only auditing found17/24/5 shared goal groups between the old
+    train-selection/train-report/selection-report partitions, respectively.
+    Task IDs were disjoint, but the old results were not goal-unseen
+    validation. Their outcomes and task-level intervals are not rewritten.
+
+    The new scale specs reset toW0/H0, retain batch8, LR, K1, concat,
+    terminal handling andGC, and declare5 critic-only plus235 actor steps:
+    1,920 different game instances, covering880 training goals, with8 saved
+    checkpoints. Evaluation uses59 selection and91 report goals, one game
+    instance each and mean@2; selection/report goals are disjoint and no
+    400--499 evaluation outcome is accessed. These reused tasks are still
+    development data. This changes training distribution, amount of data,
+    and evaluation protocol, not just optimizer steps. The existing9B pair
+    promotion thresholds remain unchanged.
+
+    The native trainer receives only the exact declared row prefix, with
+    matching environment assignments; asynchronous prefetch cannot address
+    an unregistered suffix. Catalogue/data hashes are frozen and cached
+    reports cannot bypass the evaluation-catalogue hash check.
+    Validation:51 tests plus7 subtests passed; both nodes passed CPU protocol
+    checks. A real CPU-only AgentBench run on task512 performed one synthetic
+    `look`, hit its one-token budget, cancelled its session, and terminated
+    only its owned environment processes. No model or GPU was used and this
+    is not an accuracy result. Receipts:
+    `runs/alfworld_train_catalogue_cpu_smoke_v1/validation.json` and
+    `assets/alfworld_solver_train_only_v1/protocol_preflight.json`.
+    Both live4B source manifests were reverified unchanged.9B remains gated
+    on stronger4B evidence; its v2 control is still valid and unstarted.

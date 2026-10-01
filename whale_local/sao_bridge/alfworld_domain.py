@@ -7,6 +7,8 @@ from urllib.parse import urlsplit
 
 import httpx
 
+from .alfworld_train_data import task_count
+
 INITIAL_SOURCE = '{"benchmark":"alfworld","actions":[]}\n'
 EDITOR_SYSTEM = "Use the official Harness-R1 ALFWorld failure-packet prompt supplied in each row."
 TOOL_CALL_PARSER = "qwen"
@@ -64,8 +66,15 @@ def _terminal_reward(payload: dict) -> float:
 async def run_episode(row: dict, spec: dict, generate, total_tokens=4096, seed=42) -> dict:
     del spec
     task_id = row.get("task_id", row.get("index"))
-    if type(task_id) is not int or not 0 <= task_id < 500:
-        raise ValueError("ALFWorld row requires an official integer task_id in 0..499")
+    task_split = row.get("task_split", "test_set")
+    count = task_count(
+        task_split, row.get("task_catalogue_sha256"),
+        catalogue_path=row.get("task_catalogue"),
+    )
+    if type(task_id) is not int or not 0 <= task_id < count:
+        raise ValueError(
+            f"ALFWorld row requires an integer task_id in 0..{count - 1} for {task_split}"
+        )
     task_name = row.get("task_name") or os.environ.get("SAO_ALFWORLD_TASK_NAME", "")
     if not task_name:
         raise RuntimeError("SAO_ALFWORLD_TASK_NAME is required")
@@ -97,7 +106,8 @@ async def run_episode(row: dict, spec: dict, generate, total_tokens=4096, seed=4
                 if remaining <= 0:
                     return {
                         "id": row.get("id", f"alfworld-{task_id}"),
-                        "task_id": task_id, "reward": 0.0, "tokens": tokens,
+                        "task_id": task_id, "task_split": task_split,
+                        "reward": 0.0, "tokens": tokens,
                         "tool_calls": tool_calls, "tool_errors": tool_errors,
                         "truncated": True, "boxed": bool(tool_calls),
                         "status": "token_limit", "turns": turns,
@@ -135,7 +145,8 @@ async def run_episode(row: dict, spec: dict, generate, total_tokens=4096, seed=4
             reward = _terminal_reward(payload)
             return {
                 "id": row.get("id", f"alfworld-{task_id}"),
-                "task_id": task_id, "reward": reward, "tokens": tokens,
+                "task_id": task_id, "task_split": task_split,
+                "reward": reward, "tokens": tokens,
                 "tool_calls": tool_calls, "tool_errors": tool_errors,
                 "truncated": False, "boxed": bool(tool_calls),
                 "status": status, "turns": turns, "messages": messages,

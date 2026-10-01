@@ -144,6 +144,46 @@ step（seed42/43），全部critic target严格在[0,1]；前8步没有actor更�
 补充controller远程handle不可运算的工厂接线回归，新增测试单独运行通过；
 不修改正在运行的冻结训练源码。
 
+### 后续9B扩规模的数据与隔离准备（尚未启动9B训练）
+
+已解除旧ALFWorld训练适配器只能使用500题catalogue、其中240题训练的限制。
+新增显式`training_split=sao_train_v1`，**默认`test_set`行为保持不变**。
+本地3605个train游戏在排除官方500题及全部`valid_seen`、`valid_unseen`、
+`valid_train`的goal-group后，剩余**2296个game实例、880个goal-group**。
+不同实例可能属于同一训练goal，不能把2296说成2296个不同goal。
+训练catalogue位于独立输出目录，运行时通过run-local overlay接入，
+不修改共享的只读benchmark目录，也不覆盖原`test_set.json`。
+
+元数据审计还发现：旧9B协议虽然任务ID不重叠，但train/selection、
+train/report、selection/report分别共享17/24/5个goal-group。
+这不是相同game实例重复，但意味着旧“held-out”仅指任务ID层面，
+不是goal-unseen泛化，原题级bootstrap也未作goal簇修正；旧负结果不改写。
+新scale协议固定59个selection goal、91个report goal，各取一个实例，
+两者goal互斥、均用mean@2，不使用400--499区间的评测结果。
+这些题以前已有使用记录，仍是development复验，不是全新confirmatory test。
+
+[seed42](../examples/alfworld_solver_v3_train_only_scale_s42.json)与
+[seed43](../examples/alfworld_solver_v3_train_only_scale_s43.json)预声明：
+从原始W0重新开始、固定H0、batch8、5步critic warmup、235步actor，
+共1920个不同game实例（覆盖880个训练goal），每30步保存，8个checkpoint。
+模型、LR、K1、concat、terminal修复、GC和单步显存预算沿用9B v2；
+此试验同时改变训练池、规模和评测隔离，不能声称是纯step数消融。
+后续仍复用原9B双seed promotion gate，不因扩大数据而放宽门槛。
+4B强门槛通过后，先做9B v2同预算控制；更强9B结论再看goal隔离scale。
+
+复现数据准备（仓库根目录，无模型调用）：
+```bash
+PYTHONPATH=whale_local python3 -m sao_bridge.alfworld_train_data \
+  --output assets/alfworld_solver_train_only_v1
+```
+生成文件不可静默覆盖；规范化spec冻结catalogue/data校验和，训练进程只收到
+精确预算的行，避免异步预取触及未分配的后缀任务。两个节点均通过CPU预检。
+51项回归与7个subtests通过；真实AgentBench task512完成start/step/cancel
+验证，使用手写`look`而非LLM，零GPU，不计入算法准确率。
+证据：`runs/alfworld_train_catalogue_cpu_smoke_v1/validation.json`及
+`assets/alfworld_solver_train_only_v1/protocol_preflight.json`。
+当前4B两个run的冻结源码校验和保持不变。
+
 当前顺序验证入口：
 
 - `whale_local/sao_bridge/math_solver_validation.py`：4B固定H0双split单seed控制器；

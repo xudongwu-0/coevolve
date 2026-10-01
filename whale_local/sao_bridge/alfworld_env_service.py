@@ -17,6 +17,7 @@ import httpx
 from .alfworld_runtime import (
     ALFWORLD_ASSETS, ALFWORLD_DATA, prepare_agentbench_runtime,
 )
+from .alfworld_train_data import task_count
 from .common import ROOT, read_json, write_json
 
 UPSTREAM = ROOT / "third_party/harness-r1-upstream"
@@ -41,10 +42,13 @@ TOOLS = [{
 
 
 def task_definition(name: str, task_ids: list[int], concurrency: int, harness: dict,
-                    agentbench: Path = AGENTBENCH) -> dict:
+                    agentbench: Path = AGENTBENCH, *, split: str = "test_set",
+                    catalogue_sha256: str | None = None,
+                    catalogue: str | Path | None = None) -> dict:
+    count = task_count(split, catalogue_sha256, catalogue_path=catalogue)
     if (not task_ids or len(set(task_ids)) != len(task_ids)
-            or any(type(value) is not int or not 0 <= value < 500 for value in task_ids)):
-        raise ValueError("task_ids must be distinct official ALFWorld indices")
+            or any(type(value) is not int or not 0 <= value < count for value in task_ids)):
+        raise ValueError(f"task_ids must be distinct ALFWorld indices for {split}")
     task = {name: {
         "module": "src.server.tasks.alfworld.ALFWorld",
         "parameters": {
@@ -58,7 +62,7 @@ def task_definition(name: str, task_ids: list[int], concurrency: int, harness: d
                 agentbench
                 / "src/server/tasks/alfworld/prompts/alfworld_multiturn_plan_first.json"
             ),
-            "split": "test_set",
+            "split": split,
             "max_step": 50,
             "task_ids": task_ids,
             "start": min(task_ids),
@@ -132,7 +136,6 @@ def main() -> None:
         raise RuntimeError("ALFWorld requires the copied isolated worker interpreter")
     run = args.run.resolve()
     run.mkdir(parents=True, exist_ok=False)
-    agentbench = prepare_agentbench_runtime(run / "runtime/AgentBench")
     scratch = run / "scratch"
     scratch.mkdir()
     if args.assignments:
@@ -146,6 +149,21 @@ def main() -> None:
             "name": args.task_name, "task_ids": read_json(args.task_ids),
             "harness": str(args.harness),
         }]
+    catalogues = {}
+    for assignment in assignments:
+        split = assignment.get("split", "test_set")
+        task_count(
+            split, assignment.get("catalogue_sha256"),
+            catalogue_path=assignment.get("catalogue"),
+        )
+        if split != "test_set":
+            path = Path(assignment["catalogue"]).resolve()
+            if split in catalogues and catalogues[split] != path:
+                raise ValueError("ALFWorld assignments disagree on catalogue identity")
+            catalogues[split] = path
+    agentbench = prepare_agentbench_runtime(
+        run / "runtime/AgentBench", catalogues=catalogues,
+    )
     config = {}
     all_ids = []
     for assignment in assignments:
@@ -155,6 +173,9 @@ def main() -> None:
         harness = json.loads(Path(assignment["harness"]).read_text())
         definition = task_definition(
             assignment["name"], task_ids, args.concurrency, harness, agentbench,
+            split=assignment.get("split", "test_set"),
+            catalogue_sha256=assignment.get("catalogue_sha256"),
+            catalogue=assignment.get("catalogue"),
         )
         if set(config) & set(definition):
             raise ValueError("duplicate ALFWorld task assignment name")

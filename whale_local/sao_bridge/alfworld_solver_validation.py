@@ -49,6 +49,7 @@ def validate_spec(spec: dict) -> dict:
     normalized.setdefault("critic_gradient_checkpointing", True)
     normalized.setdefault("selection_min_delta", 0.02)
     normalized.setdefault("terminal_episodes", False)
+    normalized.setdefault("training_split", "test_set")
     integer_keys = (
         "seed", "actor_steps", "critic_warmup_steps", "batch_size",
         "actor_gpus", "rollout_gpus", "save_interval_steps", "samples",
@@ -100,13 +101,36 @@ def validate_spec(spec: dict) -> dict:
     if len(rows) < required_rows:
         raise ValueError("Solver training data is smaller than the optimizer budget")
     consumed = rows[:required_rows]
+    from .alfworld_train_data import (
+        ALFWORLD_DATA, TRAIN_SPLIT, evaluation_paths, goal_group, task_count,
+    )
+
+    training_split = normalized["training_split"]
+    count = task_count(
+        training_split, normalized.get("training_catalogue_sha256"),
+        catalogue_path=normalized.get("training_catalogue"),
+    )
+    train_upper_bound = 240 if training_split == "test_set" else count
     if any(
         type(row.get("task_id")) is not int
-        or not 0 <= row["task_id"] < 240
+        or not 0 <= row["task_id"] < train_upper_bound
+        or row.get("task_split", "test_set") != training_split
         or row.get("warmup")
         for row in consumed
     ):
         raise ValueError("Solver training rows must be fresh train-split tasks")
+    if training_split == TRAIN_SPLIT:
+        normalized["training_catalogue"] = str(
+            Path(normalized["training_catalogue"]).resolve()
+        )
+        if any(
+            row.get("task_catalogue_sha256") != normalized["training_catalogue_sha256"]
+            or row.get("task_catalogue") != normalized["training_catalogue"]
+            or not isinstance(row.get("task_name"), str)
+            for row in consumed
+        ):
+            raise ValueError("Training row catalogue identity or worker name is missing")
+        normalized["training_data_sha256"] = file_sha(data)
     selection = normalized["selection_task_ids"]
     report = normalized["report_task_ids"]
     split_bounds = {
@@ -128,7 +152,23 @@ def validate_spec(spec: dict) -> dict:
     train_ids = {row["task_id"] for row in consumed}
     if len(train_ids) != len(consumed):
         raise ValueError("Each consumed Solver trajectory must use a distinct train task")
-    if train_ids & set(selection) or train_ids & set(report) or set(selection) & set(report):
+    if training_split == TRAIN_SPLIT:
+        paths = evaluation_paths()
+        selection_goals = {goal_group(paths[index]) for index in selection}
+        report_goals = {goal_group(paths[index]) for index in report}
+        if (
+            len(selection_goals) != len(selection)
+            or len(report_goals) != len(report)
+            or selection_goals & report_goals
+        ):
+            raise ValueError("Selection and report must have distinct goal groups")
+        normalized["evaluation_catalogue_sha256"] = file_sha(
+            ALFWORLD_DATA / "test_set.json"
+        )
+    if set(selection) & set(report) or (
+        training_split == "test_set"
+        and (train_ids & set(selection) or train_ids & set(report))
+    ):
         raise ValueError("ALFWorld train, selection and report task IDs must be disjoint")
     normalized.update(
         run=str(Path(normalized["run"]).resolve()),
@@ -140,7 +180,28 @@ def validate_spec(spec: dict) -> dict:
     return normalized
 
 
-def no_patch_assignments(no_patch: Path) -> list[dict]:
+def no_patch_assignments(
+    no_patch: Path, *, training_rows: list[dict] | None = None,
+) -> list[dict]:
+    if training_rows is not None:
+        grouped = {}
+        for row in training_rows:
+            name = row["task_name"]
+            identity = {
+                "name": name,
+                "harness": str(no_patch.resolve()),
+                "split": row["task_split"],
+                "catalogue": row["task_catalogue"],
+                "catalogue_sha256": row["task_catalogue_sha256"],
+            }
+            if name not in grouped:
+                grouped[name] = {**identity, "task_ids": []}
+            elif any(grouped[name][key] != value for key, value in identity.items()):
+                raise ValueError("ALFWorld assignment mixes catalogue identities")
+            grouped[name]["task_ids"].append(row["task_id"])
+        if not grouped:
+            raise ValueError("Training assignments require nonempty training rows")
+        return list(grouped.values())
     return [
         {
             "name": f"alfworld-h0-b{start:03d}",
@@ -256,6 +317,11 @@ def _run_evaluation(
     version: str,
     task_ids: list[int],
 ) -> dict:
+    if "evaluation_catalogue_sha256" in spec:
+        from .alfworld_train_data import ALFWORLD_DATA
+
+        if file_sha(ALFWORLD_DATA / "test_set.json") != spec["evaluation_catalogue_sha256"]:
+            raise ValueError("Frozen ALFWorld evaluation catalogue changed")
     run = root / "evaluations" / name
     complete_path = run / "COMPLETE.json"
     if complete_path.is_file():
@@ -321,7 +387,17 @@ def _run_training(root: Path, launch: Launcher, spec: dict) -> dict:
     })
     write_json(attempts_path, attempts)
     assignments = root / "no_patch_train_assignments.json"
-    write_json(assignments, no_patch_assignments(Path(spec["no_patch"])))
+    training_rows = None
+    training_data = Path(spec["training_data"])
+    if spec["training_split"] != "test_set":
+        training_rows = read_json(training_data)[
+            :spec["total_steps"] * spec["batch_size"]
+        ]
+        training_data = root / "solver_train.json"
+        write_json(training_data, training_rows)
+    write_json(assignments, no_patch_assignments(
+        Path(spec["no_patch"]), training_rows=training_rows,
+    ))
     config = {
         "run": str(run),
         "phase": "w1",
@@ -330,7 +406,7 @@ def _run_training(root: Path, launch: Launcher, spec: dict) -> dict:
         "solver_critic": spec["initial_solver"],
         "harness": spec["no_patch"],
         "harness_version": 0,
-        "data": spec["training_data"],
+        "data": str(training_data),
         "assignments": str(assignments),
         "steps": spec["total_steps"],
         "batch_size": spec["batch_size"],
@@ -392,6 +468,9 @@ def run(spec_path: Path) -> dict:
             "alfworld_solver_validation.py",
             "alfworld_solver_eval.py",
             "alfworld_w_train.py",
+            "alfworld_env_service.py",
+            "alfworld_runtime.py",
+            "alfworld_train_data.py",
             "large_train.py",
             "large_workflow.py",
             "gpu_telemetry.py",

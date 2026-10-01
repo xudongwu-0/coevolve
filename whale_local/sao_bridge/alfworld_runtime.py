@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import re
 
 from .common import ROOT
 
@@ -23,7 +24,9 @@ def _link(link: Path, target: Path) -> None:
     link.symlink_to(target, target_is_directory=target.is_dir())
 
 
-def prepare_agentbench_runtime(runtime: Path) -> Path:
+def prepare_agentbench_runtime(
+    runtime: Path, *, catalogues: dict[str, Path] | None = None,
+) -> Path:
     runtime = runtime.resolve()
     runtime.mkdir(parents=True, exist_ok=True)
     for name in ("src", "scripts"):
@@ -36,5 +39,22 @@ def prepare_agentbench_runtime(runtime: Path) -> Path:
     (configs / "generated").mkdir(exist_ok=True)
     data = runtime / "data"
     data.mkdir(exist_ok=True)
-    _link(data / "alfworld", ALFWORLD_DATA)
+    if catalogues:
+        overlay = data / "alfworld"
+        if overlay.is_symlink():
+            raise RuntimeError("Cannot add catalogues through the shared ALFWorld data symlink")
+        for name, path in catalogues.items():
+            if not re.fullmatch(r"[A-Za-z0-9_-]+", name):
+                raise ValueError("Invalid ALFWorld catalogue name")
+            if (ALFWORLD_DATA / f"{name}.json").exists():
+                raise ValueError("Cannot shadow a shared ALFWorld catalogue")
+            if not path.is_file():
+                raise FileNotFoundError(path)
+        overlay.mkdir(exist_ok=True)
+        for entry in ALFWORLD_DATA.iterdir():
+            _link(overlay / entry.name, entry)
+        for name, path in catalogues.items():
+            _link(overlay / f"{name}.json", path)
+    else:
+        _link(data / "alfworld", ALFWORLD_DATA)
     return runtime
