@@ -1,4 +1,4 @@
-"""Identity-checked, temporary stopping of the explicitly authorized filler."""
+"""Identity-check the authorized filler and stop only its legacy implementation."""
 from __future__ import annotations
 
 import argparse
@@ -12,6 +12,7 @@ from .common import write_json
 
 UNIT = "bruli-h200-load.service"
 SCRIPT = "/mnt/3fs/models/bruli/gpu-utilization-20260925/gpu_load.py"
+ADAPTIVE_MODULE = "sao_bridge.adaptive_gpu_filler"
 RESEARCH_HOSTS = frozenset({"dev-NDH200-025", "dev-NDH200-026"})
 
 
@@ -30,14 +31,34 @@ def process_identity(pid: int) -> dict:
     }
 
 
-def is_filler(record: dict, worker: bool = True) -> bool:
+def filler_kind(record: dict, worker: bool = True) -> str | None:
     cmd = record["cmd"]
     suffix = cmd[3:] if cmd[:3] == ["/usr/bin/python3", "-B", SCRIPT] else []
-    valid = (
+    legacy = (
         len(suffix) == 3 and suffix[:2] == ["worker", "--gpu"]
         and suffix[2].isdigit() and 0 <= int(suffix[2]) < 8
     ) if worker else suffix == ["supervisor"]
-    return valid and record["cgroup"].endswith("/system.slice/" + UNIT)
+    adaptive_suffix = (
+        cmd[4:] if cmd[:4] == ["/usr/bin/python3", "-B", "-m", ADAPTIVE_MODULE] else []
+    )
+    adaptive = (
+        len(adaptive_suffix) == 7
+        and adaptive_suffix[0] == "worker"
+        and adaptive_suffix[1] == "--gpu"
+        and adaptive_suffix[2].isdigit()
+        and 0 <= int(adaptive_suffix[2]) < 8
+        and adaptive_suffix[3] == "--matrix-size"
+        and adaptive_suffix[4] in {"2048", "4096"}
+        and adaptive_suffix[5] == "--control-fd"
+        and adaptive_suffix[6].isdigit()
+    ) if worker else adaptive_suffix == ["supervisor"]
+    if not record["cgroup"].endswith("/system.slice/" + UNIT):
+        return None
+    return "legacy" if legacy else "adaptive" if adaptive else None
+
+
+def is_filler(record: dict, worker: bool = True) -> bool:
+    return filler_kind(record, worker=worker) is not None
 
 
 def audit() -> dict:
@@ -52,17 +73,51 @@ def audit() -> dict:
         ["nvidia-smi", "--query-compute-apps=pid", "--format=csv,noheader,nounits"],
         text=True,
     ).split()
-    records = [process_identity(int(pid)) for pid in pids]
     main = process_identity(int(unit["MainPID"])) if int(unit["MainPID"]) else None
+    main_kind = filler_kind(main, worker=False) if main else None
+    records = []
+    vanished_pids = []
+    for pid in map(int, pids):
+        try:
+            records.append(process_identity(pid))
+        except FileNotFoundError:
+            vanished_pids.append(pid)
     for record in records:
-        record["verified_filler"] = record["uid"] == expected_uid and is_filler(record)
+        record["filler_kind"] = filler_kind(record)
+        record["verified_filler"] = (
+            record["uid"] == expected_uid
+            and record["filler_kind"] is not None
+            and record["filler_kind"] == main_kind
+        )
     return {
         "host": os.uname().nodename, "time": time.time(), "unit": unit,
         "supervisor": main, "processes": records,
+        "filler_kind": main_kind,
+        "vanished_gpu_pids": vanished_pids,
         "verified_unit": bool(
             main and unit["User"] == "bruli" and main["uid"] == expected_uid
-            and is_filler(main, worker=False)
+            and main_kind is not None
         ),
+    }
+
+
+def gpu_release_audit() -> dict:
+    state = audit()
+    filler = [
+        process["pid"] for process in state["processes"]
+        if process["verified_filler"]
+    ]
+    foreign = [
+        process["pid"] for process in state["processes"]
+        if not process["verified_filler"]
+    ]
+    return {
+        "remaining_gpu_pids": filler + foreign,
+        "verified_filler_pids": filler,
+        "foreign_gpu_pids": foreign,
+        "vanished_gpu_pids": state["vanished_gpu_pids"],
+        "filler_kind": state["filler_kind"],
+        "filler_unit_active": state["unit"]["ActiveState"] == "active",
     }
 
 
@@ -75,6 +130,10 @@ def stop_known(*, require_exclusive: bool) -> dict:
     if state["unit"]["ActiveState"] == "active":
         if not state["verified_unit"]:
             raise RuntimeError("Active utilization unit identity did not match authorization")
+        if state["filler_kind"] == "adaptive":
+            state["stopped"] = False
+            state["cooperative"] = True
+            return state
         # Recheck the exact supervisor immediately before targeting its service.
         main = process_identity(state["supervisor"]["pid"])
         if main != state["supervisor"]:
@@ -83,6 +142,7 @@ def stop_known(*, require_exclusive: bool) -> dict:
         state["stopped"] = True
     else:
         state["stopped"] = False
+    state["cooperative"] = False
     return state
 
 

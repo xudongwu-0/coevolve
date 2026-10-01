@@ -266,7 +266,7 @@ Solver checkpoint acceptance compares per-task no-patch rewards against its
 incumbent on the same 100 development IDs with that same gate. Global harness
 selection is run separately under the resulting Solver state, so a Harness
 change cannot be misreported as a weight improvement.
-Sealed test remains unused until both arm states are frozen.
+Sealed test was kept unused until both arm states were frozen.
 
 ### Optimizer qualification and scheduling fixes
 
@@ -417,10 +417,133 @@ excludes replay. The corrected nine-candidate gate rejected H2. H1 re-evaluated
 at 90/100 versus a 78/100 no-patch baseline (+12 points, LCB +6); the one-task
 change from its first 89/100 run is not credited to H2.
 
-Both W1 checkpoints are therefore rejected. Sequential and MA W2 restart from
-W0, not W1, with non-overlapping Solver sample offsets 512--1023. Both W2
-optimizer runs were active at 2026-09-30 23:02 UTC. Sealed test 400--499
-remains unread.
+Both W1 checkpoints were therefore rejected. Sequential and MA W2 restarted
+from W0, not W1, with non-overlapping Solver sample offsets 512--1023.
+Sequential W2 completed two actor/four critic updates in 4,728.7 seconds and
+changed its weight digest to `74eb852d15c2...`; its paired no-patch dev result
+was 79 to 77 (−2 points, one-sided 95% LCB −4), so it was rejected. MA W2
+completed the same update budget in 4,162.8 seconds with centralized critic
+enabled and digest `76f476f8cfb6...`; its dev result tied W0 at 78/100, so it
+was also rejected. W1/W2 are two consecutive rejected Solver rounds in each
+arm, and both arms therefore freeze the released W0.
+
+MA H3 restarted from accepted E1 rather than rejected H2, used a dataset with
+25% authentic H2 replay, and completed two actor/four critic updates in
+1,163.3 seconds. Its exact optimizer ledger contained nine fresh and three
+replay rows; seven valid unique consumed-fresh candidates reached the global
+gate, and none beat H1. H2/H3 satisfy the MA Harness patience rule, freezing
+H1 patch `6e6750643c1b451c65c9be1db61f73db7e88d3ab9150ca005ec00e37d36a0234`.
+
+The final development comparison is sequential 88/100 versus MA 90/100.
+MA minus sequential is +2 points with a one-sided paired 95% lower bound of
+zero. This misses the preregistered +5-point, positive-LCB threshold, so
+cadence search is not permitted. Both final arms are H1+W0; the accepted
+improvement came from global Harness H1, not Solver weight SAO.
+
+### Frozen-arm sealed test
+
+Test IDs 400--499 were first opened only after both H and W roles froze.
+Node4 completed all ten packet metadata cohorts directly. Node3 completed nine
+and had one infrastructure failure at start 470; only that cohort was rerun,
+then the strict merger required exact, duplicate-free coverage of all ten
+starts. No infrastructure failure became a model score.
+
+The two independently collected metadata sources contain identical task IDs
+and task paths, but their no-patch rewards differ on six tasks (67/100 versus
+65/100). Before either frozen patch was evaluated, the symmetric rule was
+frozen: evaluate both patches on both sources, average the two rewards within
+each task and arm, then bootstrap the 100 task-level mean deltas. This avoids
+choosing the more favorable stochastic metadata source after seeing packet
+diagnostics.
+
+| Sealed source | No patch | Sequential H1 | MA H1 | MA − sequential | One-sided 95% LCB |
+|---|---:|---:|---:|---:|---:|
+| node4 metadata | 67/100 | 78/100 | 82/100 | +4pp | −1pp |
+| node3 metadata | 65/100 | 78/100 | 84/100 | +6pp | +1pp |
+| per-task two-replicate mean | 66/100 | 78/100 | 83/100 | **+5pp** | **0pp** |
+
+Against no patch, sequential gains +12pp with LCB +6pp and MA gains +17pp
+with LCB +10.5pp. Thus both frozen H1 patches show positive sealed
+generalization. The arm contrast reaches the +5pp point threshold exactly but
+its lower bound is zero, so material MA superiority is **not established** and
+cadence search remains forbidden. Test results are not used for checkpoint,
+patch, cadence, or hyperparameter selection. The full task rows and frozen
+rule are under
+`runs/alfworld_sao_masao_20260930/final_sealed_arm_comparison.json` and
+`assets/alfworld_sao_masao_20260930/configs/final_sealed_replication_rule.json`.
+
+### Adaptive co-resident GPU filler
+
+`sao_bridge.adaptive_gpu_filler` replaces the static 55%-memory, 82%--94%-duty
+filler on node3/node4 while retaining the authorized
+`bruli-h200-load.service`. The versioned systemd drop-in is
+`scripts/systemd/bruli-h200-load-adaptive.conf`. `resources.stop_known()` still
+stops an identity-checked legacy filler, but recognizes the adaptive
+supervisor as cooperative and leaves it active when a training launcher claims
+the node.
+
+The supervisor samples both `nvidia-smi --query-compute-apps` and per-process
+`nvidia-smi pmon`, excluding only its own exact child PIDs. Each GPU has an
+independent state:
+
+* `idle`: no external CUDA process; a 4,096 TF32 worker uses 192 MiB of matrix
+  buffers and ramps slowly toward 86% total utilization.
+* `yielded`: a new, active, reserved, hot, or memory-constrained external
+  workload; the worker exits and releases its CUDA context and buffers.
+* `shared`: an external process has remained at no more than 5% SM for at
+  least six seconds; a 2,048 worker uses 48 MiB of matrix buffers. Duty caps
+  rise from 15% to 30% after 30 seconds and 50% after 120 seconds of sustained
+  external idleness.
+
+Scale-down is immediate and scale-up is limited to five duty points per
+two-second sample. Less than 8 GiB free memory, temperature at least 82 C, or
+an explicit reservation yields the GPU. A reservation file may contain
+`{"reserved_gpus":[7],"expires_epoch":...}`; malformed reservations fail safe
+by yielding all GPUs. Three telemetry failures yield and restart the
+supervisor. Workers have heartbeat recovery, and systemd retains
+`Restart=always`.
+
+Node4 canary evidence:
+
+* Empty-node steady state reached 85.25% mean utilization across eight H200s
+  at about 791 MiB total filler memory per GPU; the legacy service used about
+  80 GiB per GPU.
+* Under the final policy, a synthetic external process at 89% SM moved GPU0
+  from idle to yielded, removed the filler worker and CUDA context entirely,
+  and returned automatically to idle after exit.
+* Terminating one verified worker changed its PID automatically. Terminating
+  the verified supervisor incremented systemd `NRestarts` and rebuilt all
+  eight workers.
+* A 20-second high-duty TF32 workload completed 55,584 batches with the
+  service active versus 56,414 with it stopped: 98.53% throughput, or 1.47%
+  observed overhead including detection handoff.
+* The real sealed vLLM launch recorded `cooperative=true, stopped=false` and
+  moved all eight filler workers to the small shared state during model-load
+  idle periods. Filler duty remains separate from algorithm GPU telemetry.
+* After sealed evaluation, the final full-yield/8-GiB-margin version was
+  restarted on both nodes. Both units are active/enabled with the repo mount
+  dependency loaded; their steady-state means were about 86.4% and 86.8%.
+  Release audits classify eight verified filler PIDs and zero foreign PIDs on
+  each node.
+
+Status is written to
+`/mnt/3fs/models/bruli/gpu-utilization-20260925/nodes/<host>/adaptive-status.json`.
+The service never signals or terminates external PIDs. Its own GPU processes
+remain constrained to the exact systemd cgroup and `bruli` service user.
+
+Deployment requires an identity audit before replacing the legacy service:
+
+```bash
+PYTHONPATH="$PWD/whale_local" python -B -m sao_bridge.resources audit
+sudo install -D -m 0644 scripts/systemd/bruli-h200-load-adaptive.conf \
+  /etc/systemd/system/bruli-h200-load.service.d/adaptive-coexist.conf
+sudo systemctl daemon-reload
+sudo systemctl restart bruli-h200-load.service
+```
+
+After restart, require `filler_kind=adaptive`, `verified_unit=true`, and no
+unverified GPU process before treating deployment as successful. Do not use a
+name-based kill to remove GPU processes.
 
 ## Environment and official assets
 

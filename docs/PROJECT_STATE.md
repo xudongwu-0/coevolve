@@ -1,6 +1,6 @@
 # 项目状态与 Agent 接手指南
 
-更新：2026-09-30 UTC。这是当前研究主线的入口；历史细节见
+更新：2026-10-01 UTC。这是当前研究主线的入口；历史细节见
 [实验日志](EXPERIMENT_LOG.md)，算法定义见 [MA-SAO](MA_SAO.md)、
 [Harness-R1 SearchQA适配](../whale_local/harness_r1_searchqa/README.md)和
 [ALFWorld复现入口](../whale_local/harness_r1_alfworld/README.md)。
@@ -12,7 +12,8 @@
 先验证 Harness-R1 的官方方法，再在相同起点、奖励和预算下比较 SAO / MA-SAO。
 最终希望小模型（优先4B）具有这种能力。
 
-**当前还没有证明稳定、可泛化的 RL harness 改写收益。**
+**ALFWorld已经证明train候选到未见dev任务的global Harness提升，但尚未证明
+MA-SAO显著优于顺序SAO；Solver权重侧SAO也尚未产生可接受提升。**
 
 - 旧 SAO / MA-SAO 实验的主要收益来自 Solver 权重；多次交替实验始终保留 h0。
 - 32条数据的4B Harness-R1小试未通过输出/执行门槛，不能评价有效RL学习。
@@ -20,6 +21,11 @@
 - 官方冷启动SFT Engineer两次小样本提案分别得到4/8与5/8；存在一个正收益实例，
   但还不是稳定收益、未见任务收益或RL优于SFT的证据。
 - Agent-SFT Solver得到7/8是Solver收益，绝不能算作harness改写收益。
+- 正式ALFWorld H1在顺序/MA两臂分别得到+8pp（LCB+2pp）和+11pp
+  （LCB+5pp）的未见dev收益；这是clean global Harness证据。
+- 两臂W1/W2均未通过paired no-patch dev gate；最终都冻结为H1+官方W0。
+- 最终dev上MA为90/100、顺序为88/100，但MA−顺序仅+2pp且LCB=0，
+  未达到预注册的+5pp，因此禁止搜索交替频率。
 
 不要把“启动成功”“参数发生变化”“合法patch”“训练reward为正”
 或“GPU显示100%”替代最终实验目标。
@@ -271,6 +277,28 @@ packet-transductive结果77/100和83/100只作诊断。MA H2随后在E1/W0上完
 no-patch 78/100为+12pp、LCB+6pp，这一题运行波动不归因于H2。H2拒绝。
 两臂W2均从接受的W0（不是被拒绝的W1）重启，使用sample offsets512–1023。
 
+顺序W2完成2个actor/4个critic更新，耗时4,728.7秒，最终权重digest
+`74eb852d15c2...`；paired dev为79→77、−2pp、LCB−4pp，拒绝。MA W2同样完成
+2个actor/4个critic更新，耗时4,162.8秒，centralized critic保持开启，最终
+digest为`76f476f8cfb6...`；paired dev为78→78、gain/LCB均为0，拒绝。
+两臂W1/W2连续两轮不接受，因此Solver均冻结为官方W0。
+
+MA H3从接受的E1而非被拒绝的H2重启，25% authentic replay，完成2个actor/
+4个critic更新（1,163.3秒）；exact ledger为9 fresh+3 replay，7个合法唯一候选
+均未超过H1。H2/H3连续拒绝后，MA Harness也冻结H1 patch
+`6e6750643c1b451c65c9be1db61f73db7e88d3ab9150ca005ec00e37d36a0234`。
+两臂最终dev重测为顺序88/100、MA90/100；MA−顺序+2pp、one-sided 95%
+LCB=0，未达到+5pp/LCB>0的cadence-search门槛。
+
+两臂冻结后才首次解封sealed test 400–499。node4一次完成10 packets；node3
+首次9/10，仅串行恢复start470后严格合并为10/10，基础设施失败未记模型0分。
+两份metadata的task/path完全一致，但no-patch为67/100和65/100且6题不同；
+在任何fixed-patch结果产生前冻结为对称双replicate、按task均值bootstrap。
+最终no-patch均值66/100，顺序H1为78/100（+12pp、LCB+6pp），MA H1为
+83/100（+17pp、LCB+10.5pp）。MA−顺序恰好+5pp，但one-sided 95% LCB=0；
+因此两个Harness的sealed提升成立，MA的material superiority不成立，
+`cadence_search_permitted=false`。
+
 正式MA分支不是虚构完整MAPPO：采用去中心actor、pre-action joint-state critic、
 W版本隔离reward cache、W变化后的H reward refresh，以及25%真实Engineer
 behavior-token/logprob replay+interaction credit。官方ALFWorld reward没有提供精确
@@ -287,6 +315,9 @@ packet-transductive、Solver no-patch、reward区选择后原样用于未见题�
 - `assets/alfworld_sao_masao_20260930/protocol_v8/manifest.json`
 - `assets/alfworld_sao_masao_20260930/data/manifest.json`
 - `whale_local/harness_r1_alfworld/README.md`
+- `whale_local/sao_bridge/adaptive_gpu_filler.py`
+- `scripts/systemd/bruli-h200-load-adaptive.conf`
+- `runs/alfworld_sao_masao_20260930/final_sealed_arm_comparison.json`
 
 ## 4. 性能优化：测量而不是利用率印象
 
@@ -299,6 +330,8 @@ packet-transductive、Solver no-patch、reward区选择后原样用于未见题�
 | ALFWorld双节点矩阵 | 1,750 target episodes/1,432.49秒；96/96 jobs首尝试成功 |
 | H-SAO 3-way FSDP smoke | 1 actor+2 critic更新；765.73秒；峰值约116.7/139.8 GiB |
 | W-SAO单更新smoke | 139 action trajectories/1.386M tokens；2,713秒 |
+| 自适应filler空闲态 | node4 8卡平均85.25% util；约791MiB/卡，旧静态实现约80GiB/卡 |
+| 自适应filler共存开销 | 20秒TF32对照55,584 vs 56,414 batches；吞吐比98.53%，约1.47%开销 |
 
 以上是单次小测，不是复现稳定的全规模加速率。SFT平均利用率没有提高；
 盲目增大并发反而减速。NCCL等待可能显示GPU100%，不能冒充有效计算。
@@ -334,6 +367,7 @@ ALFWorld模型/环境就绪后的首轮8题基线+RL patch重跑约几分钟；
 | H训练提示漏掉执行上限 | 多hook提示未声明每个code的helper/AST硬限制 | 零更新停止；显式声明已有validator契约并从E0/W0同步重启 |
 | 异步receipt重复/缺失 | 消费序号与真实task身份不一致 | exact multiset审计，隔离无效attempt并计物理成本 |
 | 接口/预算/判分不一致 | 本地proxy和论文协议不同 | 显式披露，不宣称同起点或绝对分数复现 |
+| 静态filler与训练争抢 | 旧实现固定55%显存且duty下限82%，只能训练前停服务 | always-on逐卡状态机；外部负载出现时快速yield，持续空闲才分级恢复 |
 
 ALFWorld资产使用官方`0.2.2/json_2.1.1`三份archive，保留官方500题目录。
 更新版游戏bundle缺少部分指定任务，不能静默替换。
@@ -342,20 +376,15 @@ target必须返回真正的OpenAI `tool_calls`，文本看似XML不是等价证�
 
 ## 6. 下一步与停止条件
 
-1. H-SAO与W-SAO真实optimizer smoke已完成；正式checkpoint均不从smoke继承。
-   r1/r2/r3均为零optimizer更新且已隔离；protocol v8下两臂H1-r4均完成
-   2个actor/4个critic更新。node4 H1在dev从79/100升至87/100
-   （+8pp，LCB+2pp），node3从78/100升至89/100（+11pp，LCB+5pp），
-   两者均被接受。node4 H2/H3连续未接受，顺序Harness已冻结H1；node3 W1和
-   H2、node4 W1均未通过增量gate。两节点当前从W0运行W2；W2后继续paired
-   no-patch dev gate。
-2. node4按H至平台→W至平台执行顺序SAO；node3按H1-W1-H2-W2执行MA-SAO。
-   每个角色至少两轮、patience=2、最多八轮，基础设施失败不算模型0分。
-3. 每轮只用dev 300–399停止/接受；要求≥1pp、paired gain>0且one-sided
-   bootstrap 95% LCB>0。两臂冻结前禁止读取test 400–499结果。
-   Solver权重门控使用同一100个task的no-patch paired reward，避免把同时变化的
-   Harness收益误归因给W更新；global Harness另行在该Solver状态下选择。
-4. 只有MA-SAO在sealed test比顺序SAO至少+5pp且LCB>0，才搜索交替频率。
+1. 顺序和MA两臂已按patience=2完整冻结为H1+W0；W1/W2都没有产生可接受的
+   Solver权重提升。不得从被拒绝的W/H checkpoint继续，也不得用sealed结果回调。
+2. sealed test 400–499只在冻结后解封。对称双replicate最终为顺序78/100、
+   MA83/100；MA−顺序+5pp但LCB=0，material superiority未建立。
+3. MA−顺序须至少+5pp且one-sided 95% LCB>0才允许cadence搜索；sealed结果
+   未通过，因此不搜索频率，也不能据此选择checkpoint或超参数。
+4. 下一算法瓶颈是Solver weight-side样本效率：每轮只有8个长工具episode、
+   0/1稀疏奖励和长程credit assignment。先提高有效on-policy episode数与
+   reward/advantage信息密度，再考虑WebShop扩展。
 5. WebShop尚未准备；小商品库预览与论文配置须区分，Java/JNI/检索索引和
    `webshop_goal_seed=233`/task manifest匹配后才能报告。
 6. WHALE同起点复现须恢复原始Solver/h0/检索器/判分/数据协议；
@@ -374,9 +403,10 @@ target必须返回真正的OpenAI `tool_calls`，文本看似XML不是等价证�
 - 首先读本文件，再读对应方法README和实际JSON receipt；启动日志不是完成receipt。
 - 当前服务器仅授权node3/node4。CPU测试显式`CUDA_VISIBLE_DEVICES=''`，
   每节点GPU进程由单个ownership supervisor管理，不杀未知/其他用户进程。
-- 截至2026-09-30 23:02 UTC，node4运行顺序W2，node3运行MA W2；开始新任务
-  前仍须重新核验实际service、PID、端口和GPU占用，
-  不能只依赖本文判断运行状态。
+- 截至2026-10-01，两臂训练已冻结；node3/node4部署always-on adaptive filler。
+  开始新任务前仍须重新核验service、PID、端口和GPU占用，不能只依赖本文判断。
+- `bruli-h200-load.service`保持同一授权unit；adaptive supervisor不停止外部任务，
+  只管理自己精确PID/cgroup下的worker。算法利用率报告必须排除filler duty。
 - 保存已有权重、算法和分析；清理中间产物必须先有经过验证的保留清单。
   旧约826.5GB checkpoint inventory仅做过盘点，不能声称已安全清理。
 - 使用既有测试；仓库导出不是新的GPU实验。提交前禁止带入任何模型文件或凭据。
@@ -392,6 +422,12 @@ target必须返回真正的OpenAI `tool_calls`，文本看似XML不是等价证�
 **135 passed**；其后失败cache过滤的定向回归为**18 passed**。
 centralized-context、1-D trajectory、partial packet和精确消费ledger相关定向
 回归最新为**32 passed**。
+自适应filler策略、身份校验与ALFWorld回归为**42 passed**；实际GPU又通过
+空闲85.25%利用率、外部负载让载/恢复、worker与supervisor故障恢复和
+98.53%合成训练吞吐比验证。最终full-yield/8GiB版本已在node3/node4
+active+enabled：空闲实测均值分别约86.4%和86.8%，release audit各识别8个
+verified filler且无foreign PID；node4外部SM=89%时本卡worker/context归零，
+外部进程退出后自动恢复。
 跳过项不代表通过GPU训练测试；本次没有重新训练模型。存在上游依赖的弃用警告。
 服务器Python环境为torch 2.10、transformers 5.7、vLLM 0.19.1；
 旧发布环境的requirements不能静默视为当前环境完全相同。

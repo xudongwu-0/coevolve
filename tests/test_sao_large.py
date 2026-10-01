@@ -9,8 +9,24 @@ import torch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "whale_local"))
 from sao_bridge.central_critic import JointStateCritic, context_text, prepend_context
+from sao_bridge.adaptive_gpu_filler import (
+    ControllerConfig,
+    ExternalLoad,
+    decide_policy,
+    external_loads,
+    parse_pmon,
+    read_reservations,
+)
 from sao_bridge.joint_context import joint_context_audit
-from sao_bridge.resources import SCRIPT, UNIT, is_filler
+from sao_bridge.resources import (
+    ADAPTIVE_MODULE,
+    SCRIPT,
+    UNIT,
+    filler_kind,
+    gpu_release_audit,
+    is_filler,
+    stop_known,
+)
 from sao_bridge.replay import interaction_reward, replay_interaction, replay_rows, validate_call
 from sao_bridge.common import write_json
 from sao_bridge.retool import INITIAL_SOURCE
@@ -21,9 +37,180 @@ class ResourceTests(unittest.TestCase):
         record = {"cmd": ["/usr/bin/python3", "-B", SCRIPT, "worker", "--gpu", "0"],
                   "cgroup": "0::/system.slice/" + UNIT}
         self.assertTrue(is_filler(record))
+        adaptive = {
+            "cmd": [
+                "/usr/bin/python3", "-B", "-m", ADAPTIVE_MODULE, "worker",
+                "--gpu", "7", "--matrix-size", "2048", "--control-fd", "4",
+            ],
+            "cgroup": "0::/system.slice/" + UNIT,
+        }
+        self.assertEqual(filler_kind(adaptive), "adaptive")
+        self.assertEqual(filler_kind({
+            "cmd": ["/usr/bin/python3", "-B", "-m", ADAPTIVE_MODULE, "supervisor"],
+            "cgroup": "0::/system.slice/" + UNIT,
+        }, worker=False), "adaptive")
         for change in ({"cgroup": "0::/other.service"},
                        {"cmd": ["python", "real_training.py"]}):
             self.assertFalse(is_filler({**record, **change}))
+
+    def test_adaptive_filler_remains_active_for_training(self):
+        supervisor = {
+            "pid": 100,
+            "uid": 200,
+            "cmd": ["/usr/bin/python3", "-B", "-m", ADAPTIVE_MODULE, "supervisor"],
+            "cgroup": "0::/system.slice/" + UNIT,
+        }
+        state = {
+            "unit": {"ActiveState": "active"},
+            "processes": [],
+            "supervisor": supervisor,
+            "verified_unit": True,
+            "filler_kind": "adaptive",
+        }
+        with patch("sao_bridge.resources.require_research_node"), patch(
+            "sao_bridge.resources.audit", return_value=state,
+        ), patch("sao_bridge.resources.subprocess.run") as systemctl:
+            result = stop_known(require_exclusive=True)
+        systemctl.assert_not_called()
+        self.assertFalse(result["stopped"])
+        self.assertTrue(result["cooperative"])
+
+    def test_adaptive_filler_does_not_hide_existing_foreign_workload(self):
+        state = {
+            "unit": {"ActiveState": "active"},
+            "processes": [{"pid": 999, "verified_filler": False}],
+            "supervisor": {},
+            "verified_unit": True,
+            "filler_kind": "adaptive",
+        }
+        with patch("sao_bridge.resources.require_research_node"), patch(
+            "sao_bridge.resources.audit", return_value=state,
+        ), self.assertRaisesRegex(RuntimeError, "non-filler GPU processes"):
+            stop_known(require_exclusive=True)
+
+    def test_release_audit_separates_filler_from_foreign_processes(self):
+        state = {
+            "unit": {"ActiveState": "active"},
+            "processes": [
+                {"pid": 10, "verified_filler": True},
+                {"pid": 20, "verified_filler": False},
+            ],
+            "filler_kind": "adaptive",
+            "vanished_gpu_pids": [30],
+        }
+        with patch("sao_bridge.resources.audit", return_value=state):
+            result = gpu_release_audit()
+        self.assertEqual(result["remaining_gpu_pids"], [10, 20])
+        self.assertEqual(result["verified_filler_pids"], [10])
+        self.assertEqual(result["foreign_gpu_pids"], [20])
+        self.assertEqual(result["vanished_gpu_pids"], [30])
+
+
+class AdaptiveFillerTests(unittest.TestCase):
+    sample = {
+        "utilization_pct": 0,
+        "memory_used_mib": 0,
+        "memory_total_mib": 143771,
+        "temperature_c": 45,
+    }
+
+    def test_idle_gpu_ramps_gradually(self):
+        decision = decide_policy(self.sample, ExternalLoad(), 0.0, 0)
+        self.assertEqual(decision.mode, "idle")
+        self.assertEqual(decision.duty, ControllerConfig().scale_up_step)
+
+    def test_busy_training_yields_immediately(self):
+        external = ExternalLoad((123,), 120_000, 92)
+        decision = decide_policy(
+            {**self.sample, "utilization_pct": 95, "memory_used_mib": 120_100},
+            external,
+            0.9,
+            60,
+        )
+        self.assertEqual(decision.mode, "yielded")
+        self.assertEqual(decision.duty, 0)
+        self.assertEqual(decision.reason, "external_busy")
+
+    def test_training_memory_pressure_releases_worker(self):
+        external = ExternalLoad((123,), 140_000, 0)
+        decision = decide_policy(
+            {**self.sample, "memory_used_mib": 141_000},
+            external,
+            0.2,
+            60,
+        )
+        self.assertEqual(decision.mode, "yielded")
+        self.assertEqual(decision.reason, "memory_yield")
+
+    def test_external_idle_uses_hysteresis_and_tiered_caps(self):
+        external = ExternalLoad((123,), 120_000, 0)
+        short = decide_policy(self.sample, external, 0.0, 2)
+        medium = decide_policy(self.sample, external, 0.0, 35)
+        long = decide_policy(self.sample, external, 0.0, 125)
+        downsized = decide_policy(self.sample, external, 0.9, 35)
+        partial = decide_policy(
+            self.sample,
+            ExternalLoad((123,), 120_000, 10),
+            0.9,
+            0,
+        )
+        self.assertEqual(short.mode, "yielded")
+        self.assertEqual(short.duty, 0)
+        self.assertEqual(partial.mode, "yielded")
+        self.assertLessEqual(medium.duty, ControllerConfig().shared_medium_cap)
+        self.assertEqual(medium.duty, ControllerConfig().scale_up_step)
+        self.assertEqual(long.duty, ControllerConfig().scale_up_step)
+        self.assertGreater(long.cap, medium.cap)
+        self.assertEqual(downsized.duty, ControllerConfig().shared_medium_cap)
+
+    def test_pmon_parser_keeps_process_sm_and_memory(self):
+        text = """# gpu pid type sm mem enc dec jpg ofa fb ccpm command
+    0 123 C 99 81 - - - - 122814 0 VLLM::Worker
+    1 456 C 0 0 - - - - 512 0 python
+"""
+        self.assertEqual(parse_pmon(text), [
+            {
+                "gpu": 0, "pid": 123, "sm_pct": 99, "memory_pct": 81,
+                "framebuffer_mib": 122814, "command": "VLLM::Worker",
+            },
+            {
+                "gpu": 1, "pid": 456, "sm_pct": 0, "memory_pct": 0,
+                "framebuffer_mib": 512, "command": "python",
+            },
+        ])
+
+    def test_external_loads_exclude_owned_worker(self):
+        samples = [
+            {
+                "index": 0,
+                "uuid": "GPU-a",
+                "utilization_pct": 90,
+                "memory_used_mib": 1024,
+                "memory_total_mib": 143771,
+                "temperature_c": 45,
+                "power_w": 300,
+            },
+        ]
+        apps = [
+            {"uuid": "GPU-a", "pid": 10, "memory_mib": 48},
+            {"uuid": "GPU-a", "pid": 20, "memory_mib": 512},
+        ]
+        pmon = [
+            {"gpu": 0, "pid": 10, "sm_pct": 70, "framebuffer_mib": 48},
+            {"gpu": 0, "pid": 20, "sm_pct": 25, "framebuffer_mib": 512},
+        ]
+        load = external_loads(samples, apps, pmon, {10})[0]
+        self.assertEqual(load.pids, (20,))
+        self.assertEqual(load.memory_mib, 512)
+        self.assertEqual(load.sm_pct, 25)
+
+    def test_invalid_reservation_yields_all_gpus(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "reservation.json"
+            write_json(path, {"reserved_gpus": [8]})
+            reserved, error = read_reservations(path, 8)
+        self.assertEqual(reserved, set(range(8)))
+        self.assertIn("invalid GPU indices", error)
 
 
 class CentralCriticTests(unittest.TestCase):

@@ -5,7 +5,6 @@ import argparse
 import json
 import os
 from pathlib import Path
-import subprocess
 import threading
 import time
 
@@ -14,7 +13,7 @@ from .budget import model_digests
 from .common import ensure_model_runtime_metadata, read_json, write_json
 from .joint_context import joint_context_audit
 from .launch import Launcher
-from .resources import stop_known
+from .resources import gpu_release_audit, stop_known
 
 
 def assignment_schedule_audit(config: dict) -> dict:
@@ -190,10 +189,7 @@ def main() -> None:
         telemetry.join(timeout=10)
         write_json(run / "RELEASED.json", {
             "released_at": time.time(),
-            "remaining_gpu_pids": subprocess.check_output(
-                ["nvidia-smi", "--query-compute-apps=pid",
-                 "--format=csv,noheader,nounits"], text=True,
-            ).split(),
+            **gpu_release_audit(),
         })
 
 

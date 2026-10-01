@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import argparse
 from pathlib import Path
-import subprocess
 import threading
 import time
 
@@ -11,7 +10,7 @@ from .alfworld_h_train import monitor_gpus
 from .alfworld_phase_data import assignments_from_matrix, solver_dataset
 from .common import read_json, write_json
 from .launch import Launcher
-from .resources import stop_known
+from .resources import gpu_release_audit, stop_known
 from harness_r1_alfworld.packet_report import aggregate
 
 
@@ -180,10 +179,7 @@ def main() -> None:
         telemetry.join(timeout=10)
         write_json(run / "RELEASED.json", {
             "released_at": time.time(),
-            "remaining_gpu_pids": subprocess.check_output(
-                ["nvidia-smi", "--query-compute-apps=pid",
-                 "--format=csv,noheader,nounits"], text=True,
-            ).split(),
+            **gpu_release_audit(),
         })
 
 

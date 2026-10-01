@@ -8,7 +8,6 @@ import json
 from pathlib import Path
 import random
 import shutil
-import subprocess
 import threading
 import time
 
@@ -17,7 +16,7 @@ import httpx
 from .alfworld_h_train import monitor_gpus
 from .common import read_json, write_json
 from .launch import Launcher
-from .resources import stop_known
+from .resources import gpu_release_audit, stop_known
 
 
 def patch_identity(patch: dict) -> str:
@@ -239,7 +238,8 @@ def complete_without_candidates(run: Path, config: dict, packets: list[dict],
         "reason": "no_valid_harness_candidates",
     })
     write_json(run / "RELEASED.json", {
-        "released_at": time.time(), "remaining_gpu_pids": [],
+        "released_at": time.time(),
+        **gpu_release_audit(),
         "gpu_resources_claimed": False,
     })
 
@@ -548,10 +548,7 @@ def main() -> None:
         telemetry.join(timeout=10)
         write_json(run / "RELEASED.json", {
             "released_at": time.time(),
-            "remaining_gpu_pids": subprocess.check_output(
-                ["nvidia-smi", "--query-compute-apps=pid",
-                 "--format=csv,noheader,nounits"], text=True,
-            ).split(),
+            **gpu_release_audit(),
         })
 
 

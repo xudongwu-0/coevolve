@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from sao_bridge.alfworld_domain import (
     _running, _terminal_reward, harness_spec,
@@ -137,16 +138,27 @@ class AlfworldSaoTest(unittest.TestCase):
             run = Path(temporary)
             no_patch = run / "no-patch.json"
             no_patch.write_text('{"benchmark":"alfworld","actions":[]}')
-            complete_without_candidates(
-                run,
-                {
-                    "phase": "h2-dev",
-                    "no_patch": str(no_patch),
-                    "selection_split": "dev-300-399",
+            with patch(
+                "sao_bridge.alfworld_global_harness.gpu_release_audit",
+                return_value={
+                    "remaining_gpu_pids": [],
+                    "verified_filler_pids": [],
+                    "foreign_gpu_pids": [],
+                    "vanished_gpu_pids": [],
+                    "filler_kind": None,
+                    "filler_unit_active": False,
                 },
-                [{"batch_size": 10}, {"batch_size": 10}],
-                0.01,
-            )
+            ):
+                complete_without_candidates(
+                    run,
+                    {
+                        "phase": "h2-dev",
+                        "no_patch": str(no_patch),
+                        "selection_split": "dev-300-399",
+                    },
+                    [{"batch_size": 10}, {"batch_size": 10}],
+                    0.01,
+                )
             result = json.loads((run / "COMPLETE.json").read_text())
             released = json.loads((run / "RELEASED.json").read_text())
         self.assertFalse(result["accepted"])

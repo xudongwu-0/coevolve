@@ -2015,3 +2015,112 @@ It is exploratory validation, not held-out AIME. AIME test stays sealed until a 
     retains the pre-action centralized critic; node4 W2 is sequential. Both
     eight-GPU optimizer runs were active at23:02 UTC. Sealed test400--499
     remains unread.
+79. **Both ALFWorld arms frozen; Solver SAO did not pass a dev gate
+    (2026-10-01).** Sequential W2 completed2 actor/4 critic updates in
+    4,728.70s from accepted W0 and changed its final Solver weight digest to
+    `74eb852d15c21c867fa10b4eccf110b9873bcc7924a3bfad56cc4a263ad72e60`.
+    Its paired no-patch dev comparison was79/100 for W0 versus77/100 for W2:
+    −2pp with one-sided95% LCB−4pp. MA W2 completed the same update budget in
+    4,162.78s with centralized critic enabled and digest
+    `76f476f8cfb6f510bc63a0da03d1fb747faa4289b25112683386787cb06f800e`.
+    It tied W0 at78/100, with gain and LCB both zero. Both candidates were
+    rejected; W1/W2 satisfy Solver patience=2 in each arm, so both freeze the
+    released `target-agent-sft` W0.
+
+    MA H3 restarted from accepted E1, not rejected H2. It used offsets128--191,
+    25% authentic replay, interaction credit0.5, and the same decentralized
+    actor/pre-action centralized critic boundary. It completed2 actor/4 critic
+    updates in1,163.34s and changed final Engineer weights to
+    `7c5ddcccb21ba8298893f55dd63253c6bf02abdcaca8a14e1709c702f02025b3`.
+    The optimizer consumed9 fresh and3 replay rows; the exact fresh gate found
+    seven valid unique candidates. None improved on H1. H2/H3 therefore freeze
+    MA patch
+    `6e6750643c1b451c65c9be1db61f73db7e88d3ab9150ca005ec00e37d36a0234`.
+
+    A final dev-only comparison re-evaluated both frozen H1+W0 arms:
+    sequential88/100 and MA90/100. MA−sequential is+2pp with paired one-sided
+    95% LCB0. It misses the preregistered+5pp/positive-LCB material-gain rule,
+    so cadence search is explicitly disabled. The only accepted weight-state
+    improvement in either arm is Harness H1; four completed Solver
+    checkpoints changed real weights but none improved held-out no-patch task
+    completion under the gate.
+80. **Always-on adaptive GPU filler implemented and deployed
+    (2026-10-01).** Auditing node0--2 found no reusable generic co-resident
+    implementation: node0's unreadable guard honored a per-GPU reservation,
+    node1 ran the fixed55%-memory filler, and node2 paused it under workload.
+    The legacy worker held about80GiB per H200 and enforced an82% duty floor,
+    so it could not safely stay active beside training.
+
+    `sao_bridge.adaptive_gpu_filler` now supervises one small worker per
+    eligible GPU and samples both compute-app identities and per-process SM
+    utilization. It excludes only exact child PIDs. New or active external
+    work yields immediately and releases the worker; sustained external
+    idleness uses a48MiB matrix working set with tiered15%/30%/50% duty caps;
+    an empty GPU uses192MiB and ramps toward86% total utilization. Less than
+    8GiB free memory, temperature at least82C, or a reservation yields the
+    card. Scale-down is immediate, scale-up is5 duty points per2s. Telemetry
+    errors fail safe, worker heartbeats recover child failure, and systemd
+    retains `Restart=always`.
+
+    Node4 idle canary reached85.25% mean utilization across all8 GPUs at about
+    791MiB total filler memory per GPU. A verified worker kill restarted with
+    a new PID; a verified supervisor kill produced `NRestarts=1` and rebuilt
+    all8 workers. A20s TF32 comparison completed55,584 batches with adaptive
+    service active and56,414 with it off, a98.53% throughput ratio and1.47%
+    observed overhead including handoff. A synthetic external process caused
+    the service to downsize GPU0 and it resumed after process exit.
+
+    The same versioned drop-in is installed on node3 and node4. Node3's root
+    filesystem was initially full; only archived systemd journals were
+    vacuumed, freeing enough space for the drop-in, and no user data was
+    removed. Real sealed vLLM launch audits on both nodes record
+    `filler_kind=adaptive`, `cooperative=true`, and `stopped=false`; all eight
+    external model PIDs were detected and workers entered the small shared
+    state during sustained model-load idle periods. The latest filler and
+    ALFWorld focused regressions pass42 tests. After sealed jobs closed, the
+    final full-yield/8GiB-margin code and `RequiresMountsFor` drop-in were
+    reinstalled and restarted on both nodes. Both services are active/enabled,
+    expose eight identity-verified workers and no foreign PID, and reached
+    about86.4%/86.8% idle mean utilization. With a standalone workload at89%
+    SM, node4 GPU0 reported `external_busy`, removed its worker and held zero
+    filler buffers/context; it recreated the idle worker after natural exit.
+    Node3 root still has only about553MiB free, so disk pressure remains an
+    operational warning.
+81. **Frozen-arm ALFWorld sealed result (2026-10-01).** Test IDs400--499
+    remained unopened until both arms froze at H1+W0 and the final dev
+    comparison disabled cadence search. Node4's sealed packet refresh
+    completed10/10 cohorts. Node3 completed9/10; start470 had infrastructure
+    failure on both bounded attempts, so only that start was rerun serially.
+    The strict merger accepted exactly starts400--490 with no duplicate and no
+    model-zero substitution.
+
+    The two metadata sources have identical100 task IDs and paths, but
+    independent no-patch rollouts differ on six task IDs:
+    401,428,435,452,456,492. Their totals are67/100 and65/100. Because choosing
+    either source after packet diagnostics would be asymmetric, before any
+    frozen-patch result the rule was fixed to evaluate both patches on both
+    sources and bootstrap the per-task average across the two replicates. The
+    freeze receipt hashes the original final manifest, replication rule, both
+    evaluation configs and metadata-comparison receipt while both final
+    services were still active.
+
+    | Source | No patch | Sequential H1 | MA H1 | MA−sequential | one-sided95% LCB |
+    | --- | ---: | ---: | ---: | ---: | ---: |
+    | node4 metadata | 67 | 78 | 82 | +4pp | −1pp |
+    | node3 metadata | 65 | 78 | 84 | +6pp | +1pp |
+    | task-level two-replicate mean | 66 | 78 | 83 | **+5pp** | **0pp** |
+
+    Sequential versus no-patch is+12pp with LCB+6pp. MA versus no-patch is
+    +17pp with LCB+10.5pp. Both accepted H1 patches therefore generalize to
+    sealed tasks under the frozen evaluation. MA reaches the preregistered
+    +5pp point threshold over sequential exactly, but its LCB is zero; the
+    conjunction fails, material MA superiority is not established, and
+    cadence search remains disabled. No sealed result changes a checkpoint,
+    patch, cadence, or hyperparameter.
+
+    Each final fixed-patch evaluation completed without infrastructure
+    failure in about352--365s while the adaptive filler service remained
+    active and identity-verified. Legacy `RELEASED.json` files from these two
+    runs list adaptive workers as remaining GPU PIDs; subsequent code now
+    separates `verified_filler_pids` from `foreign_gpu_pids` so always-on
+    utilization is not mistaken for leaked training work.

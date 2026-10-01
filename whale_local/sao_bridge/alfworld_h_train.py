@@ -14,7 +14,7 @@ from .common import ensure_model_runtime_metadata, read_json, write_json
 from .joint_context import joint_context_audit
 from .large_train import training_capacity_audit, validate_training_rows
 from .launch import Launcher
-from .resources import stop_known
+from .resources import gpu_release_audit, stop_known
 
 
 def training_spec(config: dict, run: Path, evaluator_url: str) -> dict:
@@ -190,10 +190,7 @@ def main() -> None:
         telemetry.join(timeout=10)
         write_json(run / "RELEASED.json", {
             "released_at": time.time(),
-            "remaining_gpu_pids": subprocess.check_output(
-                ["nvidia-smi", "--query-compute-apps=pid",
-                 "--format=csv,noheader,nounits"], text=True,
-            ).split(),
+            **gpu_release_audit(),
         })
 
 
