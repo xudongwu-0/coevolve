@@ -2525,3 +2525,36 @@ It is exploratory validation, not held-out AIME. AIME test stays sealed until a 
     Original start timestamps, service names, source/spec identities and the
     passing4B prerequisite hash are stored in launch_receipt.json. No9B
     improvement is claimed at launch. Filler remains active.
+
+91. **Terminal-corrected9B control completes; switch to fast single-seed
+    exploration (2026-10-01 16:20 UTC).** Both seeds selected step29.
+    Seed42 report74% ->81%, delta+7pp, question-level95%CI[0,+15]pp.
+    Seed43 report81% ->74%, delta-7pp, CI[-17,+3]pp. Mean delta0pp;
+    the original pair gate failed and is not relaxed retrospectively.
+    Both selection scores rose61.67% ->70%. Seed43's baseline differs from
+    v1's79% despite identical nominal decoding, so this is not a bitwise
+    paired algorithm ablation. No stable9B learning claim follows.
+
+    Both completed30 native steps/25 nonzero Actor updates, targets in[0,1],
+    and all3 actor/critic checkpoints. No controller restart was observed.
+    Optimizer windows43.36/46.65 minutes; true experiment SM40.25%/42.16%,
+    filler6.55%/6.32%, filler active throughout. Persisted final native/source
+    audit precedes any subsequent shared-source edit.
+
+    User now prioritizes finding useful performance over seed replication
+    or ablations. The unstarted240-step dual-seed v3 plan is suspended,
+    not silently relabeled as executed. New Solver v4 uses one seed42,
+    freshW0/H0,640 goal-isolated train games,5+75 steps, batch8, LR2e-6/1e-5,
+    K1 and2 checkpoints.59/91 mean@2 selection/report remain independent
+    of the new training goals. Any success is exploratory, not replicated.
+
+    Prepare Engineer learning in parallel rather than waiting for a Solver
+    pair gate. The official builder reconstructs24 compact packets from
+    unchanged cached training evidence; no new GPU collection. Exact maximum
+    prompt7,733 plus4,096 generation fits16,384 microbatch. The first single
+    seed H budget is5+27 steps, batch6,3+1+4 GPU layout, terminal fix andK1.
+    Matched E0/E1 generation uses8 identical evidence prompts and candidate
+    counts; metadata-only filtering yields24 selection and70 report goals
+    disjoint from all legacy training goals and each other. This evaluates
+    global proposal quality conditioned on fixed evidence, not unseen-packet
+    transfer.61 tests and22 subtests pass; GPU H evaluation is not yet done.

@@ -4,15 +4,21 @@ import os
 from pathlib import Path
 import sys
 import tempfile
+from types import ModuleType, SimpleNamespace
 import unittest
 from unittest.mock import Mock, patch
 
 import httpx
+from fastapi.testclient import TestClient
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "whale_local"))
 from sao_bridge.alfworld_domain import run_episode
 from sao_bridge.alfworld_env_service import task_definition
+from sao_bridge.alfworld_h_train import reward_config
 from sao_bridge.alfworld_runtime import prepare_agentbench_runtime
+from sao_bridge.alfworld_reward_service import (
+    create_app, official_args, reward_data_identity, validate_metadata,
+)
 from sao_bridge.alfworld_solver_validation import (
     _run_evaluation, _run_training, no_patch_assignments, validate_spec,
 )
@@ -51,6 +57,139 @@ def large_catalogue_fixture(root, size=600):
     path = root / f"{TRAIN_SPLIT}.json"
     write_json(path, {"train": paths})
     return tuple(paths), file_sha(path)
+
+
+class AlfworldEngineerCatalogueTests(unittest.TestCase):
+    def setUp(self):
+        self.temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temporary.cleanup)
+        self.root = Path(self.temporary.name)
+        self.data_root = self.root / "shared_data"
+        self.paths, digest = large_catalogue_fixture(self.data_root)
+        self.catalogue = self.root / f"{TRAIN_SPLIT}.json"
+        (self.data_root / self.catalogue.name).replace(self.catalogue)
+        for module in ("alfworld_train_data", "alfworld_runtime", "alfworld_reward_service"):
+            override = patch(f"sao_bridge.{module}.ALFWORLD_DATA", self.data_root)
+            override.start()
+            self.addCleanup(override.stop)
+        self.config = {
+            "cache_root": str(self.root / "cache"),
+            "receipts": str(self.root / "receipts"),
+            "port_locks": str(self.root / "locks"),
+            "agentbench_dir": str(self.root / "runtime/AgentBench"),
+            "target_urls": ["http://127.0.0.1:19501/v1"],
+            "solver_version": "w0", "solver_weights_sha256": "a" * 64,
+            "split": TRAIN_SPLIT, "catalogue": str(self.catalogue),
+            "catalogue_sha256": digest,
+        }
+        self.metadata = {
+            "batch_tag": "train-512", "split": TRAIN_SPLIT, "start": 512, "end": 514,
+            "batch_size": 2, "baseline_pass": 1,
+            "baseline_rewards": {"512": 0.0, "513": 1.0}, "reward_threshold": 1.0,
+            "target_agent_name": "qwen35-9b-nothink", "target_model": "policy",
+            "response_protocol": "prefill_think_patch", "solver_version": "w0",
+            "solver_weights_sha256": "a" * 64,
+            "task_catalogue": str(self.catalogue), "task_catalogue_sha256": digest,
+        }
+
+    def validate(self, metadata):
+        validate_metadata(metadata, "w0", **{
+            name: self.config[name] for name in (
+                "split", "catalogue", "catalogue_sha256", "solver_weights_sha256",
+            )
+        })
+
+    def test_train_packet_identity_and_dynamic_bounds(self):
+        self.validate(self.metadata)
+        for key, value in (
+            ("split", "test_set"),
+            ("task_catalogue_sha256", "b" * 64),
+            ("task_catalogue", str(self.root / "wrong.json")),
+            ("solver_weights_sha256", "b" * 64),
+            ("solver_version", "w1"),
+            ("end", 601),
+        ):
+            with self.subTest(key=key), self.assertRaises(ValueError):
+                self.validate({**self.metadata, key: value})
+        for value in (float("nan"), float("inf"), -1, None):
+            with self.subTest(reward=value), self.assertRaises(ValueError):
+                self.validate({
+                    **self.metadata, "baseline_rewards": {"512": value, "513": 1.0},
+                })
+
+    def test_official_cache_is_scoped_to_catalogue_and_solver_weights(self):
+        args = official_args(self.config, self.root / "runtime")
+        self.assertEqual(args.harness_r1_alfworld_split, TRAIN_SPLIT)
+        changed = official_args(
+            {**self.config, "solver_weights_sha256": "b" * 64}, self.root / "runtime",
+        )
+        self.assertNotEqual(
+            args.harness_r1_reward_cache_protocol, changed.harness_r1_reward_cache_protocol,
+        )
+        with self.assertRaisesRegex(ValueError, "Solver weights"):
+            reward_data_identity({**self.config, "solver_weights_sha256": None})
+        legacy = {
+            key: value for key, value in self.config.items()
+            if key not in {"split", "catalogue", "catalogue_sha256", "solver_weights_sha256"}
+        }
+        self.assertIsNone(reward_data_identity(legacy))
+        self.assertFalse(hasattr(
+            official_args(legacy, self.root / "runtime"), "harness_r1_reward_cache_protocol",
+        ))
+
+    def test_engineer_launcher_forwards_the_exact_reward_catalogue_identity(self):
+        config = {
+            "tmpdir": str(self.root / "tmp"), "batch_size": 6, "solver_version": "w0",
+            "training_split": TRAIN_SPLIT, "training_catalogue": str(self.catalogue),
+            "training_catalogue_sha256": self.config["catalogue_sha256"],
+            "solver_weights_sha256": self.config["solver_weights_sha256"],
+        }
+        reward = reward_config(config, self.root / "run", self.config["target_urls"])
+        self.assertEqual(reward_data_identity(reward), reward_data_identity(self.config))
+        self.assertEqual(reward["target_urls"], self.config["target_urls"])
+        with self.assertRaises(ValueError):
+            reward_config({**config, "training_catalogue_sha256": "0" * 64}, self.root, [])
+
+    def test_live_adapter_rechecks_catalogue_before_cached_reward_calls(self):
+        backend_calls = []
+
+        async def reward_func(args, samples):
+            backend_calls.append((args, samples))
+            return [{"score": 0.25, "valid_patch": True, "eval_status": "ok"}]
+
+        backend = ModuleType("examples.harness_r1.reward_alfworld_patch")
+        backend.reward_func = reward_func
+        types = ModuleType("relax.utils.types")
+        types.Sample = SimpleNamespace
+        with (
+            patch.dict(sys.modules, {
+                "examples.harness_r1.reward_alfworld_patch": backend,
+                "relax.utils.types": types,
+            }),
+            patch.object(sys, "path", list(sys.path)),
+            patch.dict(os.environ, {}),
+        ):
+            app = create_app(self.config)
+            with TestClient(app) as client:
+                self.assertEqual(client.get("/health").json()["split"], TRAIN_SPLIT)
+                overlay = Path(self.config["agentbench_dir"]) / "data/alfworld"
+                self.assertEqual((overlay / self.catalogue.name).resolve(), self.catalogue)
+                self.assertFalse((self.data_root / self.catalogue.name).exists())
+                request = {
+                    "source": "<patch>{}</patch>", "sample_id": "same-packet",
+                    "metadata": self.metadata,
+                }
+                response = client.post("/score", json=request)
+                self.assertEqual(response.status_code, 200, response.text)
+                self.assertEqual(response.json()["reward"], 0.25)
+                write_json(self.catalogue, {"train": list(reversed(self.paths))})
+                response = client.post("/score", json=request)
+                self.assertEqual(response.status_code, 422, response.text)
+                self.assertIn("checksum changed", response.json()["detail"])
+            self.assertEqual(len(backend_calls), 1)
+            write_json(self.catalogue, {"train": list(self.paths)})
+            with self.assertRaisesRegex(ValueError, "different identity"):
+                create_app({**self.config, "solver_weights_sha256": "b" * 64})
 
 
 class AlfworldTrainDataTests(unittest.TestCase):

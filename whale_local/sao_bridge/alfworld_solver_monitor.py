@@ -1,4 +1,4 @@
-"""Read-only native-update audit and persistent monitoring of a 9B Solver pair."""
+"""Read-only native-update audit and monitoring of predeclared 9B Solver runs."""
 from __future__ import annotations
 
 import argparse
@@ -197,6 +197,13 @@ def watch(
                 previous = marker
             if all(row["completed_and_released"] for row in reports):
                 result = evaluate_pair(roots, protocol)
+                if len(roots) == 1:
+                    result["interpretation"] = (
+                        "This is a single-training-seed exploratory development gate, "
+                        "not a replicated or confirmatory result. Question-level "
+                        "bootstrap does not measure training-seed uncertainty or "
+                        "correct adaptive searches across methods."
+                    )
                 if output.exists() and read_json(output) != result:
                     raise ValueError("Refusing to replace a different persisted pair result")
                 write_json(output, result)

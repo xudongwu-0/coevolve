@@ -14,6 +14,13 @@
 4B Solver修复加扩规模已通过更强双seed门槛，当前转向9B Solver，
 随后验证9B Engineer；不能把某次4B校准失败说成推翻历史4B正向结果。
 
+**2026-10-01 16:07 UTC用户更新优先级：快速找到有效配置优先，取消探索阶段
+的多seed/消融前置要求。** node3/node4用于不同候选或Solver/Engineer并行，
+不再重复同一配置的两个seed。已经开始的9B v2对照正常收尾并保留原gate，
+不得追溯性放宽旧结果；尚未启动的9B v3双seed扩规模计划暂停。后续单seed
+结果明确标记exploratory，继续保留固定起点、独立任务评测和基础设施失败记录。
+Engineer准备与验证不再等待Solver的双seed门槛；MA-SAO仍须先有两侧学习证据。
+
 **ALFWorld已经证明train候选到未见dev任务的global Harness提升，但尚未证明
 SAO更新后的Engineer权重比E0更会改Harness，也尚未证明9B Solver权重侧SAO
 能通过held-out gate；在这两项顺序基线成立前，MA-SAO继续锁定。**
@@ -40,7 +47,7 @@ SAO更新后的Engineer权重比E0更会改Harness，也尚未证明9B Solver权
 不要把“启动成功”“参数发生变化”“合法patch”“训练reward为正”
 或“GPU显示100%”替代最终实验目标。
 
-### 当前顺序验证阶梯（2026-10-01冻结）
+### 历史顺序验证阶梯（2026-10-01；后续探索按上述新优先级执行）
 
 1. 固定数学H0，只训练4B Solver。双seed各用8步critic-only warm-up、
    64步actor、batch64，共4,608条真实轨迹；在独立reward split上从
@@ -59,7 +66,7 @@ SAO更新后的Engineer权重比E0更会改Harness，也尚未证明9B Solver权
 5. 若SAO-H失败，先按官方Harness-R1的组内GRPO目标做同预算复现；只有
    9B Solver和Engineer两侧都证明可训练后，才解锁MA-SAO与交替频率研究。
 
-### 最新9B Solver结果（fixed no-patch，2026-10-01）
+### 9B Solver v1结果（fixed no-patch，2026-10-01）
 
 | seed | W0 selection | step9 / step19 / step29 selection | 选中step | 独立report W0→候选 | 配对delta及题级95%区间 |
 |---|---|---|---|---|---|
@@ -179,16 +186,31 @@ Launcher的`wb`重启日志覆盖，底层原因未知；不要把恢复后的to
 为+12.89/+14.06pp。这支持在修复后的协议中继续增加数据/训练步数有用，
 但不是对早期checkpoint另做独立report、也不是把bug修复与scale分离的消融。
 
-### 正在执行9B v2控制
+### 9B v2控制已完成：正负各一，平均无提升
 
 强4B gate通过后，于2026-10-01 14:41 UTC启动两个持久系统service：
 node4的`coevolve-9b-solver-v2-s42`与node3的`coevolve-9b-solver-v2-s43`。
 使用`2fed1fd`源码，维持旧9B的30步、5步critic warm-up、batch8、K1、
 原240题、解码预算和选择门槛；启用正确的worker端terminal修复。
-两个baseline API均已返回200，14:56 UTC进入training阶段。
-这不是9B改进结果；仍需实际optimizer与独立report验证。
+两个baseline API均返回200，14:56 UTC进入training阶段，约16:20 UTC全部结束。
 每个run的`launch_receipt.json`冻结首次启动时间、unit、spec和4B gate哈希，
 避免重启后仅用controller当前uptime计算总耗时。
+
+| seed | 选中step | 独立report W0 | 训练后 | delta | 题级95%CI |
+|---|---:|---:|---:|---:|---|
+|42|29|74%|81%|+7pp|[0,+15]pp|
+|43|29|81%|74%|-7pp|[-17,+3]pp|
+
+原双seed gate失败，平均delta为0，不能仅摘取seed42宣称9B已稳定学会。
+两个selection都从61.67%升到70%，再次说明selection上涨不足以证明泛化。
+seed43的W0与v1的79%有2pp差异：相同名义解码设置并不意味着逐题bitwise复现。
+两边均完成30步/25次非零Actor更新，targets始终[0,1]，三个actor/critic
+checkpoint完整，观察到的controller重启数均为0。optimizer窗口43.36/46.65
+分钟，真实实验SM40.25%/42.16%，filler为6.55%/6.32%，全过程active。
+结果与完成时源码/原生更新审计分别持久化在
+`runs/alfworld_solver_v2_pair_gate_result.json`、
+`runs/alfworld_solver_v2_final_native_audit.json`。之后的合法源码修改不能用来
+追溯否定完成时已核对的冻结身份；旧gate结果也不会因改用单seed探索而重标。
 
 旧9B实测计时还表明，记录到的阶段时间中actor/critic更新约占62%--64%，
 保存约占21%--22%，GAE只占1.6%，不能把向量化GAE当主要提速方向。
@@ -222,6 +244,16 @@ train/report、selection/report分别共享17/24/5个goal-group。
 后续仍复用原9B双seed promotion gate，不因扩大数据而放宽门槛。
 4B强门槛通过后，先做9B v2同预算控制；更强9B结论再看goal隔离scale。
 
+上述240步双seed配置保留作协议记录，但按最新指令不再排队启动。
+新的[单seed快速方案](../examples/alfworld_solver_fast_v4_s42.json)使用fresh W0、
+相同goal隔离数据与59/91题mean@2评测，5步critic warmup加75步actor，
+batch8，共640个不同train实例/goal，Actor实际使用600个；仅保存step39/79。
+LR改为Actor 2e-6、critic 1e-5，保持learned critic、K1、concat和terminal修复。
+这是面向有效性能的联合配置探索，不是LR或步数的单因素消融。
+[单seed探索门槛](../examples/alfworld_solver_fast_exploration_gate.json)要求独立
+report至少+3pp、题级95%下界大于0；通过也不代表多seed稳定或正式确认，
+更不能隐藏既有负结果。另一节点优先准备/验证Engineer，不重复这个seed。
+
 复现数据准备（仓库根目录，无模型调用）：
 ```bash
 PYTHONPATH=whale_local python3 -m sao_bridge.alfworld_train_data \
@@ -247,26 +279,50 @@ PYTHONPATH=whale_local python3 -m sao_bridge.alfworld_train_data \
 - `whale_local/sao_bridge/gpu_telemetry.py`：按精确PID区分实验/filler，
   同时记录峰值显存；算法利用率必须取`mean_experiment_sm_percent`。
 
-新增只读的`alfworld_solver_monitor.py`供9B双seed长期监管使用，不修改训练
+新增只读的`alfworld_solver_monitor.py`供预声明9B单seed或多seed长期监管，不修改训练
 配置、不停止GPU进程，也不负责替代controller的systemd重启策略。它检查
 完整JSONL行、连续step、critic-only warmup、真实Actor更新、concat batch、
 terminal target范围、冻结源码/数据、最终actor/critic checkpoint及GPU释放。
 短暂controller失败给既有自动恢复留出10分钟，持续失败或不变量错误写出
 `attention_required`并退出；不能将失败算作零分或通过gate。
 
-在两个controller已生成`spec.json`及`source_manifest.json`后运行：
+在controller已生成`spec.json`及`source_manifest.json`后运行当前单seed版本：
 ```bash
 PYTHONPATH=whale_local python3 -B -m sao_bridge.alfworld_solver_monitor \
-  --protocol examples/alfworld_solver_v1_pair_gate.json \
-  --run runs/alfworld_solver_v3_train_only_scale_s42 \
-  --run runs/alfworld_solver_v3_train_only_scale_s43 \
-  --output runs/alfworld_solver_v3_pair_gate_result.json
+  --protocol examples/alfworld_solver_fast_exploration_gate.json \
+  --run runs/alfworld_solver_fast_v4_s42 \
+  --output runs/alfworld_solver_fast_v4_result.json
 ```
 默认每60秒写原子`*_monitor.json`，24小时超时，预声明gate和run身份存入
-不可变的`*_monitor_protocol.json`，重启监管也不能放宽gate。只有两边完整
+不可变的`*_monitor_protocol.json`，重启监管也不能放宽gate。只有所有声明run完整
 结束、当前尝试释放GPU且filler仍active后才发布pair result。应由持久系统
 service执行此CPU命令，不依赖编辑器连接。运行中源码应保持冻结；实验结束
 后合法修改源码，不应再对旧run重启这项“当前源码一致”检查。
+
+### 9B Engineer快速并行准备
+
+[数据准备器](../whale_local/sao_bridge/alfworld_engineer_data.py)复用24个已冻结的
+train failure cohorts，通过官方builder压缩观测证据，不重新采集Solver rollout。
+基线文件及reward/task identity在压缩前后检查；验证器限制仍放入E0/E1相同
+system prompt。192行训练数据的精确chat-template prompt为7,448--7,733 tokens，
+加4,096生成预算最坏11,829，低于16,384 microbatch；不是依靠截断训练轨迹提速。
+
+[快速H配置](../examples/alfworld_engineer_fast_v1_s42.json)为5步critic warmup+
+27步actor、batch6、K1、terminal修复，使用3 learner+1 Engineer rollout+
+4 frozen Solver GPU，fresh官方E0/W0，不从历史被拒checkpoint接着训练。
+E0/E1使用相同8个压缩packet、相同decode种子和候选数。metadata-only过滤排除
+全部legacy train goal及selection/report相互亲缘后，得到24个selection和70个
+report goal。主要目标是固定证据下候选质量的平均E1−E0变化，而不是挑出一个
+比no-patch好的E0提案；不声称测试了未见failure packet的迁移能力。
+数据位于`assets/alfworld_engineer_fast_v1/`。评测流水线仍需完成实际GPU验证。
+
+另已把train-only catalogue接入Engineer launcher和官方reward adapter：可选
+`training_split/training_catalogue/training_catalogue_sha256/solver_weights_sha256`
+贯穿预检、run-local overlay、请求metadata和cache namespace。每次请求先检查
+catalogue hash；新模式拒绝错误Solver权重或既有未绑定cache。默认`test_set`
+行为保留，本次快速H先复用上述旧train证据，再排除相关评测goal以节省采集时间。
+Solver telemetry现在直接导入共享`gpu_telemetry.monitor`，不再依赖Engineer
+launcher文件，便于两条研究线独立开发。准备阶段61项测试及22个subtests通过。
 
 GPU利用率必须分开报告。新增per-process telemetry把精确识别的adaptive
 filler PID与其它实验PID分开。4B启动阶段曾观测到表面72.75% SM中仅

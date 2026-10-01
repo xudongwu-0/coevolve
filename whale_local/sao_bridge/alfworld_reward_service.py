@@ -5,8 +5,10 @@ import argparse
 import asyncio
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
+import re
 import sys
 import time
 from types import SimpleNamespace
@@ -15,6 +17,7 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 from .alfworld_runtime import ALFWORLD_DATA, prepare_agentbench_runtime
+from .alfworld_train_data import TRAIN_SPLIT, task_count
 from .common import ROOT, read_json, write_json
 
 UPSTREAM = ROOT / "third_party/harness-r1-upstream"
@@ -29,8 +32,28 @@ class RewardRequest(BaseModel):
     reference_source: str | None = None
 
 
+def reward_data_identity(config: dict) -> dict | None:
+    split = config.get("split", "test_set")
+    task_count(
+        split, config.get("catalogue_sha256"), catalogue_path=config.get("catalogue"),
+    )
+    if split == "test_set":
+        return None
+    solver_digest = config.get("solver_weights_sha256")
+    if not isinstance(solver_digest, str) or not re.fullmatch(r"[0-9a-f]{64}", solver_digest):
+        raise ValueError("Train-only Engineer rewards require the fixed Solver weights SHA-256")
+    return {
+        "split": split,
+        "catalogue": str(Path(config["catalogue"]).resolve()),
+        "catalogue_sha256": config["catalogue_sha256"],
+        "solver_version": config["solver_version"],
+        "solver_weights_sha256": solver_digest,
+    }
+
+
 def official_args(config: dict, agentbench: Path) -> SimpleNamespace:
-    return SimpleNamespace(
+    identity = reward_data_identity(config)
+    args = SimpleNamespace(
         harness_r1_eval_root=str(Path(config["cache_root"]).resolve()),
         harness_r1_agentbench_dir=str(agentbench),
         harness_r1_agentbench_python=ALFWORLD_PYTHON,
@@ -42,7 +65,7 @@ def official_args(config: dict, agentbench: Path) -> SimpleNamespace:
         harness_r1_require_think_patch=False,
         harness_r1_require_code_hook_only=True,
         harness_r1_reject_runtime_noop_patch=True,
-        harness_r1_alfworld_split="test_set",
+        harness_r1_alfworld_split=config.get("split", "test_set"),
         harness_r1_alfworld_max_step=50,
         harness_r1_rollout_concurrency=config.get("rollout_concurrency", 8),
         harness_r1_rollout_max_tokens=4096,
@@ -67,9 +90,19 @@ def official_args(config: dict, agentbench: Path) -> SimpleNamespace:
         harness_r1_reward_max_concurrency=config.get("max_concurrency", 8),
         reward_max_concurrency=config.get("max_concurrency", 8),
     )
+    if identity is not None:
+        digest = hashlib.sha256(
+            json.dumps(identity, sort_keys=True, separators=(",", ":")).encode()
+        ).hexdigest()
+        args.harness_r1_reward_cache_protocol = f"sao-train-catalogue-v1-{digest}"
+    return args
 
 
-def validate_metadata(metadata: dict, solver_version: str) -> None:
+def validate_metadata(
+    metadata: dict, solver_version: str, *, split: str = "test_set",
+    catalogue: str | Path | None = None, catalogue_sha256: str | None = None,
+    solver_weights_sha256: str | None = None,
+) -> None:
     required = {
         "batch_tag", "split", "start", "end", "batch_size", "baseline_pass",
         "baseline_rewards", "reward_threshold", "target_agent_name", "target_model",
@@ -80,9 +113,30 @@ def validate_metadata(metadata: dict, solver_version: str) -> None:
         raise ValueError(f"ALFWorld reward metadata missing: {sorted(missing)}")
     if metadata["solver_version"] != solver_version:
         raise ValueError("ALFWorld packet was collected from a different Solver version")
+    if metadata["split"] != split:
+        raise ValueError("ALFWorld packet split differs from the reward service")
+    count = task_count(split, catalogue_sha256, catalogue_path=catalogue)
+    if split == TRAIN_SPLIT and (
+        metadata.get("task_catalogue") != str(Path(catalogue).resolve())
+        or metadata.get("task_catalogue_sha256") != catalogue_sha256
+        or not solver_weights_sha256
+        or metadata.get("solver_weights_sha256") != solver_weights_sha256
+    ):
+        raise ValueError("ALFWorld packet catalogue or fixed Solver identity changed")
     start, end = metadata["start"], metadata["end"]
-    rewards = {int(key): value for key, value in metadata["baseline_rewards"].items()}
-    if (type(start) is not int or type(end) is not int or end <= start
+    raw_rewards = metadata["baseline_rewards"]
+    if not isinstance(raw_rewards, dict) or any(
+        type(value) not in (int, float) or not math.isfinite(value) or not 0 <= value <= 1
+        for value in raw_rewards.values()
+    ):
+        raise ValueError("ALFWorld baseline rewards must be finite values in [0, 1]")
+    if any(
+        type(key) not in (str, int) or not str(key).isdigit() for key in raw_rewards
+    ):
+        raise ValueError("ALFWorld baseline task IDs must be nonnegative integers")
+    rewards = {int(key): value for key, value in raw_rewards.items()}
+    if (type(start) is not int or type(end) is not int or not 0 <= start < end <= count
+            or len(rewards) != len(raw_rewards)
             or set(rewards) != set(range(start, end))
             or metadata["batch_size"] != end - start):
         raise ValueError("ALFWorld reward packet must use one complete contiguous cohort")
@@ -98,20 +152,32 @@ def infrastructure_failure(result: dict) -> bool:
 
 
 def create_app(config: dict) -> FastAPI:
+    identity = reward_data_identity(config)
     cache_root = Path(config["cache_root"]).resolve()
     tmpdir = Path(config.get("tmpdir", cache_root.parent / "tmp")).resolve()
     tmpdir.mkdir(parents=True, exist_ok=True)
     os.environ["TMPDIR"] = str(tmpdir)
     os.environ["ALFWORLD_DATA"] = str(ALFWORLD_DATA)
-    agentbench = prepare_agentbench_runtime(Path(
-        config.get("agentbench_dir", cache_root.parent / "runtime/AgentBench")
-    ))
+    catalogues = {identity["split"]: Path(identity["catalogue"])} if identity else None
+    agentbench = prepare_agentbench_runtime(
+        Path(config.get("agentbench_dir", cache_root.parent / "runtime/AgentBench")),
+        catalogues=catalogues,
+    )
     sys.path.insert(0, str(RELAX))
     from examples.harness_r1.reward_alfworld_patch import reward_func
     from relax.utils.types import Sample
 
     args = official_args(config, agentbench)
     Path(args.harness_r1_eval_root).mkdir(parents=True, exist_ok=True)
+    if identity is not None:
+        identity_path = cache_root / "data_identity.json"
+        if identity_path.exists():
+            if read_json(identity_path) != identity:
+                raise ValueError("Cannot reuse Engineer reward cache with a different identity")
+        else:
+            if any(cache_root.iterdir()):
+                raise ValueError("Cannot bind an existing unscoped Engineer reward cache")
+            write_json(identity_path, identity)
     receipts = Path(config["receipts"]).resolve()
     receipts.mkdir(parents=True, exist_ok=True)
     os.environ["HARNESS_R1_PORT_LOCK_DIR"] = str(Path(config["port_locks"]).resolve())
@@ -127,12 +193,19 @@ def create_app(config: dict) -> FastAPI:
             "target_urls": len(args.harness_r1_target_urls),
             "reward": "official_harness_r1_delta_average_reward",
             "agentbench_dir": str(agentbench),
+            "split": config.get("split", "test_set"),
+            "data_identity": identity,
         }
 
     @app.post("/score")
     async def score(request: RewardRequest):
         try:
-            validate_metadata(request.metadata, solver_version)
+            validate_metadata(
+                request.metadata, solver_version, split=config.get("split", "test_set"),
+                catalogue=config.get("catalogue"),
+                catalogue_sha256=config.get("catalogue_sha256"),
+                solver_weights_sha256=config.get("solver_weights_sha256"),
+            )
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         samples = [Sample(response=request.source, metadata=dict(request.metadata))]
@@ -165,6 +238,7 @@ def create_app(config: dict) -> FastAPI:
             "sample_id": request.sample_id, "solver_version": solver_version,
             "reward": reward, "candidate": candidate,
             "reference": results[1] if len(results) == 2 else None,
+            "data_identity": identity,
             "elapsed_seconds": time.monotonic() - started,
         }
         await asyncio.to_thread(write_json, receipts / f"{identity}.json", receipt)

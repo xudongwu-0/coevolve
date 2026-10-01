@@ -2,12 +2,14 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 from pathlib import Path
 import threading
 import time
 
 from .budget import model_digests
+from .alfworld_reward_service import reward_data_identity, validate_metadata
 from .common import ensure_model_runtime_metadata, read_json, write_json
 from .gpu_telemetry import (
     monitor as monitor_gpu_processes,
@@ -70,6 +72,31 @@ def monitor_gpus(path: Path, stop: threading.Event, interval: float) -> None:
     monitor_gpu_processes(path, stop, interval)
 
 
+def reward_config(config: dict, run: Path, target_urls: list[str]) -> dict:
+    reward = {
+        "cache_root": str(run / "reward_cache"),
+        "receipts": str(run / "reward_receipts"),
+        "port_locks": str(run / "reward_port_locks"),
+        "agentbench_dir": str(run / "runtime/AgentBench"),
+        "tmpdir": config["tmpdir"],
+        "target_urls": target_urls,
+        "target_model": "policy",
+        "target_agent_name": "qwen35-9b-nothink",
+        "solver_version": config["solver_version"],
+        "rollout_concurrency": config.get("reward_rollout_concurrency", 8),
+        "max_concurrency": config.get("reward_concurrency", config["batch_size"]),
+        "controller_port_base": config.get("reward_controller_port_base", 30000),
+        "worker_port_base": config.get("reward_worker_port_base", 32000),
+        "port_probe_span": config.get("reward_port_probe_span", 7000),
+        "split": config.get("training_split", "test_set"),
+        "catalogue": config.get("training_catalogue"),
+        "catalogue_sha256": config.get("training_catalogue_sha256"),
+        "solver_weights_sha256": config.get("solver_weights_sha256"),
+    }
+    reward_data_identity(reward)
+    return reward
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", type=Path, required=True)
@@ -87,6 +114,18 @@ def main() -> None:
         validate_training_rows(preflight_spec, rows)
         capacity_audit = training_capacity_audit(preflight_spec, rows)
         write_json(run / "capacity_audit.json", capacity_audit)
+        reward = reward_config(config, run, [])
+        identity = reward_data_identity(reward)
+        if identity is not None:
+            if model_digests(Path(config["solver_model"]))[1] != identity["solver_weights_sha256"]:
+                raise ValueError("Engineer reward Solver weights differ from the frozen identity")
+            for row in rows:
+                validate_metadata(
+                    json.loads(row["metadata_json"]), config["solver_version"],
+                    split=reward["split"], catalogue=reward["catalogue"],
+                    catalogue_sha256=reward["catalogue_sha256"],
+                    solver_weights_sha256=reward["solver_weights_sha256"],
+                )
         if config.get("central_context"):
             write_json(
                 run / "joint_context_audit.json",
@@ -122,22 +161,7 @@ def main() -> None:
             max_num_seqs=32,
             server_args=["--enable-prefix-caching"],
         ) as urls:
-            reward = {
-                "cache_root": str(run / "reward_cache"),
-                "receipts": str(run / "reward_receipts"),
-                "port_locks": str(run / "reward_port_locks"),
-                "agentbench_dir": str(run / "runtime/AgentBench"),
-                "tmpdir": config["tmpdir"],
-                "target_urls": urls.split(","),
-                "target_model": "policy",
-                "target_agent_name": "qwen35-9b-nothink",
-                "solver_version": config["solver_version"],
-                "rollout_concurrency": config.get("reward_rollout_concurrency", 8),
-                "max_concurrency": config.get("reward_concurrency", config["batch_size"]),
-                "controller_port_base": config.get("reward_controller_port_base", 30000),
-                "worker_port_base": config.get("reward_worker_port_base", 32000),
-                "port_probe_span": config.get("reward_port_probe_span", 7000),
-            }
+            reward = reward_config(config, run, urls.split(","))
             write_json(run / "reward_config.json", reward)
             reward_port = config.get("reward_service_port", 28600)
             reward_process = launch.module(

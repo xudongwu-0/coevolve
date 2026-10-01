@@ -8,10 +8,10 @@ from pathlib import Path
 import threading
 import time
 
-from .alfworld_h_train import monitor_gpus
 from .budget import model_digests
 from .common import ensure_model_runtime_metadata, read_json, write_json
 from .gpu_telemetry import (
+    monitor as monitor_gpus,
     summarize as summarize_gpu_processes,
     summarize_active_training,
 )

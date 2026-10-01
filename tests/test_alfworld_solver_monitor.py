@@ -207,6 +207,20 @@ class AlfworldSolverMonitorTests(unittest.TestCase):
             watch(roots, protocol, output)
         self.assertEqual(read_json(output), original)
 
+    def test_single_seed_exploration_is_not_labeled_as_replication(self):
+        root = self.make_run(42)
+        self.complete(root)
+        protocol = self.root / "single-seed.json"
+        write_json(protocol, {
+            "required_seeds": [42], "minimum_seed_delta": 0.03,
+            "minimum_mean_delta": 0.03, "minimum_significant_seeds": 1,
+        })
+        with patch("builtins.print"):
+            result = watch([root], protocol, self.root / "single-result.json")
+        self.assertTrue(result["gate_passed"])
+        self.assertIn("single-training-seed exploratory", result["interpretation"])
+        self.assertNotIn("two-training-seed", result["interpretation"])
+
     def test_controller_retry_is_observed_without_restarting_or_scoring_early(self):
         roots = [self.make_run(seed) for seed in (42, 43)]
         failure = roots[0] / "FAILED.json"
