@@ -2514,3 +2514,14 @@ It is exploratory validation, not held-out AIME. AIME test stays sealed until a 
     The4B prerequisite is satisfied. Next execute the frozen9B v2 same-budget
     terminal-fix control, then the goal-isolated scale protocol; Engineer and
     MA-SAO remain gated.
+
+    At the previous step71 budget, v3 selection gains were+6.4453/+6.6406pp,
+    with ten-way-adjusted LCB0/+0.9766pp. Later selected steps143/191 reached
+    +12.8906/+14.0625pp on selection. This is useful scaling-curve evidence,
+    not separate report evidence for the early checkpoints.
+
+    At14:41 UTC,9B v2 control services started on both nodes under2fed1fd;
+    baseline APIs returned200 and both entered training at14:56 UTC.
+    Original start timestamps, service names, source/spec identities and the
+    passing4B prerequisite hash are stored in launch_receipt.json. No9B
+    improvement is claimed at launch. Filler remains active.

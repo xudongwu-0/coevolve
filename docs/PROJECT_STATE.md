@@ -95,7 +95,7 @@ seed42的step29评估曾把单题4096-token预算耗尽误当作基础设施异�
 两节点adaptive filler receipt仍新鲜，平均总利用率node3为87.13%、node4为
 86.50%，外部实验SM均为0；这是补载，不是算法利用率。
 
-### 当前4B v3修复与扩规模协议
+### 4B v3修复与扩规模协议（已完成）
 
 已用原生AReaL GAE复现一个边界错误：同一个已经结束、reward=1的episode，
 若末尾critic value=3，在batch中未padding时return=4，有padding时return=1。
@@ -174,7 +174,28 @@ Launcher的`wb`重启日志覆盖，底层原因未知；不要把恢复后的to
 该run最终`elapsed_seconds`只覆盖重启后的controller，不能当全程耗时。
 后续Launcher会把同名旧日志先归档到`previous_logs/`，不再覆盖故障证据。
 
-### 后续9B扩规模的数据与隔离准备（尚未启动9B训练）
+同预算探索点也已完成：step71的selection提升为+6.45/+6.64pp，
+十重校正LCB为0/+0.98pp；继续到选中的step143/191后，selection提升
+为+12.89/+14.06pp。这支持在修复后的协议中继续增加数据/训练步数有用，
+但不是对早期checkpoint另做独立report、也不是把bug修复与scale分离的消融。
+
+### 正在执行9B v2控制
+
+强4B gate通过后，于2026-10-01 14:41 UTC启动两个持久系统service：
+node4的`coevolve-9b-solver-v2-s42`与node3的`coevolve-9b-solver-v2-s43`。
+使用`2fed1fd`源码，维持旧9B的30步、5步critic warm-up、batch8、K1、
+原240题、解码预算和选择门槛；启用正确的worker端terminal修复。
+两个baseline API均已返回200，14:56 UTC进入training阶段。
+这不是9B改进结果；仍需实际optimizer与独立report验证。
+每个run的`launch_receipt.json`冻结首次启动时间、unit、spec和4B gate哈希，
+避免重启后仅用controller当前uptime计算总耗时。
+
+旧9B实测计时还表明，记录到的阶段时间中actor/critic更新约占62%--64%，
+保存约占21%--22%，GAE只占1.6%，不能把向量化GAE当主要提速方向。
+learner卡显存曾达约125--132GiB，不能盲目翻倍batch。上游异步HF saver
+只支持Archon，FSDP设置async会退回同步，不能声称已经启用异步保存。
+
+### 后续9B goal隔离扩规模准备（scale尚未启动）
 
 已解除旧ALFWorld训练适配器只能使用500题catalogue、其中240题训练的限制。
 新增显式`training_split=sao_train_v1`，**默认`test_set`行为保持不变**。
