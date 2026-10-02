@@ -1,6 +1,84 @@
 # 项目状态与 Agent 接手指南
 
-## 最新交接：E15/W79 的8小时自动交替实验
+## 最新优先级：补齐同口径核心数据表
+
+2026-10-02用户将起点、官方Harness-R1、单独H1/W1、W1+H1/H2的核心表
+提到第一优先级，并明确授权node3/node4全力并行补测。
+输出`runs/alfworld_core_quick_20261002_v1`，统一24题mean@2、
+temperature1、总completion预算4096、seed6000045。
+node4的`coevolve-core-quick-20261002-v1-w0-w1`已完成：
+W0空harness **68.75%**，W0+固定H1 **75.00%**，
+W1空harness **87.50%**，W1+同一固定H1 **91.67%**，
+W1+固定H2 **97.92%**。题目与sample/rollout_seed配对校验已通过。
+
+node3的`coevolve-core-quick-20261002-v1-official`使用已校验的
+`agent-sft-harness-r1`，8个新提案全部合法。与冻结E15的8提案使用同样
+W79历史失败输入、提案seed及decode预算；在同一W0上重新测24题。
+源码d2e306a，[快速比较入口](../whale_local/sao_bridge/alfworld_core_quick.py)；
+无效和重复提案槽保留，候选均分与8选1的选择分分别报告。
+全部8个官方候选已完成必需测评：平均**80.21%**、最优
+**85.42%（41/48，proposal05；proposal06同分）**。
+节点3复测的W0空harness68.75%、固定H1 75%与节点4完全一致。
+核心表已完成并存为`CORE_TABLE.json`，包含所有48条样本覆盖验证、
+配对seed校验、来源hash及题级区间。额外E15候选诊断可继续，
+但不再阻塞用户所要的6行核心表。
+旧H1的75.71%→80%来自70题、greedy/per-turn预算和8提案均值，
+不能并入本次固定harness、总token预算的快速列。
+
+MA两次joint启动均未产生native更新：首试在生成提案后被嵌套Launcher
+误判同一实验的兄弟GPU进程为foreign而停止；dd543db修复为共享父Launcher，
+并以文件锁保留首个错误，28测试及3subtest通过。r2于14:42 UTC因用户
+新优先级主动停止，当时0个native更新、0个配对完成episode。
+两次原始记录全部保留，不自动重用部分目录。两节点filler始终保持active。
+
+## 暂缓任务：E15/W79 联合轮次MA-SAO首版
+
+2026-10-02 14:21 UTC用户要求尽快得到与已验证H1/W1可比的MA-SAO结果，
+不再把长阶段H→W交替加静态critic标签称为MAPPO式联合训练。
+新入口是[联合实验控制器](../whale_local/sao_bridge/joint_experiment.py)，
+输出`runs/alfworld_joint_ma_pilot_v1`，冻结源码`1b2fd3f`。
+14:31 UTC已启动持久systemd服务：node3的
+`coevolve-joint-ma-pilot-v1-editor`，node4的
+`coevolve-joint-ma-pilot-v1-solver`及等待两侧完成的
+`coevolve-joint-ma-pilot-v1-evaluation`。GPU filler保持开启。
+启动不等于训练完成：后续启动故障及主动暂停见上面的最新优先级记录。
+
+- E15/C15与W79/C79起步；128个不同train任务，16轮×8个合作episode；
+  每角色4轮critic预热、12次Actor更新，轮间不重置Adam。
+- 每轮必须等待两个rollout策略版本都发布；Engineer真实采样harness，
+  Solver使用实际应用该harness的官方worker执行，双方获得相同最终奖励。
+  本版staleness=0，保留各自完整行为概率及concat action masks。
+- Engineer Actor LR1e-6、Solver5e-7，critic5e-6；每轮一次原生SAO critic更新。
+  动态动作前critic特权上下文不进入Actor。尚无MAPPO ValueNorm，
+  不能宣称完整MAPPO复现或MA优于SAO。
+- 自动生成最终Engineer的8个候选，在24题mean@2选择harness，
+  随后对冻结H1/W1和联合候选重新测70题mean@2；负结果也必须报告。
+  两角色服务各有3小时上限，等待评测服务5小时，不自动重启部分训练。
+- CPU测试26项及3项subtest通过；Git校验对确切canonical路径逐命令授权，
+  真实Launcher改写HOME的节点3子进程已通过。不得依赖交互用户Git配置。
+- 接回首先检查`joint/*FAILED.json`、双方`optimizer/metrics.jsonl`、
+  `joint/round-*/{editor,solver}-receipt-*.json`及最终
+  `evaluation/COMPLETE.json`，不要把GPU filler利用率当作训练进度。
+
+### 已结束的8小时交替实验：不是有效MA对照
+
+窗口05:22:03–13:22:03 UTC，实际训练与报告在09:33:45结束。
+普通SAO H2完成32 native/27 Actor更新并选择step31；
+W2完成80/75，但step39/79分别81.25%/75.00%，低于W79+H2的
+97.92%选择分，两者均拒绝，最终仍用W79。
+预声明70题mean@2终评为**W79+H2 96.43%（135/140）**。
+另一次同W79矩阵为no-patch91.43%、H1 95.00%、H2 97.86%；
+H2−H1为+2.86pp，题级95%区间[-1.43,+7.14]pp，不显著。
+96.43%和97.86%是同一最终策略的不同serving结果，不挑高值替代主报告。
+
+MA两次启动均因Launcher改写HOME后的canonical Git ownership校验失败，
+没有任何native更新。其95%是回退H1/W1，不是训练后的MA成绩，
+两臂完成预算不匹配，禁止据此推断MA算法优劣。
+普通H2的合法提案数从初始7/8降到step15的1/8、step31的3/8；
+非法槽执行no-patch并计分，候选均分提高不等于编辑可靠性提高。
+W2此次没有4096-token耗尽，不能套用更早的截断崩坏解释。
+
+## 历史部署记录：E15/W79 的8小时自动交替实验
 
 用户最新要求优先部署离线也能完成的实验，而非继续延长旧W0训练。新入口是
 [自动控制器](../whale_local/sao_bridge/alfworld_alternating_campaign.py)：node4

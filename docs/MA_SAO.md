@@ -1,6 +1,54 @@
 # Fixed-sample SAO / MA-SAO research protocol
 
-## Current ALFWorld continuation (2026-10-01)
+## Current joint-round ALFWorld pilot (2026-10-02)
+
+**Status:** paused before any native update to prioritize the user's matched
+core-results table. The first launch hit nested ownership supervision, fixed in
+dd543db by sharing the parent Launcher with the environment thread and retaining
+the first failure under a lock. The fresh second attempt was explicitly stopped
+at14:42 UTC with0 native updates/0 paired outcomes. It is not a completed MA run.
+
+The active implementation is [joint_experiment](../whale_local/sao_bridge/joint_experiment.py),
+not the historical long H/W block schedule below. The first pilot starts from
+validated E15/C15 and Solver v4-W79/C79, with 16 joint rounds, batch8,
+4 critic-only warmup rounds and12 Actor updates per role. Both optimizers
+persist throughout. Engineer LR1e-6, Solver5e-7 and critic5e-6 are explicit
+pilot choices, not unchanged historical recipes.
+
+Each round publishes both actual rollout policy versions before any paired
+episode begins. Engineer samples one patch with native behavior logprobs;
+an official ALFWorld worker actually applies that patch, and the current
+Solver samples its own complete concat trajectory. Both receive the same
+binary terminal outcome. Invalid patches explicitly become no-patch; those
+slots and their Solver outcomes remain in training and evaluation.
+Each role preserves its own behavior probabilities, version vector and action
+masks; no Solver trajectory is fabricated from an external reward receipt.
+The next round cannot begin until both versions have advanced. Optimizer
+backward passes need not occur at exactly the same wall-clock instant.
+
+Actors remain decentralized. Critic-only prefixes contain dynamic pre-action
+partner evidence/task state and are loss-masked; terminal outcomes are never
+included in these prefixes. Token-aligned metadata survives native batching,
+including real token0 and padding. First-pilot staleness is deliberately0;
+joint off-policy importance correction for stale partner policies is not claimed.
+Native SAO terminal GAE/value losses and batch advantage normalization remain.
+**MAPPO ValueNorm/PopArt and complete MAPPO hyperparameter parity are not yet
+implemented; this is a joint-training pilot, not a complete MAPPO reproduction.**
+
+The automatic report compares frozen H1/W1 against the final joint candidate:
+8 fresh Engineer proposals, selection24 and report70 at mean@2,4096 total
+completion tokens and Solver temperature1. These are reused development cohorts.
+Report trained candidates even if worse; retain the validated incumbent rather
+than assuming PPO updates guarantee monotonic gains. This comparison tests
+improvement from H1/W1, not causal superiority over a matched independently
+trained SAO/IPPO arm. Such an arm must share this joint collection/update schedule,
+initialization, reward and budgets, changing critic information rather than order.
+
+Output: `runs/alfworld_joint_ma_pilot_v1`; source1b2fd3f. Persistent services run
+Engineer on node3 and Solver on node4; filler remains enabled. A peer failure
+propagates explicitly. Partial native optimizer state is never silently restarted.
+
+## Historical ALFWorld continuation (2026-10-01; completed)
 
 The two independent 9B learning gates have passed; see
 [project state](PROJECT_STATE.md). The next **single-seed exploratory continuation**

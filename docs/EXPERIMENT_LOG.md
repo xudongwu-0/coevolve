@@ -7,7 +7,11 @@ questions at mean@4; r4 onward uses 128 dev + 384 never-trained train-tail
 questions at mean@2 (512 questions, guarded against solver training offsets).
 It is exploratory validation, not held-out AIME. AIME test stays sealed until a final configuration is frozen.
 
-## Protocol (current)
+For the current ALFWorld joint-round protocol and status, see
+[project state](PROJECT_STATE.md) and [MA-SAO](MA_SAO.md). The protocol below
+records the earlier math campaign, not the current joint implementation.
+
+## Protocol (historical math campaign)
 
 - Baseline ("SAO"): editor (harness model) and solver (weights) each updated
   with the pinned open-source SAO; order H→W→H. Success criterion: final
@@ -3026,3 +3030,74 @@ It is exploratory validation, not held-out AIME. AIME test stays sealed until a 
    already-trained vanilla-target harness-r1, not SFT-only; the target-specific
    agent-sft-harness-r1 has not been locally evaluated. No direct superiority over
    the paper's GRPO/84.0% result is claimed.
+
+## 2026-10-02: alternating E15/W79 campaign and joint-round correction
+
+The autonomous8h campaign started05:22:03 UTC and completed its available
+training/reporting at09:33:45. Ordinary SAO trained H2 for32 native/27 Actor
+updates and selected step31, but W2's80/75 updates produced selection scores
+81.25%/75.00% at step39/79 against incumbent W79+H2 at97.92%. Both new Solver
+checkpoints were rejected. The declared final70x2 result is W79+H2 **96.43%**.
+A separate matched W79 matrix gave no-patch91.43%,H1 95%,H2 97.86%;
+H2-H1 +2.86pp, paired question95% interval[-1.43,+7.14]pp.
+These serving runs differ and the larger number is not substituted for the
+declared final result. H2 valid proposals were7/8 initially,1/8 at15 and3/8
+at31; invalid slots count as no-patch. W2 had no completion-cap hits in selection.
+
+MA never reached native training: both attempts failed Git ownership checks
+after Launcher changed HOME. The reported95% is the untrained H1/W1 fallback,
+not MA performance. Budgets are unmatched. Per-command trust of exact resolved
+SAO/AReaL paths fixes the cause independently of HOME; the actual node3 child
+environment was retested successfully.
+
+At14:21 UTC the user prioritized a genuine MAPPO-style joint first result.
+Source1b2fd3f,26 passing tests+3 subtests, was pushed before deployment.
+At14:31 UTC persistent node3 Engineer/node4 Solver services and an automatic
+waiting evaluator were launched. Pilot:16 rounds,batch8,4 warmup,12 Actor updates
+per role;128 distinct training tasks,30 failures under historical W79 evidence.
+Both native optimizers persist. Every sampled harness and current-Solver outcome
+is paired by row/slot/version, with authentic per-role logprobs and one shared
+terminal reward. Dynamic pre-action privileged context is critic-only.
+Zero staleness deliberately avoids pretending unsupported stale joint correction.
+MAPPO ValueNorm is not implemented; native SAO value machinery remains.
+At this entry's write time GPU initialization was live, first updates/results
+still required verification. No improvement or full MAPPO parity is claimed.
+
+The first joint deployment subsequently failed before any update: a nested CPU
+environment Launcher's resource watchdog misclassified its sibling native
+learner's GPUs as foreign. dd543db shares parent process ownership and preserves
+the original failure atomically during concurrent peer cancellation;28 tests
+and3 subtests pass. A fresh immutable r2 kept all data/settings unchanged.
+At14:42 UTC the user prioritized a matched core table; r2 was explicitly stopped
+with0 native updates and0 paired outcomes, preserving both attempts and filler.
+
+## 2026-10-02: highest-priority matched core quick table
+
+Node4 sequentially evaluated W0 and W1; node3 generated8 valid target-specific
+official Engineer proposals and evaluates them beside the8 frozen E15 proposals.
+Output: `runs/alfworld_core_quick_20261002_v1`. Native24-task mean@2,
+temperature1,total4096 completion tokens,seed6000045, same frozen H1 for both
+Solver weights. No new training or multi-seed sweep.
+
+Node4 finished at14:56 UTC: W0 **68.75%**, W0+H1 **75.00%**, W1 **87.50%**,
+W1+H1 **91.67%**, W1+H2 **97.92%**. Pure-W gain+18.75pp has question95%
+interval[+4.17,+35.42]pp; H1 overW0+6.25pp has[0,+12.50]pp; H2 overH1
+onW1+6.25pp also has[0,+12.50]pp. These reused selection scores are exploratory,
+not fresh report-set significance. All native sample identities match.
+
+The official matrix remained active when this entry was written. d2e306a reuses
+the native evaluator, verifies the released target-specific checkpoint, matches
+proposal inputs/seeds and distinguishes mean over8 from best-of8.2 tests and
+2 subtests pass. No official final score is inferred from partial candidates.
+
+All8 required official candidates subsequently completed and were independently
+validated before waiting for the extra E15 diagnostics. Scores by slot:
+77.08%,83.33%,81.25%,70.83%,79.17%,85.42%,85.42%,79.17%.
+The mean is**80.21%**, best**85.42%** (slot05, deterministic tie break).
+Official-matrix W0 and frozen-H1 controls exactly repeat node4's68.75%/75%.
+`OFFICIAL_CORE_READY.json` records the complete required8-candidate evidence,
+not a false claim that remaining matrix diagnostics had already finished.
+`CORE_TABLE.json` completes all six requested system rows, exact sample/seed/token
+validation and source hashes. W1+H2 minus official best is**+12.50pp**,
+question-bootstrap95% interval[+2.08,+25.00]pp; reused selection/search exposure
+precludes treating this as independent significance or training-budget parity.
