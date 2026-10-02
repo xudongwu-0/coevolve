@@ -31,6 +31,24 @@ class PhaseAttemptsExhausted(RuntimeError):
     pass
 
 
+def legacy_native_audit(audit: dict) -> dict:
+    return {
+        key: value for key, value in audit.items()
+        if key not in {"critic_target_range", "critic_target_roundoff_atol"}
+    }
+
+
+def publish_phase_completion(root: Path, complete: dict) -> dict:
+    path = root / "PHASE_COMPLETE.json"
+    if path.is_file():
+        previous = read_json(path)
+        legacy = {**complete, "native_audit": legacy_native_audit(complete["native_audit"])}
+        if previous == legacy:
+            return previous
+    _immutable_json(path, complete)
+    return complete
+
+
 def checked_native_report(report: dict, task_ids: list[int], evaluation: dict) -> dict:
     expected = {(task_id, sample) for task_id in task_ids
                 for sample in range(evaluation["samples"])}
@@ -408,8 +426,7 @@ def execute_phase(root: Path, maximum_attempts: int = 2) -> dict:
                     "trained": trained, "attempts": attempts,
                     "input_identity": identity, "native_audit": audit,
                 }
-                write_json(root / "PHASE_COMPLETE.json", complete)
-                return complete
+                return publish_phase_completion(root, complete)
             if output.exists() or attempt <= len(attempts):
                 continue
             current = copy.deepcopy(config)
@@ -436,8 +453,7 @@ def execute_phase(root: Path, maximum_attempts: int = 2) -> dict:
             complete = {"status": "completed", "training_root": str(output),
                         "trained": trained, "attempts": attempts, "input_identity": identity,
                         "native_audit": audit}
-            write_json(root / "PHASE_COMPLETE.json", complete)
-            return complete
+            return publish_phase_completion(root, complete)
         raise PhaseAttemptsExhausted(f"Strong native phase exhausted {maximum_attempts} attempts")
     finally:
         launch.close()

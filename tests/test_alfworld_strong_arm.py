@@ -5,7 +5,7 @@ import unittest
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "whale_local"))
-from sao_bridge.alfworld_strong_arm import run, wait_existing_phase
+from sao_bridge.alfworld_strong_arm import main, run, wait_existing_phase, wait_stopped_unit
 from sao_bridge.common import file_sha, read_json, write_json
 
 
@@ -116,6 +116,38 @@ class StrongArmTests(unittest.TestCase):
                 self.assertRaisesRegex(RuntimeError, "without complete evidence"),
             ):
                 wait_existing_phase(root, receipt, timeout=1)
+
+    def test_handoff_waits_through_restarts_and_shutdown(self):
+        with (
+            patch("sao_bridge.alfworld_strong_arm.subprocess.check_output",
+                  side_effect=["active\n", "activating\n", "deactivating\n", "failed\n"]),
+            patch("sao_bridge.alfworld_strong_arm.time.sleep") as sleep,
+        ):
+            self.assertEqual(wait_stopped_unit("coevolve-strong-previous.service"), "failed")
+            self.assertEqual(sleep.call_count, 3)
+        with self.assertRaisesRegex(ValueError, "previous"):
+            wait_stopped_unit("unrelated.service")
+        with (
+            patch("sao_bridge.alfworld_strong_arm.subprocess.check_output", return_value="active\n"),
+            patch("sao_bridge.alfworld_strong_arm.time.monotonic", side_effect=[0, 0, 2]),
+            patch("sao_bridge.alfworld_strong_arm.time.sleep"),
+            self.assertRaises(TimeoutError),
+        ):
+            wait_stopped_unit("coevolve-strong-previous.service", timeout=1)
+
+    def test_cli_does_not_enter_arm_before_previous_unit_stops(self):
+        events = []
+        with (
+            patch.object(sys, "argv", ["arm", "--protocol", "frozen.json", "--arm", "ma",
+                                      "--after-unit", "coevolve-strong-previous.service"]),
+            patch("sao_bridge.alfworld_strong_arm.wait_stopped_unit",
+                  side_effect=lambda unit: events.append("wait")),
+            patch("sao_bridge.alfworld_strong_arm.run",
+                  side_effect=lambda protocol, arm: events.append("run")),
+            patch("builtins.print"),
+        ):
+            main()
+        self.assertEqual(events, ["wait", "run"])
 
 
 if __name__ == "__main__":

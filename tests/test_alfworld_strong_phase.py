@@ -285,7 +285,13 @@ class StrongPhaseTests(unittest.TestCase):
                 result = execute_phase(root)
                 self.assertEqual(len(read_json(root / "attempts.json")), 2)
                 self.assertEqual(result["native_audit"]["nonzero_actor_gradients"], 2)
-                self.assertEqual(execute_phase(root)["training_root"], result["training_root"])
+                legacy = copy.deepcopy(result)
+                legacy["native_audit"].pop("critic_target_range")
+                legacy["native_audit"].pop("critic_target_roundoff_atol")
+                write_json(root / "PHASE_COMPLETE.json", legacy)
+                previous_sha = file_sha(root / "PHASE_COMPLETE.json")
+                self.assertEqual(execute_phase(root), legacy)
+                self.assertEqual(file_sha(root / "PHASE_COMPLETE.json"), previous_sha)
                 cached.module.assert_not_called()
             self.assertEqual([path.name for path in launches], ["attempt-01", "attempt-02"])
             self.assertTrue((root / "attempt-01").exists())
@@ -295,6 +301,16 @@ class StrongPhaseTests(unittest.TestCase):
                 self.assertRaises(PhaseAttemptsExhausted),
             ):
                 execute_phase(root, maximum_attempts=1)
+            factory.return_value.module.assert_not_called()
+            changed = copy.deepcopy(legacy)
+            changed["native_audit"]["nonzero_actor_gradients"] = 1
+            write_json(root / "PHASE_COMPLETE.json", changed)
+            with (
+                patch("sao_bridge.alfworld_strong_phase.Launcher") as factory,
+                patch("sao_bridge.alfworld_strong_phase.gpu_release_audit", return_value=release),
+                self.assertRaisesRegex(ValueError, "frozen"),
+            ):
+                execute_phase(root)
             factory.return_value.module.assert_not_called()
             write_json(root / "data.json", ["changed"])
             with (

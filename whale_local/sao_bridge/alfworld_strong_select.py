@@ -11,7 +11,7 @@ from .alfworld_engineer_eval import Jobs
 from .alfworld_phase_data import editor_dataset
 from .alfworld_solver_validation import select_checkpoint
 from .alfworld_strong_phase import (
-    checked_native_report, checked_release, checkpoint_pair, training_evidence,
+    checked_native_report, checked_release, checkpoint_pair, legacy_native_audit, training_evidence,
 )
 from .alfworld_train_data import _immutable_json
 from .budget import contract_digest, model_digests
@@ -50,10 +50,7 @@ def freeze_selection_identity(root: Path, identity: dict) -> None:
     path = root / "identity.json"
     if path.is_file():
         legacy = {
-            **identity, "native_audit": {
-                key: value for key, value in identity["native_audit"].items()
-                if key not in {"critic_target_range", "critic_target_roundoff_atol"}
-            },
+            **identity, "native_audit": legacy_native_audit(identity["native_audit"]),
         }
         if legacy != identity and read_json(path) == legacy:
             _immutable_json(root / "target_range_audit.json", {

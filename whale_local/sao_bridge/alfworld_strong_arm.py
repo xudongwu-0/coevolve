@@ -38,6 +38,22 @@ def wait_existing_phase(root: Path, receipt: Path, timeout: float) -> dict:
     raise TimeoutError(f"External phase timed out: {unit}")
 
 
+def wait_stopped_unit(unit: str, timeout: float = 86400) -> str:
+    if not unit.startswith("coevolve-strong-") or not unit.endswith(".service"):
+        raise ValueError("Unexpected previous strong arm unit")
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        state = subprocess.check_output(
+            ["systemctl", "show", unit, "--property=ActiveState", "--value"], text=True,
+        ).strip()
+        if state in {"inactive", "failed"}:
+            return state
+        if state not in {"active", "activating", "reloading", "deactivating"}:
+            raise RuntimeError(f"Unknown previous arm unit state: {state!r}")
+        time.sleep(10)
+    raise TimeoutError(f"Previous arm unit has not stopped: {unit}")
+
+
 def checked_selected_state(path: Path, protocol: dict, expected_protocol_sha: str) -> dict:
     state = read_json(path)
     if state["protocol_sha256"] != expected_protocol_sha:
@@ -149,8 +165,12 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--protocol", type=Path, required=True)
     parser.add_argument("--arm", choices=("sequential", "ma"), required=True)
+    parser.add_argument("--after-unit", help="Wait for this earlier controller to stop; never interrupt it")
     args = parser.parse_args()
     try:
+        if args.after_unit:
+            print(f"Waiting for previous controller {args.after_unit}", flush=True)
+            wait_stopped_unit(args.after_unit)
         result = run(args.protocol, args.arm)
     except (ValueError, PhaseAttemptsExhausted, SelectionAttemptsExhausted, EvaluationAttemptsExhausted) as exc:
         raise SystemExit(78) from exc

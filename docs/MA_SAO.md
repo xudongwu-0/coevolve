@@ -147,6 +147,18 @@ spending another training attempt.
 For selections frozen before these two audit fields existed, verify every old
 binding exactly and publish the additive fields in `target_range_audit.json`.
 Do not rewrite the old identity or regenerate its completed proposal matrix.
+Completed native phase receipts are likewise reused byte-for-byte after a fresh
+validation; extending an audit schema must not change the phase hash bound by
+an already completed selection.
+
+For a provenance-recorded controller-only upgrade while the old controller is
+still running, queue the new `alfworld_strong_arm` with
+`--after-unit coevolve-strong-ma-v1-arm.service`. It stays CPU-only until the
+previous systemd unit is inactive/failed, including through its automatic
+restarts. If the old arm already froze, the new controller exits without
+training/evaluation. Otherwise it resumes under the same immutable inputs and
+attempt limits. It does not interrupt the old job or bypass substantive failed
+invariants. Use a separate systemd unit and preserve both launch receipts.
 
 After both arms freeze and an arm's report completes/releases, run the cost audit
 on that arm's owning node:
