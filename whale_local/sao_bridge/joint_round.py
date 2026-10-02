@@ -44,8 +44,17 @@ def record_failure(root: Path, role: str, failure: dict) -> None:
     with (root / f"{role}_FAILED.lock").open("a") as lock:
         fcntl.flock(lock, fcntl.LOCK_EX)
         path = root / f"{role}_FAILED.json"
-        if not path.exists():
-            write_json(path, failure)
+        if path.exists():
+            return
+        if (root / "STOP.json").exists():
+            cancelled = root / f"{role}_CANCELLED.json"
+            if not cancelled.exists():
+                write_json(cancelled, {
+                    "interruption": failure, "stop": read_json(root / "STOP.json"),
+                    "classification": "interruption after an explicit shared stop request",
+                })
+            return
+        write_json(path, failure)
 
 
 async def wait_record(path: Path, root: Path, timeout: float = 1800) -> dict:

@@ -37,6 +37,18 @@ class JointTests(unittest.TestCase):
         self.assertEqual(read_json(self.root / "solver_FAILED.json"), original)
         self.assertFalse((self.root / "solver_FAILED.json.tmp").exists())
 
+    def test_explicit_stop_cancellation_does_not_poison_checkpoint_recovery(self):
+        write_json(self.root / "STOP.json", {"reason": "evaluation deadline"})
+        record_failure(self.root, "solver", {"error": "worker terminated during shutdown"})
+        self.assertFalse((self.root / "solver_FAILED.json").exists())
+        self.assertEqual(
+            read_json(self.root / "solver_CANCELLED.json")["stop"],
+            {"reason": "evaluation deadline"},
+        )
+        write_json(self.root / "editor_FAILED.json", {"error": "earlier real failure"})
+        record_failure(self.root, "editor", {"error": "later cancellation"})
+        self.assertEqual(read_json(self.root / "editor_FAILED.json"), {"error": "earlier real failure"})
+
     def test_environment_uses_parent_ownership_and_never_closes_native_launcher(self):
         from sao_bridge.joint_environment import run
         spec = self.root / "spec.json"
