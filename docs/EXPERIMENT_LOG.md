@@ -3277,3 +3277,52 @@ not mutated. The reference-only cache-release correction passes41 tests+3 subtes
 A real node3 CUDA check freed8589934592bytes while preserving live tensors and
 16384allocated bytes. This validates cache release, not a full long-context PPO
 retry. The failed run remains failed, and the W1+h2 incumbent remains unchanged.
+
+## 2026-10-02 23:07 UTC: final recovered MA report, target not achieved
+
+Best-arm evaluation finished23:07:27UTC, about34minutes before the23:41:31 deadline.
+The evaluated pair is committed globalstep3/round4, with2 Actor updates per role,
+not the last in-memory round6 state. Eight fresh Engineer proposals had6 valid
+patches. Slots01/02/03 tied45/48 on selection24 mean@2; the predefined smallest
+slot rule froze01 before all200. No candidate was replaced using the200 scores.
+
+| System | all200 mean@1 | strict197 |
+|---|---:|---:|
+| MA round4 Solver, no harness | 172/200 = 86.00% | 170/197 = 86.29% |
+| MA round4 Solver + new Engineer harness | 180/200 = 90.00% | 177/197 = 89.85% |
+| Retained historical W1+h2 | 184/200 = 92.00% | 181/197 = 91.88% |
+
+MA minus W1+h2:-2.0pp, paired question-bootstrap95% interval[-5.5,+1.5]pp,
+5 improved/9 regressed questions. Adding the new patch to the same new Solver:
++4.0pp[-0.5,+8.5],16 improved/8 regressed. Neither comparison establishes an
+advantage. This short run does not establish that MA is intrinsically worse;
+the primary performance goal was nevertheless not achieved, and matched round12
+is unavailable. OOM is a training infrastructure failure, not proof of policy
+collapse. Healthy losses did not guarantee either memory safety or higher scores.
+
+The compact report hashes, native report equality,200 unique single samples,
+exact seeds/token limit, training exclusion, strict197 subsets, checkpoint and
+patch bindings, frozen selection and paired intervals were independently checked.
+Evidence is `runs/alfworld_joint_async_6h_v5_recovered/FINAL_AUDIT.json`;
+`best_COMPLETE.json` is completed while `DEADLINE_REPORT.json` remains incomplete
+because the matched arm is unavailable. Neither the original FAILED records nor
+the original release snapshot was rewritten. The latter briefly contained an
+unverified PID2016329, which had exited by final audit; no manual kill was used.
+Both nodes finally had only verified filler GPU processes, with filler active.
+
+The selected point consumed64 new H+W trajectories; the corrected run consumed96.
+Earlier failed attempts consumed72 more, for168 known committed MA trajectories
+and at least260 generated policy actions across attempts. Adding the832 common
+prefix yields1000 known committed trajectories, not total research cost:
+uncommitted work, proposal selection and evaluation remain additional.
+
+The prior matched GRPO conclusion also stands: W0+new h1=83.50% and
+W1+new h1=88.00%, versus historical SAO h1 at74.00% and90.50%, respectively.
+This is not a universally better Engineer. All200 is a reused development cohort;
+strict197 excludes training goal-family overlap, not selection exposure or
+unknown official-pretraining exposure. No training-seed robustness is claimed.
+
+The live W1+h2 incumbent is unchanged. Code837a67e releases unused frozen-reference
+cache and passed41 tests+3 subtests plus a real8GiB CUDA release check, but was not
+hot-applied and has not passed a full long-context PPO rerun. Future work must
+first validate that recovery and preserve honest full-budget accounting.

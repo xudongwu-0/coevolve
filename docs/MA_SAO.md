@@ -2,6 +2,21 @@
 
 ## Deadline-bound joint asynchronous continuation (2026-10-02)
 
+**Window outcome,23:07:27UTC:** the recovered round4 pair scored180/200=90.00%
+(strict197:177/197=89.85%), versus retained W1+h2 at184/200=92.00%.
+The same new Solver without a harness scored172/200=86.00%
+(strict197:170/197=86.29%). Eight new Engineer proposals yielded six valid patches;
+slots01/02/03 tied at45/48 on selection24 mean@2, and the predefined lowest-slot
+rule selected01 before all200 mean@1. No test-score candidate replacement occurred.
+The paired question-bootstrap difference versus W1+h2 is-2.0pp[-5.5,+1.5];
+the harness addition over this new Solver is+4.0pp[-0.5,+8.5].
+Neither an MA advantage over SAO nor a stable harness gain is established.
+Round12 was not reached, so the192-trajectory matched comparison is unavailable.
+The overall protocol remains explicitly incomplete despite a valid completed
+best-arm evaluation. This is an exploratory single-seed development result with
+historical implementation differences, not an algorithm-only causal comparison.
+Evidence: `runs/alfworld_joint_async_6h_v5_recovered/FINAL_AUDIT.json`.
+
 The requested result deadline is **23:41:31 UTC**, with a training cutoff at
 22:41:31. [joint_campaign](../whale_local/sao_bridge/joint_campaign.py) waits for
 the matched GRPO W0/W1 comparison, then launches one persistent role per node.
