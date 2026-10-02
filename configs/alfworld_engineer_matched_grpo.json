@@ -21,7 +21,9 @@
   "max_prompt_tokens": 28672,
   "max_response_tokens": 4096,
   "max_context_tokens": 32768,
-  "rollout_tp": 2,
+  "rollout_tp": 1,
+  "rollout_enforce_eager": true,
+  "rollout_max_num_seqs": 32,
   "rollout_gdn_prefill_backend": "triton",
   "rollout_memory_fraction": 0.65,
   "rollout_timeout": 7200

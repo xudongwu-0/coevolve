@@ -165,6 +165,8 @@ def train(root: Path) -> None:
             "excluded_eval_task_ids": protocol["all_task_ids"],
         }
         write_json(root / "reward_client.json", reward)
+        grpo_config = read_json(GRPO_CONFIG)
+        rollout_gpus = ",".join(str(i) for i in range(4, 4 + grpo_config["rollout_tp"]))
         process = launch.start([
             sys.executable, "-B", "-m", "torch.distributed.run", "--standalone",
             "--local-addr=127.0.0.1", "--nproc-per-node=4", "--max-restarts=0",
@@ -172,7 +174,7 @@ def train(root: Path) -> None:
             "--model", config["engineer_model"], "--data", config["data"],
             "--reward-config", str(root / "reward_client.json"),
             "--config", str(GRPO_CONFIG), "--output", str(root / "engine"),
-            "--updates", "6", "--rollout-gpus", "4,5", "--seed", "42",
+            "--updates", "6", "--rollout-gpus", rollout_gpus, "--seed", "42",
         ], gpus="0,1,2,3", name="grpo")
         launch.wait(process, "Matched Harness-R1 GRPO", timeout=5 * 3600)
         progress = read_json(root / "engine/progress.json")

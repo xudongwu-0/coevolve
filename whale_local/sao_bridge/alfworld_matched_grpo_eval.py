@@ -94,16 +94,16 @@ def evaluate(training: Path, root: Path, role: str) -> dict:
         solver = read_json(SAO_CONFIG)["solver_model"] if role == "w0" else state["solver"]
         quick = matrix_config(protocol, solver, f"{role}-matched-grpo",
                               shared["harnesses"], root / role / "selection")
-        matrix, output = run_matrix(launch, quick, root / role / "selection", 1)
-        reports = matrix_reports(matrix, protocol)
-        choice = choose_harness(reports, shared["proposals"])
-        _immutable_json(root / f"{role}_QUICK.json", {
-            "scores": {label: report["accuracy"] for label, report in reports.items()},
-            "proposal_mean": sum(reports[f"grpo-{i:02d}"]["accuracy"] for i in range(8)) / 8,
-            "best_slot_diagnostic": choice, "matrix": str(output),
-            "valid_proposals": sum(p["valid"] for p in shared["proposals"]),
-        })
         if role == "w1":
+            matrix, output = run_matrix(launch, quick, root / role / "selection", 1)
+            reports = matrix_reports(matrix, protocol)
+            choice = choose_harness(reports, shared["proposals"])
+            _immutable_json(root / f"{role}_QUICK.json", {
+                "scores": {label: report["accuracy"] for label, report in reports.items()},
+                "proposal_mean": sum(reports[f"grpo-{i:02d}"]["accuracy"] for i in range(8)) / 8,
+                "best_slot_diagnostic": choice, "matrix": str(output),
+                "valid_proposals": sum(p["valid"] for p in shared["proposals"]),
+            })
             _immutable_json(root / "SELECTED.json", {
                 "label": choice, "harness": shared["harnesses"][choice],
                 "harness_sha256": contract_digest(read_json(Path(shared["harnesses"][choice]))),

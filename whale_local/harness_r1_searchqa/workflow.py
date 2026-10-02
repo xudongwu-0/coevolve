@@ -137,7 +137,12 @@ class ResidentEngine:
                 seed=seed, enable_prefix_caching=False, logprobs_mode="processed_logprobs",
                 gdn_prefill_backend=config["rollout_gdn_prefill_backend"],
                 worker_extension_cls="harness_r1_searchqa.workflow.Qwen35TextWorkerExtension",
-                **({"language_model_only": True} if config.get("domain") == "alfworld" else {}),
+                **({
+                    "language_model_only": True,
+                    "enforce_eager": config.get("rollout_enforce_eager", False),
+                    "max_num_seqs": config.get("rollout_max_num_seqs", 32),
+                    "disable_custom_all_reduce": True,
+                } if config.get("domain") == "alfworld" else {}),
             )
             self.signature = signature
         elif signature != self.signature:

@@ -140,3 +140,5 @@ def test_training_waits_for_remote_ready_before_opening_tunnel(monkeypatch, tmp_
     matched.train(tmp_path)
     assert launch.start.call_count == 2
     assert (tmp_path / "TRAINING_COMPLETE.json").is_file()
+    command = launch.start.call_args_list[1].args[0]
+    assert command[command.index("--rollout-gpus") + 1] == "4"
