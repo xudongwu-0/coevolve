@@ -30,6 +30,21 @@ Engineer E15/critic15与Solver v4 W79/critic79开始，都按H2 → W2顺序训�
 协议的`autonomous`字段保存绝对启动、共同准备、训练截止、总截止时间、
 节点与服务名；重启读取原时间，绝不重新获得8小时。
 
+**已部署的本次时间窗口：2026-10-02 05:22:03–13:22:03 UTC**
+（北京时间13:22:03–21:22:03）。训练最晚12:22:03 UTC停止；6小时后的
+11:22 UTC可直接查看状态或已完成结果。控制器源码冻结在`1b365c4`，不要在
+`runs/source-snapshots/alt8h-e15-w79-v1/`内编辑代码。
+
+| 节点 | 独立于Agent运行的协调器 |
+|---|---|
+| node4 | `coevolve-alt8h-e15-w79-v1-sequential-coordinator.service` |
+| node3 | `coevolve-alt8h-e15-w79-v1-ma-coordinator.service` |
+
+node4已启动共同W79环境服务；node3正确等待同一份H1/W1初始化，随后两臂
+并行执行H2/W2。计算子服务使用同一前缀的`sequential-common`、
+`sequential-arm`、`sequential-report`、`ma-arm`、`ma-report`，每个都有独立
+expiry timer。部署时两节点的GPU filler均保持active，没有被停止或改动。
+
 - 最多约1小时共同准备，最晚第7小时停止训练，至少留1小时终评；若提前完成，
   可以提前出结果，不为耗满8小时继续无收益训练。
 - 两个CPU协调器管理独立systemd计算服务；崩溃后接回原服务与已有收据，
@@ -49,6 +64,9 @@ Engineer E15/critic15与Solver v4 W79/critic79开始，都按H2 → W2顺序训�
 若终评未完成，脚本明确写`COMPARISON_UNAVAILABLE.json`，不会补造分数。
 每臂`*_command.json`、`*_launches.json`和`*_expiry.json`保存实际命令、
 重启历史及独立截止保护，`*.service.log`保存无需journal权限即可读取的日志。
+node3首次检查还遇到共享源码的Git所有权保护：仅在先验证固定revision后，
+为SAO/AReaL两个真实路径加入该用户的显式信任，没有通配符信任；记录在
+`ma/SHARED_GIT_TRUST.json`。不要将这个部署问题误判为算法学习失败。
 
 手动接回同一个实验时，在**冻结源码工作树**中运行：
 

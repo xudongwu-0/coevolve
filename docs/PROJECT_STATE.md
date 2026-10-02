@@ -15,12 +15,21 @@ H2为32/27 native/Actor更新，W2为80/75；至少留最后1小时做70题mean@
 不在停止列表。截止仅保留已验证状态，部分预算未完成时不宣称MA胜出。
 不做多seed/参数扫/交叉harness消融，不使用node0–node2。
 实际启动时间及接回方式见根[README](../README.md)与运行收据。
+本次窗口已冻结为2026-10-02 **05:22:03–13:22:03 UTC**，12:22:03训练截止。
+源码`1b365c4`，node4协调器`coevolve-alt8h-e15-w79-v1-sequential-coordinator`、
+node3协调器`coevolve-alt8h-e15-w79-v1-ma-coordinator`均已启动，5个独立expiry
+timer已注册。05:30 UTC真实验证：W79的8/8服务健康，15/24个官方10题训练
+baseline批次已完成；MA在等待同一份共同初始化，不是已开始H2训练。
 
 旧两臂均已完成native预算但保留同一W0/E15/H1。MA W2选择为45.83%/75.00%，
 均低于83.33%的incumbent；step39端口/取消修复后获得真实分数，step79的
 一次worker ReadError在原有第二次尝试中恢复。相同最终策略的分差不能视作
 MA进化收益。官方对口`agent-sft-harness-r1`权重已校验下载完毕，但其GPU
 基线评测推迟到本次8小时实验之后。
+旧`PAIRED_REPORT.json`已完成：87.86%对89.29%，差+1.43pp，题级95%区间
+[-1.43,+4.29]pp；两臂权重与harness完全相同，gate为false，不能称为MA提升。
+旧顺序臂成本审计已完成；旧MA的`cost-r2`退出失败，成本审计仍待修复，
+不能把缺失成本记成0。它不阻塞当前8小时实验，也不应占用当前实验GPU。
 
 更新：2026-10-02 UTC。这是当前研究主线的入口；历史细节见
 [实验日志](EXPERIMENT_LOG.md)，算法定义见 [MA-SAO](MA_SAO.md)、
