@@ -148,6 +148,28 @@ For selections frozen before these two audit fields existed, verify every old
 binding exactly and publish the additive fields in `target_range_audit.json`.
 Do not rewrite the old identity or regenerate its completed proposal matrix.
 
+After both arms freeze and an arm's report completes/releases, run the cost audit
+on that arm's owning node:
+
+```bash
+CUDA_VISIBLE_DEVICES='' PYTHONPATH=whale_local python -B \
+  -m sao_bridge.alfworld_strong_cost \
+  --protocol runs/alfworld_strong_sao_ma_v1/frozen_protocol.json --arm sequential
+```
+
+Use `--arm ma` on node3. `COST_AUDIT.json` separates declared/optimizer-consumed
+episodes from all saved fresh-generation receipts, including prefetch duplicates.
+Never choose an arbitrary duplicate receipt as the consumed behavior. Count
+physical matrix reports once rather than their logical aliases, retaining failed
+attempts' completed reports, proposal responses and official reward retry counts.
+Canceled work without a saved receipt remains an explicit lower-bound gap.
+Eight-GPU allocation time starts at the original first-phase launch and ends at
+final report release, including recovery and peer-arm waiting. Per-process
+telemetry separates experiment/filler; nested matrix telemetry is not counted
+again when its selection parent already covers it. Original shared-prefix
+training/search and common H1 selection are additional equal charges; the separate
+Solver-v5 and train-probe explorations remain separately reported R&D.
+
 ## Objective and control
 
 The primary endpoint is final held-out task accuracy under the same declared
