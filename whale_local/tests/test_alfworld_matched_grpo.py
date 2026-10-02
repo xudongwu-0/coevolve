@@ -5,8 +5,10 @@ from types import SimpleNamespace
 
 import httpx
 import pytest
+from unittest.mock import Mock
 
 from harness_r1_searchqa.grpo_train import packet_batch, validate_engineer_scale
+from sao_bridge import alfworld_matched_grpo as matched
 from sao_bridge.alfworld_matched_grpo import matched_rows, score_records, validate_reward_rows
 
 
@@ -110,3 +112,31 @@ def test_vlm_requires_explicit_alfworld_opt_in():
     validate_engineer_scale("qwen3_5", 9_000_000_000, allow_vlm=True)
     with pytest.raises(ValueError):
         validate_engineer_scale("qwen3_5", 4_000_000_000, allow_vlm=True)
+
+
+def test_training_waits_for_remote_ready_before_opening_tunnel(monkeypatch, tmp_path):
+    launch = Mock()
+    monkeypatch.setattr(matched, "Launcher", lambda root: launch)
+    monkeypatch.setattr(matched, "stop_known", lambda **kw: {})
+    monkeypatch.setattr(matched, "gpu_release_audit", lambda: {})
+    config = tmp_path / "source.json"
+    config.write_text(json.dumps({
+        "engineer_model": "h0", "data": "data", "solver_version": "w0",
+    }))
+    cohort = tmp_path / "cohort.json"
+    cohort.write_text('{"all_task_ids": [240, 241]}')
+    monkeypatch.setattr(matched, "SAO_CONFIG", config)
+    monkeypatch.setattr(matched, "EVAL_PROTOCOL", cohort)
+    (tmp_path / "engine").mkdir()
+    (tmp_path / "engine/progress.json").write_text(
+        '{"updates_completed": 6, "optimizer_steps": 24}')
+
+    def become_ready(seconds):
+        launch.start.assert_not_called()
+        (tmp_path / "target").mkdir()
+        (tmp_path / "target/READY.json").write_text("{}")
+
+    monkeypatch.setattr(matched.time, "sleep", become_ready)
+    matched.train(tmp_path)
+    assert launch.start.call_count == 2
+    assert (tmp_path / "TRAINING_COMPLETE.json").is_file()

@@ -143,6 +143,14 @@ def train(root: Path) -> None:
     write_json(root / "resource_audit.json", stop_known(require_exclusive=True))
     launch = Launcher(root / "supervision")
     try:
+        deadline = time.monotonic() + 1800
+        while not (root / "target/READY.json").is_file():
+            if (root / "target/FAILED.json").exists():
+                raise RuntimeError(f"Fixed W0 target failed: {read_json(root / 'target/FAILED.json')}")
+            if time.monotonic() >= deadline:
+                raise TimeoutError("Fixed W0 target did not become ready within 30 minutes")
+            launch.check()
+            time.sleep(2)
         tunnel = launch.start([
             "ssh", "-F", "/mnt/3fs/xudong/cluster-ssh/config", "-N",
             "-o", "ExitOnForwardFailure=yes", "-o", "ServerAliveInterval=30",
