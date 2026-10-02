@@ -5,7 +5,7 @@ import unittest
 from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "whale_local"))
-from sao_bridge.alfworld_strong_report import compare, frozen_states, report_config, run
+from sao_bridge.alfworld_strong_report import compare, frozen_states, report_config, run, wait_reports
 from sao_bridge.budget import contract_digest
 from sao_bridge.common import file_sha, read_json, write_json
 from sao_bridge.evaluation import stable_id_seed_offset
@@ -113,6 +113,18 @@ class StrongReportTests(unittest.TestCase):
             self.assertEqual(config["task_ids"], list(range(300, 370)))
             self.assertEqual(set(config["harnesses"]), {"common_h1", "sequential_final", "ma_final"})
             self.assertEqual(config["samples"], 2)
+
+    def test_comparison_wait_requires_both_release_receipts(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            path, _, _ = self.fixture(root)
+            wait_reports(path, timeout=1)
+            (root / "ma/final_report/RELEASED.json").unlink()
+            with (
+                patch("sao_bridge.alfworld_strong_report.time.monotonic", side_effect=[0, 2]),
+                self.assertRaisesRegex(TimeoutError, "released GPUs"),
+            ):
+                wait_reports(path, timeout=1)
 
     def test_exact_five_point_threshold_and_paired_positive_bound(self):
         with tempfile.TemporaryDirectory() as temporary:

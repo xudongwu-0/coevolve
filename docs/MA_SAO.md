@@ -125,7 +125,9 @@ Identical patches retain all aliases without duplicate inference.
 After both reporter units finish and release GPUs,
 `python -m sao_bridge.alfworld_strong_report --protocol FROZEN_JSON --compare`
 rechecks freeze/report hashes, exact task/sample seeds and binary trajectories,
-then writes `PAIRED_REPORT.json`. The +5pp floor is tested at its exact boundary;
+then writes `PAIRED_REPORT.json`. Add `--wait` for a separate persistent CPU
+finalizer on node4; it cannot finalize before both release receipts exist.
+The +5pp floor is tested at its exact boundary;
 a positive paired 95% lower bound is separately required. It also reports the
 cross-harness final-policy interaction, without claiming a causal component
 ablation. All outputs explicitly retain the reused-development/single-seed

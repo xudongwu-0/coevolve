@@ -59,6 +59,19 @@ def wait_frozen(protocol_path: Path, timeout: float = 86400) -> None:
     raise TimeoutError("Both arms have not frozen; report remains closed")
 
 
+def wait_reports(protocol_path: Path, timeout: float = 86400) -> None:
+    root = Path(read_json(protocol_path)["run"])
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        if all(
+            (root / arm / "final_report" / name).is_file()
+            for arm in ("sequential", "ma") for name in ("COMPLETE.json", "RELEASED.json")
+        ):
+            return
+        time.sleep(30)
+    raise TimeoutError("Both frozen report jobs have not completed and released GPUs")
+
+
 def report_config(protocol: dict, states: dict, root: Path, solver: str, label: str) -> dict:
     return matrix_config(
         protocol, solver, label, {
@@ -263,8 +276,10 @@ def main() -> None:
     parser.add_argument("--compare", action="store_true")
     args = parser.parse_args()
     if args.compare:
-        if args.arm or args.wait:
-            parser.error("--compare cannot be combined with --arm/--wait")
+        if args.arm:
+            parser.error("--compare cannot be combined with --arm")
+        if args.wait:
+            wait_reports(args.protocol)
         result = compare(args.protocol)
     else:
         if args.arm is None:
