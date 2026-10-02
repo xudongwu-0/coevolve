@@ -3111,3 +3111,50 @@ the official release in this quick comparison. All18 logical variants passed
 complete task/sample/seed/token checks; `ENGINEER_MATCHED_DIAGNOSTIC.json` persists
 the result. The previously reported six fixed-system rows and older70-task
 greedy/per-turn protocol are unchanged.
+
+## 2026-10-02 16:04 UTC: expanded untrained one-shot core table
+
+The user requested175 additional tasks to reach200, but the existing cohort was
+24, not25. Declared176 new tasks and reused sample_index0 from each old task,
+never the better of two samples. All six models/harnesses were frozen before
+new outcomes. Native temperature1,total4096 completion tokens,one sample.
+
+The500-task catalogue contains197 game instances whose goal groups exclude all
+legacy0-239 training tasks; these197 cover179 distinct goals. To reach200 without
+repeating any locally trained game, three deterministic unseen instances
+291/414/467 with related training goals were transparently included and a strict197
+subset reported separately. The entire2296-game training-only catalogue is also
+instance/goal-disjoint from the official catalogue.83 previously sealed IDs were
+opened under this request. Existing development exposure and unknown official
+pretraining exposure remain limitations.
+
+First v1 W1 and W0 matrices failed after445.8s and570.9s with worker interact
+ReadError->HTTP502, without worker exception logs or a complete variant report.
+An identical W1 retry was stopped during startup after the second node exhibited
+the same symptom. No failed/incomplete evaluation was converted to reward0.
+57942d1 prevents worker TCP reuse and logs the session ID on transport errors.
+A real socket fixture fails on a reused connection but passes four fresh requests;
+no ambiguous state-changing request is retried.18 tests+6 subtests pass.
+New immutable v2 retains all task/model/harness/seed/token/concurrency settings and
+all prior failure hashes. Its full native evaluation completed, with both GPU
+release audits verified. An early CPU aggregation launch/dependency and directory
+readability issue was recorded and corrected without restarting GPU work.
+
+| System | 200-task mean@1 | Strict197 | Newly evaluated176 |
+|---|---:|---:|---:|
+| W0 | 147/200 =73.50% | 144/197 =73.10% | 130/176 =73.86% |
+| W0+official target-specific Harness-R1 | 166/200 =83.00% | 163/197 =82.74% | 146/176 =82.95% |
+| W0+fixed H1 | 148/200 =74.00% | 146/197 =74.11% | 131/176 =74.43% |
+| W1 | 174/200 =87.00% | 172/197 =87.31% | 154/176 =87.50% |
+| W1+H1 | 181/200 =90.50% | 178/197 =90.36% | 158/176 =89.77% |
+| W1+H2 | 184/200 =92.00% | 181/197 =91.88% | 161/176 =91.48% |
+
+Pure-W gain+13.50pp, question95% interval[+6.50,+20.50]pp; fixedH1 onW0
+only+0.50pp,[-4.50,+5.50]. H2 overH1 onW1+1.50pp,[-1.50,+5.00],
+not established as a stable advantage. Best system minus official+9.00pp,
+[+3.50,+15.00], but these question intervals do not additionally cluster repeated
+goals or correct historical selection/search. The retained24 are not independent
+report data. Final output `runs/alfworld_core_200_oneshot_v2/COMPLETE.json`;
+all200 unique sample0 identities, seeds,tokens,input hashes and strict197 counts
+verified. Completed16:04:13 UTC,30.5min from first launch including failures,
+16.6min for the successful recovery round. The initial15min target was missed.
