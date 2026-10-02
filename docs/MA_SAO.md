@@ -132,6 +132,9 @@ a positive paired 95% lower bound is separately required. It also reports the
 cross-harness final-policy interaction, without claiming a causal component
 ablation. All outputs explicitly retain the reused-development/single-seed
 limitation. Missing or inconsistent freezes cannot be bypassed by a report flag.
+If both arms select identical Solver weights and harness, the method-improvement
+gate cannot pass: any separately measured score difference is evaluation
+variation, not a policy improvement. Raw paired scores are still preserved.
 
 ## Objective and control
 

@@ -233,11 +233,23 @@ def compare(protocol_path: Path) -> dict:
         reports["sequential"]["ma_final"], reports["ma"]["ma_final"],
         seed=evaluation["bootstrap_seed"] + 1, draws=evaluation["bootstrap_draws"],
     )
+    identical_final_policy = (
+        freezes["sequential"]["solver_weights_sha256"] == freezes["ma"]["solver_weights_sha256"]
+        and freezes["sequential"]["harness_sha256"] == freezes["ma"]["harness_sha256"]
+    )
     result = {
         "status": "completed",
         "gate_passed": (
-            difference["candidate_minus_control"] >= evaluation["minimum_ma_gain"]
+            not identical_final_policy
+            and difference["candidate_minus_control"] >= evaluation["minimum_ma_gain"]
             and difference["paired_question_bootstrap_95pct"][0] > 0
+        ),
+        "identical_final_policy": identical_final_policy,
+        "identity_interpretation": (
+            "Both arms selected identical Solver weights and harness. Any measured score "
+            "difference is evaluation variation, not an algorithmic policy improvement."
+            if identical_final_policy else
+            "At least one final policy component differs; paired score uncertainty still applies."
         ),
         "paired_final_system": difference,
         "report_matrix": {

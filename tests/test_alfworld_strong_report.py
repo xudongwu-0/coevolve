@@ -12,7 +12,7 @@ from sao_bridge.evaluation import stable_id_seed_offset
 
 
 class StrongReportTests(unittest.TestCase):
-    def fixture(self, root, *, extra_successes=7, noisy=False):
+    def fixture(self, root, *, extra_successes=7, noisy=False, identical_policy=False):
         manifest = root / "manifest.json"
         ids = list(range(300, 370))
         write_json(manifest, {"selection_task_ids": [240, 241], "report_task_ids": ids})
@@ -33,7 +33,8 @@ class StrongReportTests(unittest.TestCase):
         states = {}
         for arm in ("sequential", "ma"):
             state = {
-                "solver": arm + "-w", "harness": str(empty), "harness_sha256": contract_digest(read_json(empty)),
+                "solver": "same-w" if identical_policy else arm + "-w",
+                "harness": str(empty), "harness_sha256": contract_digest(read_json(empty)),
                 "protocol_sha256": file_sha(protocol_path),
             }
             states[arm] = state
@@ -41,7 +42,8 @@ class StrongReportTests(unittest.TestCase):
             write_json(root / arm / "ARM_FROZEN.json", {
                 "status": "frozen", "report_opened": False, "protocol_sha256": file_sha(protocol_path),
                 "final_state_sha256": file_sha(root / arm / "FINAL_STATE.json"),
-                "solver_model": state["solver"], "solver_weights_sha256": arm + "-weights",
+                "solver_model": state["solver"],
+                "solver_weights_sha256": "same-weights" if identical_policy else arm + "-weights",
                 "harness_sha256": state["harness_sha256"], "phase_order": protocol["phase_orders"][arm],
             })
         freeze_hashes = {arm: file_sha(root / arm / "ARM_FROZEN.json") for arm in states}
@@ -75,7 +77,10 @@ class StrongReportTests(unittest.TestCase):
                     values[harness] = {"path": str(path), "sha256": file_sha(path)}
                 groups[group] = {
                     "solver": "w0" if group == "initial_w0" else states[group]["solver"],
-                    "solver_weights_sha256": "initial" if group == "initial_w0" else group + "-weights",
+                    "solver_weights_sha256": (
+                        "initial" if group == "initial_w0" else
+                        "same-weights" if identical_policy else group + "-weights"
+                    ),
                     "reports": values,
                 }
             write_json(report_root / "COMPLETE.json", {
@@ -172,6 +177,16 @@ class StrongReportTests(unittest.TestCase):
             write_json(record, report)
             with self.assertRaisesRegex(ValueError, "after publication"):
                 compare(path)
+
+    def test_identical_policy_cannot_win_from_evaluation_variation(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            path, _, _ = self.fixture(Path(temporary), extra_successes=7, identical_policy=True)
+            result = compare(path)
+            self.assertEqual(result["paired_final_system"]["candidate_minus_control"], 0.05)
+            self.assertGreater(result["paired_final_system"]["paired_question_bootstrap_95pct"][0], 0)
+            self.assertTrue(result["identical_final_policy"])
+            self.assertFalse(result["gate_passed"])
+            self.assertIn("evaluation variation", result["identity_interpretation"])
 
 
 if __name__ == "__main__":
