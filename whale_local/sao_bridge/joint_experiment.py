@@ -13,7 +13,7 @@ from .analysis import paired_difference
 from .budget import contract_digest
 from .common import ensure_model_runtime_metadata, file_sha, read_json, write_json
 from .gpu_telemetry import monitor, summarize
-from .joint_round import check_failures
+from .joint_round import check_failures, record_failure
 from .launch import Launcher
 from .resources import gpu_release_audit, require_research_node
 
@@ -67,17 +67,32 @@ def run_role(spec_path: Path) -> dict:
     started = time.time()
     try:
         if spec["role"] == "solver":
-            launch.module(
-                "sao_bridge.joint_environment", ["--spec", spec_path],
-                gpus="", name="joint_environment",
+            from .joint_environment import run as run_environment
+            environment = threading.Thread(
+                target=run_environment, args=(spec_path, launch),
+                name="joint-environment", daemon=True,
             )
+            environment.start()
             launch.env["SAO_ALFWORLD_CONTROLLER_URL"] = "http://127.0.0.1:28000/api"
             launch.env["SAO_ALFWORLD_HTTP_TIMEOUT"] = "900"
         process = launch.module(
             "sao_bridge.large_train", ["--spec", spec_path],
             gpus="0,1,2,3,4,5,6,7", name="joint_native",
         )
-        launch.wait(process, "joint native learner", timeout=10800)
+        deadline = time.monotonic() + 10800
+        while process.poll() is None:
+            launch.check()
+            check_failures(joint)
+            if time.monotonic() >= deadline:
+                raise TimeoutError("Joint native learner timed out")
+            time.sleep(2)
+        if process.returncode:
+            raise RuntimeError(f"Joint native learner failed ({process.returncode}); inspect its log")
+        if spec["role"] == "solver":
+            environment.join(timeout=30)
+            if environment.is_alive():
+                raise RuntimeError("Joint environment did not finish its final round")
+        check_failures(joint)
         trained = read_json(root / "trained.json")
         rows = [json.loads(line) for line in (root / "metrics.jsonl").read_text().splitlines() if line.strip()]
         warmup = spec["critic_warmup_steps"]
@@ -98,20 +113,27 @@ def run_role(spec_path: Path) -> dict:
             "joint_rounds": spec["steps"], "optimizer_resets_between_rounds": False,
             "finished_at_unix": time.time(),
         }
-        _immutable_json(previous, result)
-        return result
     except BaseException as exc:
         failure = {"error": repr(exc), "role": spec["role"], "failed_at_unix": time.time()}
         write_json(root.parent / "FAILED.json", failure)
-        write_json(joint / f"{spec['role']}_FAILED.json", failure)
+        record_failure(joint, spec["role"], failure)
         raise
     finally:
         launch.close()
         stop.set()
         telemetry.join(timeout=10)
-        if samples.exists():
-            write_json(root.parent / "gpu_utilization_summary.json", summarize(samples, start_time=started))
-        write_json(root.parent / "RELEASED.json", gpu_release_audit())
+        try:
+            if samples.exists():
+                write_json(root.parent / "gpu_utilization_summary.json", summarize(samples, start_time=started))
+        except Exception as exc:
+            failure = {"error": repr(exc), "where": "telemetry", "role": spec["role"]}
+            write_json(root.parent / "FAILED.json", failure)
+            record_failure(joint, spec["role"], failure)
+            raise
+        finally:
+            write_json(root.parent / "RELEASED.json", gpu_release_audit())
+    _immutable_json(previous, result)
+    return result
 
 
 def evaluate(protocol_path: Path) -> dict:

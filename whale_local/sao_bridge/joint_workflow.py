@@ -14,7 +14,7 @@ from . import alfworld_domain as domain
 from .alfworld_train_data import _immutable_json
 from .common import ROOT, read_json, write_json
 from .joint_critic import attach_joint_context
-from .joint_round import checked_behavior, round_path, wait_record, wait_versions
+from .joint_round import checked_behavior, record_failure, round_path, wait_record, wait_versions
 
 
 def parse_proposal(text: str) -> tuple[dict, str | None]:
@@ -151,7 +151,7 @@ class JointWorkflow(RolloutWorkflow):
                 _immutable_json(root / f"outcome-{slot:03d}.json", episode)
             return trajectory
         except BaseException as exc:
-            write_json(self.root / f"{self.role}_FAILED.json", {
+            record_failure(self.root, self.role, {
                 **identity, "error": repr(exc), "failed_at_unix": time.time(),
             })
             raise

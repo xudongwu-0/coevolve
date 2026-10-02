@@ -2,11 +2,12 @@
 from __future__ import annotations
 
 import asyncio
+import fcntl
 from pathlib import Path
 import time
 
 from .alfworld_train_data import _immutable_json
-from .common import read_json
+from .common import read_json, write_json
 
 
 ROLES = ("editor", "solver")
@@ -35,6 +36,16 @@ def check_failures(root: Path) -> None:
         failed = root / f"{role}_FAILED.json"
         if failed.exists():
             raise RuntimeError(f"Joint partner failed: {read_json(failed)}")
+
+
+def record_failure(root: Path, role: str, failure: dict) -> None:
+    check_role(role)
+    root.mkdir(parents=True, exist_ok=True)
+    with (root / f"{role}_FAILED.lock").open("a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        path = root / f"{role}_FAILED.json"
+        if not path.exists():
+            write_json(path, failure)
 
 
 async def wait_record(path: Path, root: Path, timeout: float = 1800) -> dict:

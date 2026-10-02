@@ -1,4 +1,5 @@
 import asyncio
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 import sys
 import tempfile
@@ -15,7 +16,7 @@ from areal.infra.workflow_executor import check_trajectory_format
 from areal.utils.data import batched_call
 from sao_bridge.common import AREAL_REVISION, SAO_REVISION, read_json, verify_upstreams, write_json
 from sao_bridge.joint_critic import attach_joint_context, expand_joint_context
-from sao_bridge.joint_round import checked_behavior, install_version_publication, publish_version, wait_versions
+from sao_bridge.joint_round import checked_behavior, install_version_publication, publish_version, record_failure, wait_versions
 from sao_bridge.joint_workflow import JointWorkflow
 
 
@@ -24,6 +25,34 @@ class JointTests(unittest.TestCase):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name)
+
+    def test_first_failure_is_preserved_under_concurrent_peer_cancellation(self):
+        original = {"error": "original environment failure"}
+        record_failure(self.root, "solver", original)
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            list(pool.map(
+                lambda i: record_failure(self.root, "solver", {"error": f"peer cancellation {i}"}),
+                range(32),
+            ))
+        self.assertEqual(read_json(self.root / "solver_FAILED.json"), original)
+        self.assertFalse((self.root / "solver_FAILED.json.tmp").exists())
+
+    def test_environment_uses_parent_ownership_and_never_closes_native_launcher(self):
+        from sao_bridge.joint_environment import run
+        spec = self.root / "spec.json"
+        data = self.root / "data.json"
+        write_json(spec, {"joint_root": str(self.root), "data": str(data), "steps": 1, "batch_size": 1})
+        write_json(data, [{"joint_slot": 0, "task_id": 7}])
+        current = self.root / "round-0000"
+        write_json(current / "proposal-000.json", {"patch": {"benchmark": "alfworld", "actions": []}})
+        write_json(current / "outcome-000.json", {"reward": 1})
+        write_json(current / "environment/READY.json", {"ready": True})
+        launch = Mock()
+        run(spec, launch)
+        launch.module.assert_called_once()
+        launch.stop.assert_called_once_with(launch.module.return_value)
+        launch.close.assert_not_called()
+        self.assertTrue((current / "ENVIRONMENT_RELEASED.json").exists())
 
     def test_canonical_git_trust_does_not_depend_on_user_home(self):
         canonical = self.root / "canonical/sao"

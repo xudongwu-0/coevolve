@@ -1,21 +1,19 @@
 """Serve each joint round's sampled harnesses without changing official workers."""
 from __future__ import annotations
 
-import argparse
 import asyncio
 from pathlib import Path
 import time
 
 from .common import read_json, write_json
-from .joint_round import check_failures, round_path, wait_record
+from .joint_round import check_failures, record_failure, round_path, wait_record
 from .launch import Launcher
 
 
-def run(spec_path: Path) -> None:
+def run(spec_path: Path, launch: Launcher) -> None:
     spec = read_json(spec_path)
     root = Path(spec["joint_root"])
     rows = read_json(Path(spec["data"]))
-    launch = Launcher(root / "environment_supervision")
     try:
         for version in range(spec["steps"]):
             current = round_path(root, version)
@@ -54,13 +52,5 @@ def run(spec_path: Path) -> None:
             launch.stop(process)
             write_json(current / "ENVIRONMENT_RELEASED.json", {"version": version})
     except BaseException as exc:
-        write_json(root / "solver_FAILED.json", {"error": repr(exc), "where": "joint_environment"})
+        record_failure(root, "solver", {"error": repr(exc), "where": "joint_environment"})
         raise
-    finally:
-        launch.close()
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--spec", type=Path, required=True)
-    run(parser.parse_args().spec)
