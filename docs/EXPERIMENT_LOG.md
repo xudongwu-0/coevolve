@@ -3158,3 +3158,31 @@ report data. Final output `runs/alfworld_core_200_oneshot_v2/COMPLETE.json`;
 all200 unique sample0 identities, seeds,tokens,input hashes and strict197 counts
 verified. Completed16:04:13 UTC,30.5min from first launch including failures,
 16.6min for the successful recovery round. The initial15min target was missed.
+
+## 2026-10-02 16:48 UTC: actual final W2 under frozen h2
+
+The user requested the rejected W2's200-task score. Freeze actual localstep79
+from the sequentialW2 phase (80native,5warmup,75Actor), not the retained W1.
+Its weightSHA256 is46fa776d8652188aba42f54212a9c7884db91ab42785fe1fbbc49bb11b018ea9,
+distinct from W1. Keep h2 digest4b7f50de842f638d862e81deae70566c71deb2a5c1a090a54e22fe825c11e174.
+Two100-task shards re-evaluate all200 at mean@1,temperature1,total4096tokens,
+seed6000045. Source57942d1 uses fresh worker TCP connections. Bothshards finish
+with no native failure; exact coverage/seeds/token budgets/source hashes and GPU
+release verified. Runtime11.02min.
+
+W2 no-patch100/200=50%; W2+h2 127/200=63.5%.
+Strict197:100/197=50.76% and126/197=63.96%.
+Against the frozen W1+h2 reference184/200=92%, W2 loses28.5pp, question95%
+interval[-35.5,-21.5]pp;5 tasks improve,62 regress. Strict197 difference-27.92pp,
+[-35.03,-20.81]pp. The gate's rejection was warranted, not a completed successful
+alternating improvement. Root cause remains unresolved.
+Output: `runs/alfworld_w2_h2_200_v1/COMPLETE.json`.
+
+Native H1 accounting was also checked:32steps,192 consumedEngineer trajectories,
+30critic-only and162Actor; selectedstep15 contains96/66 respectively.
+The official README example NUM_ROLLOUT174,rolloutbatch4,samplesperprompt8 implies
+5568nominal generated trajectories. This is not an audited release run budget or
+a29x efficiency result: SAO continuation inherits the already-RL-trained official
+Engineer, budgets/outcomes differ, and target reruns/critic/search/prefetch matter.
+The pinned fooSynaptic SAO implementation explicitly declares itself unofficial;
+its underlying AReaL revision and our integration changes are documented separately.
