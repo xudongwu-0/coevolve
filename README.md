@@ -28,6 +28,14 @@ H2此前固定W1训练，**不依赖退化的W2**；新的MA也从H1/W1而不是
 - 排除已有200题训练实例，基础设施故障抛错而非记零分；保留filler，
   固定目标服务与训练器均有独立超时、失败记录和GPU释放审计。
 
+评测入口为[matched GRPO evaluation](whale_local/sao_bridge/alfworld_matched_grpo_eval.py)：
+预先固定最终192条消费checkpoint，不依据200题选择96/192模型；
+使用与固定H1相同的W79历史证据/seed生成8个补丁，保留非法及重复槽。
+W0/W1各测24题mean@2诊断，**仅W1的24题选一个补丁**，随后不再改动，
+W0/W1分别完整重测同200题mean@1并报告严格197题。W0列仍是W1补丁的迁移测试，
+不是为W0单独重选的最优补丁。SAO采用历史选择的step15，因此不能把此次对照
+说成checkpoint选择过程完全相同；96点保留供后续审计，不参与本轮最终选择。
+
 ## ALFWorld模型起点、训练步数与checkpoint
 
 基础架构均为**Qwen3.5-9B**。Solver从官方`target-agent-sft`开始，
