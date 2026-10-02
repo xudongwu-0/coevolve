@@ -2939,3 +2939,34 @@ It is exploratory validation, not held-out AIME. AIME test stays sealed until a 
     gated on final freeze/report release. Lost in-flight work is an explicit
     lower-bound gap, never a zero-cost assumption; reserved node time starts
     at the original phase launch and includes all recovery and waiting.
+
+104. **2026-10-02 — rejected MA H2 and noninterrupting audit handoff.**
+    MA H2's second matrix completes with incumbent/step15/step31 proposal
+    means71.614583%/71.354167%/69.791667%. Retain E15 and the common H1;
+    MA W2 starts from W0/E15/H1, as does sequential W2. Neither arm has
+    accepted a counterpart change yet, so no effective co-adaptation has
+    been demonstrated. `W2_MATCHED_INPUT_AUDIT.json` verifies the actual
+    matched640 rows, model/critic and harness contents,80 steps/batch8,
+    seed1000042, learning rates and4:4 layout; only MA has central context.
+    W1/W2 together have1,280 distinct input IDs. Input parity is not an
+    outcome or a convergence result.
+
+    Commit`42a521f`preserves legacy completed phase bytes as well as
+    selection identities after revalidating native evidence. This matters
+    for cached non-first MA H2 during a later controller recovery.
+    45 tests/29 subtests and real MA H2 phase+selection temporary-copy
+    checks pass;9 training/trajectory implementation files match1a9af61.
+    At02:48 UTC, node3 queues`coevolve-strong-ma-v1-arm-r1`with
+    `--after-unit coevolve-strong-ma-v1-arm.service`. The new CPU-only
+    controller waits without interrupting original PID3820062 or its W2;
+    live W2 subsequently has14 steps/9 nonzero Actor updates. An already
+    frozen arm is a no-op; recovery retains the same inputs/attempt limits.
+    The migration is recorded in`ma/DEFERRED_AUDIT_HANDOFF.json`.
+    No active training, reward, target, optimizer or filler setting changed.
+
+    Published common cost fragments charge the complete original Engineer
+    window23.124939 GPUh and common-H1 selection/repair window12.825886
+    GPUh:35.950825 GPUh per logical arm, physically paid once. Separate
+    Solver-v5 and the strong-Solver train probe remain additional R&D.
+    Final per-arm costs and the MA advantage gate still await W2, immutable
+    freezes and both gated report releases.

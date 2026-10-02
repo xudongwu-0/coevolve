@@ -418,6 +418,10 @@ MA H2的incumbent/step15/step31分别8/8、8/8、2/8合法提案；
 其matrix首试完成16/20个unique harness后遇到worker transport ReadError/
 HTTP502，没有把错误记作零分。原训练与16份完整报告保留，systemd已自动
 启动第二次matrix；没有重新训练，也没有重采样Engineer提案。
+第二次matrix现已完成：incumbent/step15/step31均值为
+71.61%/71.35%/69.79%，H2未被采纳，继续保留E15/H1。MA也已进入W2。
+两臂第一轮都没有接受counterpart变化，不能把阶段顺序不同等同于已经
+发生了有效共适应；两侧W2目前都从同一个W0/E15/H1起点训练。
 
 完整pipeline已独立于agent运行：两臂`*-arm.service`推进到冻结，
 node4`coevolve-strong-sao-v1-sequential-report`与node3
@@ -438,6 +442,17 @@ node4`coevolve-strong-sao-v1-sequential-report`与node3
 所有失败及两次恢复均保存在顺序臂的`TARGET_ROUNDOFF_RECOVERY*.json`和
 failure归档；这些停顿也应计入成本。node3的MA原unit继续运行，未打断。
 
+node3另已排队`coevolve-strong-ma-v1-arm-r1`（冻结`42a521f`源码），使用
+`--after-unit coevolve-strong-ma-v1-arm.service`等待原controller自然停止，
+不会stop/kill原训练。旧controller若正常冻结，新controller直接返回已有
+freeze，不增加训练或评测；若旧精确审计遇到同类FP32边界残差，则在原有
+输入和max2 native attempts内恢复。兼容处理也覆盖非首阶段的旧
+`PHASE_COMPLETE.json`：重新验证原始native证据，但保持历史phase和selection
+收据逐字节不变，不允许借schema升级重写科学绑定。45测试/29 subtests及
+真实MA H2 phase+selection临时副本验证通过，9个训练/轨迹实现文件与旧
+`1a9af61`相同。`ma/DEFERRED_AUDIT_HANDOFF.json`保留启动/源码迁移记录；
+启动后已确认新unit仅CPU等待、原MA PID未变、W2继续非零Actor更新。
+
 最终器在任何report打开前增加了policy identity防误报：
 若两臂最终Solver权重SHA和harness SHA均相同，独立serving得到的分差只能
 称为评测波动，不能通过MA方法优势gate；原始配对分数仍保留。
@@ -453,6 +468,15 @@ evaluation，共1,160个task episodes。不能把声明行数当全部采样成�
 也不能凭相同ID任挑一个receipt作为optimizer实际消费的行为。
 最终成本审计要等两臂冻结和report释放；无收据的中断生成只能报告下界，
 原始启动至report释放之间的恢复/等待仍全部计入8卡分配时间。
+已发布的共同成本片段为：原Engineer训练/筛选/report及中断尝试的完整
+窗口23.124939 GPUh，共同H1选择含启动失败、修复、间隙和r2的窗口
+12.825886 GPUh，合计35.950825 GPUh。它们物理上只执行一次，但完整
+计入每个逻辑臂，不把失败或丢弃的step31搜索视为免费。另行Solver-v5与
+strong-Solver probe属于额外R&D，不混作免费的共同前缀。
+`W2_MATCHED_INPUT_AUDIT.json`已验证两臂实际W2的640行、模型/critic起点、
+harness内容、80步/batch8/seed1000042/LR/4:4布局一致，只有MA启用集中
+critic上下文；W1/W2无ID重叠，共1,280个不同权重训练输入。这是接线审计，
+不是W2完成或学习成功的证据。
 
 利用率必须区分filler：顺序H2整个phase实验SM25.95%、filler15.28%；
 MA W1整个phase实验SM43.87%、filler7.79%。这些是每进程pmon采样均值，
