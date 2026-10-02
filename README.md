@@ -10,6 +10,33 @@
 
 ## 最新任务：已验证 H1/W1 起点的自动交替实验
 
+**2026-10-02 14:21 UTC新任务：转向真正的联合轮次MA-SAO首版。**
+旧8小时实验已结束：普通SAO选中了H2但拒绝退化的W2；MA在启动时失败，
+不能作为算法对照。新的[联合实验入口](whale_local/sao_bridge/joint_experiment.py)
+在node3训练Engineer、node4训练Solver，共享版本屏障与同一次合作episode
+的最终奖励，两角色优化器持续存在，不再执行几十步H后几十步W的块交替。
+首版16轮、4轮critic预热、每角色12次Actor更新，batch8。
+Engineer actor保持E15起点，Solver保持v4-W79，critic各自匹配；
+Solver学习率暂降到5e-7，避免机械重用此前W2退化配方。
+
+新实验输出使用`runs/alfworld_joint_ma_pilot_v1`，与历史目录严格分离。
+先开发集24题选择最终Engineer的harness，再对冻结H1/W1及联合候选分别
+进行70题mean@2报告；候选即使更差也报告，不只挑正结果。
+每轮记录两角色真实行为概率、完整concat轨迹、团队奖励和动态的动作前
+critic上下文。后续轮次必须等待两个rollout策略都完成权重发布，任何伙伴
+失败使另一方显式停止。无效Engineer提案明确执行no-patch并计入结果，
+不伪造Solver样本或行为概率。
+
+这是**MAPPO式联合采样/更新 + 原生SAO value/GAE更新的初版**，尚不宣称
+完整MAPPO实现：ValueNorm等尚未接入；历史W79失败包仍是固定任务输入，
+真实奖励则由当前联合策略执行得到。未来独立SAO/IPPO式对照必须使用相同
+联合轮次和采样预算，仅改变critic可见信息。旧长阶段交替不是该主对照。
+GPU filler保持开启，node0-node2不使用，旧实验收据和模型不改写。
+
+MA旧故障已定位并修复：Launcher改写`HOME`后不能依赖交互用户的Git配置。
+源码校验现在对每条Git命令只信任解析后的两个确切SAO/AReaL路径；
+节点3真实子进程预检通过，不使用`safe.directory=*`。
+
 用户离线期间，node4跑普通SAO对照，node3跑MA-SAO。**两臂都从同一份
 Engineer E15/critic15与Solver v4 W79/critic79开始，都按H2 → W2顺序训练。**
 不要把上一轮保留下来的官方Agent-SFT W0误当成本轮的W1，也不要把已有

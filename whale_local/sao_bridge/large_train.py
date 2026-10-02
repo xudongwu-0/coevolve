@@ -267,6 +267,12 @@ def main():
         os.environ["MA_SAO_CONTEXT_FILE"] = str(Path(spec["central_context"]).resolve())
     else:
         os.environ.pop("MA_SAO_CONTEXT_FILE", None)
+    if spec.get("joint_root"):
+        if spec.get("central_context") or not spec.get("terminal_episodes"):
+            raise ValueError("Joint episodes require dynamic context and complete terminal trajectories")
+        os.environ["MA_SAO_JOINT_EPISODES"] = "1"
+    else:
+        os.environ.pop("MA_SAO_JOINT_EPISODES", None)
     rows = read_json(Path(spec["data"]))
     validate_training_rows(spec, rows)
     write_json(run / "consumed_rows.json", consumed_row_ledger(spec, rows))
@@ -294,22 +300,31 @@ def main():
             "started_at_unix": active_started_at,
         })
         try:
-            trainer.train(
-                workflow="sao_bridge.large_workflow.MathWorkflow",
-                workflow_kwargs={
+            workflow = "sao_bridge.large_workflow.MathWorkflow"
+            workflow_kwargs = {
+                "role": spec["role"], "tokenizer": spec["model"],
+                "gconfig": config.gconfig, "harness_path": spec["harness"],
+                "receipts_dir": str(run / "receipts"),
+                "evaluator_url": spec.get("evaluator_url"),
+                "total_tokens": spec["tokens"],
+                "interaction_credit": spec.get("interaction_credit", 0.0),
+                "recycle_pool": spec.get("recycle_pool"),
+                "domain": spec.get("domain", "math"),
+                "context_tokens": spec.get("context_tokens", 8192),
+                "solver_trajectory_style": spec.get("solver_trajectory_style", "individual"),
+            }
+            if spec.get("joint_root"):
+                from .joint_round import install_version_publication
+                install_version_publication(trainer, Path(spec["joint_root"]), spec["role"])
+                workflow = "sao_bridge.joint_workflow.JointWorkflow"
+                workflow_kwargs = {
                     "role": spec["role"], "tokenizer": spec["model"],
-                    "gconfig": config.gconfig, "harness_path": spec["harness"],
-                    "receipts_dir": str(run / "receipts"),
-                    "evaluator_url": spec.get("evaluator_url"),
+                    "gconfig": config.gconfig, "joint_root": spec["joint_root"],
                     "total_tokens": spec["tokens"],
-                    "interaction_credit": spec.get("interaction_credit", 0.0),
-                    "recycle_pool": spec.get("recycle_pool"),
-                    "domain": spec.get("domain", "math"),
-                    "context_tokens": spec.get("context_tokens", 8192),
-                    "solver_trajectory_style": spec.get(
-                        "solver_trajectory_style", "individual"
-                    ),
-                },
+                    "context_tokens": spec["context_tokens"],
+                }
+            trainer.train(
+                workflow=workflow, workflow_kwargs=workflow_kwargs,
             )
         except BaseException as exc:
             active_finished_at = time.time()
@@ -370,7 +385,8 @@ def main():
         "training_active_finished_at_unix": active_finished_at,
         "elapsed_seconds": time.monotonic() - started,
         "upstream": provenance, "role": spec["role"], "phase": spec["phase"],
-        "central_critic": bool(spec.get("central_context")),
+        "central_critic": bool(spec.get("central_context") or spec.get("joint_root")),
+        "joint_root": spec.get("joint_root"),
         "stage_optimizer_reset": True, "checkpoint_history": checkpoint_history,
     })
 

@@ -97,8 +97,9 @@ def ensure_model_runtime_metadata(checkpoint: Path, source: Path) -> dict:
 
 def verify_upstreams() -> dict[str, str]:
     result = {}
+    sao, areal = SAO.resolve(), AREAL.resolve()
     for name, path, revision in (
-        ("sao", SAO, SAO_REVISION), ("areal", AREAL, AREAL_REVISION)
+        ("sao", sao, SAO_REVISION), ("areal", areal, AREAL_REVISION)
     ):
         actual = subprocess.check_output(
             ["git", "-c", f"safe.directory={path}", "-C", str(path),
@@ -108,7 +109,7 @@ def verify_upstreams() -> dict[str, str]:
             raise RuntimeError(f"{name} revision is {actual}, expected {revision}")
         result[name] = actual
     subprocess.run(
-        ["git", "-c", f"safe.directory={AREAL}", "-C", str(AREAL),
+        ["git", "-c", f"safe.directory={areal}", "-C", str(areal),
          "apply", "--reverse", "--check",
          str(SAO / "patches/areal-sao.patch")],
         check=True, capture_output=True,
@@ -122,7 +123,7 @@ def verify_upstreams() -> dict[str, str]:
     ):
         runtime_patch = Path(__file__).with_name(name)
         subprocess.run(
-            ["git", "-c", f"safe.directory={AREAL}", "-C", str(AREAL),
+            ["git", "-c", f"safe.directory={areal}", "-C", str(areal),
              "apply", "--reverse", "--check", str(runtime_patch)],
             check=True, capture_output=True,
         )

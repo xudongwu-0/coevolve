@@ -95,6 +95,13 @@ def upstream_trainer(config, dataset, *, terminal_episodes: bool = False):
                 return actor
 
             def _create_critic(self, critic_config, allocation):
+                if os.environ.get("MA_SAO_JOINT_EPISODES") == "1":
+                    from .joint_critic import JointEpisodeCritic
+                    if allocation.backend != "fsdp":
+                        raise ValueError("Joint episode critic requires FSDP")
+                    critic = JointEpisodeCritic.as_controller(critic_config, self.scheduler)
+                    critic.create_process_group(parallel_strategy=allocation.parallel)
+                    return critic
                 if not os.environ.get("MA_SAO_CONTEXT_FILE"):
                     return super()._create_critic(critic_config, allocation)
                 from .central_critic import JointStateCritic
