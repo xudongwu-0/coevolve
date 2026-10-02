@@ -32,16 +32,23 @@ def assess(rows: list[dict], spec: dict) -> dict:
         grad = metric_value(metrics, "ppo_actor/update/grad_norm")
         if grad <= 0:
             hard.append("actor has no nonzero gradient")
-    warnings = []
+    warnings, stop_reasons = [], []
     for suffix, threshold in (
         ("joint_policy/fixed_reference_kl", 0.10),
-        ("joint_policy/peer_importance_clipped_fraction", 0.75),
         ("joint_value_norm/raw_value_mse", 4.0),
     ):
         if len(rows) >= 3 and all(
             metric_value(row["metrics"], suffix) > threshold for row in rows[-3:]
         ):
-            warnings.append(f"three consecutive {suffix} > {threshold}")
+            stop_reasons.append(f"three consecutive {suffix} > {threshold}")
+    if len(rows) >= 3 and all(
+        metric_value(row["metrics"], "joint_policy/peer_importance_clipped_fraction") > 0.75
+        for row in rows[-3:]
+    ):
+        # Long autoregressive trajectory ratios can clip without policy collapse.
+        warnings.append("three consecutive peer importance clipping fractions > 0.75")
+    if metric_value(metrics, "joint_policy/fixed_reference_available") != 1:
+        hard.append("fixed-reference diagnostic is unavailable")
     if metric_value(metrics, "joint_policy/reference_kl_overflow") > 0:
         hard.append("fixed-reference log ratio overflow")
     current = round_path(Path(spec["joint_root"]), latest["global_step"])
@@ -51,8 +58,9 @@ def assess(rows: list[dict], spec: dict) -> dict:
                 for slot in range(spec["batch_size"])]
     success = sum(row["reward"] for row in receipts) / len(receipts)
     return {
-        "status": "stop" if hard or warnings else "healthy",
-        "completed_steps": len(rows), "hard_errors": hard, "warnings": warnings,
+        "status": "stop" if hard or stop_reasons else "warning" if warnings else "healthy",
+        "completed_steps": len(rows), "hard_errors": hard,
+        "stop_reasons": stop_reasons, "warnings": warnings,
         "latest_team_success": success,
         "invalid_patch_fraction": sum(row["model_error"] is not None for row in proposals) / len(proposals),
         "completion_cap_fraction": sum(

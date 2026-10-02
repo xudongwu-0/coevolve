@@ -74,3 +74,7 @@ def test_invalid_and_constant_targets_are_reported_explicitly():
     row["returns"].fill_(1)
     _, stats = norm.prepare_update([row])
     assert stats["explained_variance_defined"] == 0
+    for field in ("behavior_mean", "behavior_std"):
+        state = {**norm.state(), field: float("inf")}
+        with pytest.raises(ValueError, match="checkpoint moments"):
+            norm.restore(state)

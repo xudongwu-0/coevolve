@@ -90,7 +90,10 @@ class JointValueNorm:
         tensors = {key: torch.tensor(value, dtype=torch.float32)
                    for key, value in state["tensors"].items()}
         if (not all(torch.isfinite(value).all() for value in tensors.values())
-                or not state["behavior_std"] > 0):
+                or not state["behavior_std"] > 0
+                or not torch.isfinite(torch.tensor([
+                    state["behavior_mean"], state["behavior_std"],
+                ])).all()):
             raise ValueError("Invalid ValueNorm checkpoint moments")
         self.normalizer.load_state_dict(tensors, strict=True)
         self.updates = state["updates"]

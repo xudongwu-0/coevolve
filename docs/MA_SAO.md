@@ -37,9 +37,11 @@ unbiased joint-policy correction guarantee**. Own-policy SAO correction remains.
 [joint_health](../whale_local/sao_bridge/joint_health.py) records fixed-reference
 sampled KL, raw value MSE, gradient validity, importance clipping/ESS, executable
 proposal validity, terminal reward and completion-cap rate. Nonfinite metrics,
-reference-ratio overflow or absent actor gradients stop explicitly. Three
-consecutive rounds with KL>0.10, raw MSE>4 or peer clipping fraction>0.75 request
-a shared soft stop. These conservative engineering thresholds are not calibrated
+reference-ratio overflow, absent reference diagnostics or absent actor gradients
+stop explicitly. Three consecutive rounds with KL>0.10 or raw MSE>4 request
+a shared soft stop. Peer clipping fraction>0.75 for three rounds is a warning,
+not a standalone stop: long autoregressive trajectory ratios can saturate even
+without policy collapse. These conservative engineering thresholds are not calibrated
 collapse predictors; held-out outcomes decide whether performance improved.
 Only checkpoints whose save is followed by a committed native metrics row are
 recoverable; both actor and normalized critic must exist at the same round.

@@ -36,6 +36,7 @@ def metrics(step, kl=0.01):
         "metrics": {
             "ppo_actor/update/grad_norm": 1.,
             "joint_policy/fixed_reference_kl": kl,
+            "joint_policy/fixed_reference_available": 1.,
             "joint_policy/peer_importance_clipped_fraction": 0.,
             "joint_policy/reference_kl_overflow": 0.,
             "joint_value_norm/raw_value_mse": 0.2,
@@ -91,6 +92,14 @@ def test_health_requires_consecutive_soft_warnings_and_reports_nonfinite(tmp_pat
     report = assess([metrics(i, 0.2) for i in range(3)], spec)
     assert report["status"] == "stop"
     assert report["latest_team_success"] == 1
+    clipped = [metrics(i) for i in range(3)]
+    for row in clipped:
+        row["metrics"]["joint_policy/peer_importance_clipped_fraction"] = 1.
+    report = assess(clipped, spec)
+    assert report["status"] == "warning"
+    assert report["warnings"] and not report["stop_reasons"]
+    clipped[-1]["metrics"]["joint_policy/fixed_reference_available"] = 0.
+    assert assess(clipped, spec)["status"] == "stop"
     bad = metrics(2)
     bad["metrics"]["ppo_actor/update/grad_norm"] = float("nan")
     assert assess([metrics(0), metrics(1), bad], spec)["hard_errors"]
