@@ -422,6 +422,10 @@ HTTP502，没有把错误记作零分。原训练与16份完整报告保留，sy
 71.61%/71.35%/69.79%，H2未被采纳，继续保留E15/H1。MA也已进入W2。
 两臂第一轮都没有接受counterpart变化，不能把阶段顺序不同等同于已经
 发生了有效共适应；两侧W2目前都从同一个W0/E15/H1起点训练。
+**04:11 UTC快照：顺序W2已完成80步/75次非零Actor更新并进入checkpoint
+选择；MA W2记录79步/74次非零Actor更新，仍在原native阶段。**
+两臂尚未最终冻结，report仍未打开。该快照不是实时状态；接手时先读
+`ARM_STATUS.json`及完成/释放收据，不重复已完成的W2训练。
 
 完整pipeline已独立于agent运行：两臂`*-arm.service`推进到冻结，
 node4`coevolve-strong-sao-v1-sequential-report`与node3
@@ -430,6 +434,11 @@ node4`coevolve-strong-sao-v1-sequential-report`与node3
 最终输出为`runs/alfworld_strong_sao_ma_v1/PAIRED_REPORT.json`。
 所有systemd启动参数、代码worktree和输入SHA均有run内收据；不依赖本次
 终端观察器存活。report尚未打开，最终MA增益尚无结论。
+成本也已自动排队：node4`coevolve-strong-sao-v1-sequential-cost`与node3
+`coevolve-strong-ma-v1-cost`使用冻结`42a521f`源码，仅CPU等待各自report
+service自然结束，再验证freeze/report/release并发布每臂`COST_AUDIT.json`。
+启动记录在每臂`COST_AUDIT_LAUNCH.json`，不停止其他unit，不提前写成功结果。
+这两个等待器已验证无GPU进程；它们不是仍需人工发起的评测或训练。
 
 **当前顺序臂unit为`coevolve-strong-sao-v1-sequential-arm-r2`，不是旧的
 `...-arm`或`...-arm-r1`。** W1训练已成功，但原精确区间审计在step26的
@@ -458,6 +467,9 @@ freeze，不增加训练或评测；若旧精确审计遇到同类FP32边界残�
 称为评测波动，不能通过MA方法优势gate；原始配对分数仍保留。
 `7067440`及`FINALIZER_IDENTITY_GUARD_MIGRATION.json`记录该纯解释性迁移。
 上述恢复中用户filler一直active，没有停止或更改参数。
+选择门槛应准确描述：当前`select_checkpoint`计算Bonferroni LCB供诊断，
+实际采纳条件是至少+2pp点差，不额外要求该LCB为正；最终MA门才要求
+至少+5pp且题级配对95%下界为正。这是原冻结实现，不是本次放宽门槛。
 
 成本工具`alfworld_strong_cost`已加入并在真实已完成阶段上验证：
 顺序H2声明192行，实际保存198次生成，额外6次是prefetch重复输入；

@@ -2970,3 +2970,24 @@ It is exploratory validation, not held-out AIME. AIME test stays sealed until a 
     Solver-v5 and the strong-Solver train probe remain additional R&D.
     Final per-arm costs and the MA advantage gate still await W2, immutable
     freezes and both gated report releases.
+
+105. **2026-10-02 04:11 UTC — final W block and README handoff.**
+    Sequential W2 has completed80 native steps/75 nonzero Actor updates and
+    entered checkpoint selection. MA W2 has79 recorded steps/74 nonzero Actor
+    updates; its original native phase remains active. Neither arm has frozen
+    and no final report exists at this observation. Completed native training
+    must not be confused with a completed comparison or convergence.
+
+    CPU-only cost services are already waiting for the respective reporters:
+    node4`coevolve-strong-sao-v1-sequential-cost`and node3
+    `coevolve-strong-ma-v1-cost`, both frozen42a521f. Their launch receipts are
+    stored per arm and their waiting cgroups have no GPU processes. Each cost
+    publication remains conditional on genuine freeze/report/release evidence.
+
+    The root README now presents the actual9B research task, positive
+    single-role gates, real fixed-H1 instability, active services, remaining
+    validation and resource/provenance boundaries. The older2B RSFT/GRPO
+    description is explicitly historical instead of misleadingly presenting
+    itself as the current method. W selection uses the original+2pp point
+    floor; its recorded Bonferroni LCB is diagnostic, not a promotion condition.
+    This clarification changes no running gate or training setting.

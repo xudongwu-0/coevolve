@@ -103,6 +103,10 @@ the incumbent harness and no-patch. W checkpoints are only considered after the
 full80-step phase. Shared/current control reports are bound to Solver path,
 harness hash, question IDs, seeds and decode settings. Runtime supplementation
 does not rewrite already-complete historical model metadata.
+W promotion uses the frozen two-percentage-point accuracy floor. The selector
+also records a Bonferroni-adjusted paired LCB for diagnosis; that LCB is not an
+additional qualification condition. Do not confuse this selection rule with
+the final MA advantage gate's positive paired95% lower-bound requirement.
 
 After MA W1 actually changes W, `alfworld_strong_refresh` collects24 official
 greedy baseline cohorts of10 **train-only** tasks. It freezes the raw records,
@@ -168,6 +172,15 @@ CUDA_VISIBLE_DEVICES='' PYTHONPATH=whale_local python -B \
   -m sao_bridge.alfworld_strong_cost \
   --protocol runs/alfworld_strong_sao_ma_v1/frozen_protocol.json --arm sequential
 ```
+
+For the current run, CPU-only systemd jobs are already queued:
+`coevolve-strong-sao-v1-sequential-cost` on node4 and
+`coevolve-strong-ma-v1-cost` on node3, using frozen42a521f.
+Each waits for its existing report unit to stop, then invokes this CLI.
+`COST_AUDIT_LAUNCH.json` records the command/source; a stopped or failed reporter
+is not assumed successful, because the audit still validates actual completion,
+freeze and release receipts before publishing. No GPU workload is allocated by
+the waiting jobs, and they never stop the reporters.
 
 Use `--arm ma` on node3. `COST_AUDIT.json` separates declared/optimizer-consumed
 episodes from all saved fresh-generation receipts, including prefetch duplicates.
