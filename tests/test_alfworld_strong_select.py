@@ -6,7 +6,7 @@ from unittest.mock import Mock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "whale_local"))
 from sao_bridge.alfworld_strong_select import (
-    checked_matrix, matrix_config, publish_selection_binding, run_matrix,
+    checked_matrix, matrix_attempt_limit, matrix_config, publish_selection_binding, run_matrix,
     run as select_phase, select_engineer, selection_binding, supplement_runtime,
 )
 from sao_bridge.budget import contract_digest
@@ -14,6 +14,44 @@ from sao_bridge.common import file_sha, read_json, write_json
 
 
 class StrongSelectionTests(unittest.TestCase):
+    def test_port_collision_recovery_is_explicit_bounded_and_pre_evaluation_only(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            write_json(root / "request.json", {"solver_model": "unchanged"})
+            self.assertEqual(matrix_attempt_limit(root, 2), 2)
+            failures = {}
+            for i in (1, 2):
+                failed = root / f"attempt-{i:02d}"
+                write_json(failed / "FAILED.json", {
+                    "error": "RuntimeError('Service http://127.0.0.1:19801/health exited before readiness')",
+                })
+                write_json(failed / "RELEASED.json", {
+                    "foreign_gpu_pids": [], "remaining_gpu_pids": [], "verified_filler_pids": [],
+                    "filler_unit_active": True,
+                })
+                log = failed / "supervision/solver_replica0.log"
+                log.parent.mkdir()
+                log.write_text("torch.distributed.DistNetworkError: EADDRINUSE\n")
+                failures[failed.name] = {
+                    "failure_sha256": file_sha(failed / "FAILED.json"),
+                    "log": str(log), "log_sha256": file_sha(log),
+                }
+            receipt = {
+                "reason": "vllm-distributed-port-collision", "request_sha256": file_sha(root / "request.json"),
+                "original_attempt_limit": 2, "additional_attempts": 1, "failures": failures,
+            }
+            write_json(root / "STARTUP_RECOVERY.json", receipt)
+            self.assertEqual(matrix_attempt_limit(root, 2), 3)
+            for change in ({"additional_attempts": 2}, {"request_sha256": "changed"},
+                           {"original_attempt_limit": 3}, {"failures": {}}):
+                write_json(root / "STARTUP_RECOVERY.json", {**receipt, **change})
+                with self.subTest(change=change), self.assertRaisesRegex(ValueError, "authorization"):
+                    matrix_attempt_limit(root, 2)
+            write_json(root / "STARTUP_RECOVERY.json", receipt)
+            write_json(root / "attempt-01/PROGRESS.json", {"completed": 1})
+            with self.assertRaisesRegex(ValueError, "pre-evaluation"):
+                matrix_attempt_limit(root, 2)
+
     @staticmethod
     def proposals():
         return {

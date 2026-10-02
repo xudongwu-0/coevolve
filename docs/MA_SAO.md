@@ -65,6 +65,17 @@ protocol and error responses, but awaits asynchronous worker forwarding.
 The original single-harness controller remains the default unless the new flag
 is explicit; running frozen experiments are not modified in place.
 
+Concurrent vLLM replicas now receive distinct internal rendezvous port bases,
+separate from their HTTP ports, rather than racing in the shared ephemeral pool.
+MA W2 selection encountered two documented `EADDRINUSE` startup failures before
+any evaluation started. An explicitly authorized `STARTUP_RECOVERY.json` may
+permit exactly one additional matrix attempt after both original attempts:
+it binds the unchanged request and original failure/log hashes, requires GPU
+release and rejects any earlier completed/progress reports. This is an extra
+**infrastructure attempt**, not an unchanged retry budget; its time and work
+remain charged. It does not extend native training, change model/data/seeds,
+relax the selection gate, or treat startup failure as a zero-reward sample.
+
 The matrix runner and train-only context support have CPU regression coverage.
 The full paired continuation is not yet a completed experiment; runtime receipts
 and subsequent entries in [the experiment log](EXPERIMENT_LOG.md) are authoritative.

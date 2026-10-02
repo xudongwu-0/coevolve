@@ -130,7 +130,8 @@ class Launcher:
         except psutil.NoSuchProcess:
             return False
 
-    def start(self, command: list[str], *, gpus: str, name: str):
+    def start(self, command: list[str], *, gpus: str, name: str,
+              env_overrides: dict[str, str] | None = None):
         self.check()
         # Serialize Popen + ownership registration with GPU audits. Otherwise a new
         # worker can appear in nvidia-smi before its root is registered.
@@ -145,7 +146,8 @@ class Launcher:
                 log_path.rename(previous)
             with log_path.open("wb") as log:
                 process = subprocess.Popen(
-                    command, cwd=ROOT, env=dict(self.env, CUDA_VISIBLE_DEVICES=gpus),
+                    command, cwd=ROOT,
+                    env={**self.env, **(env_overrides or {}), "CUDA_VISIBLE_DEVICES": gpus},
                     stdout=log, stderr=subprocess.STDOUT,
                 )
             self.children.append(process)
@@ -158,9 +160,11 @@ class Launcher:
         print(f"{name}: PID {process.pid}, GPUs {gpus}", flush=True)
         return process
 
-    def module(self, module: str, args: list, *, gpus: str, name: str):
+    def module(self, module: str, args: list, *, gpus: str, name: str,
+               env_overrides: dict[str, str] | None = None):
         return self.start(
             [sys.executable, "-B", "-m", module, *map(str, args)], gpus=gpus, name=name,
+            env_overrides=env_overrides,
         )
 
     def wait(self, process, name: str, timeout: float = 43200):
@@ -285,6 +289,9 @@ class Launcher:
                     + (["--language-model-only"] if language_model_only else [])
                     + list(server_args or []),
                     gpus=assigned, name=name + f"_replica{index}",
+                    # Keep delayed worker rendezvous out of the shared ephemeral
+                    # port pool while independent replicas start concurrently.
+                    env_overrides={"VLLM_PORT": str(replica_port + 1)},
                 )
                 processes.append(process)
                 urls.append(f"http://127.0.0.1:{replica_port}/v1")

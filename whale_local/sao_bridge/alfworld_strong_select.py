@@ -105,8 +105,40 @@ def checked_matrix(output: Path, config: dict) -> dict:
     return report
 
 
+def matrix_attempt_limit(root: Path, attempts: int) -> int:
+    recovery = root / "STARTUP_RECOVERY.json"
+    if not recovery.is_file():
+        return attempts
+    receipt = read_json(recovery)
+    if (
+        receipt["reason"] != "vllm-distributed-port-collision"
+        or receipt["request_sha256"] != file_sha(root / "request.json")
+        or receipt["original_attempt_limit"] != attempts
+        or receipt["additional_attempts"] != 1
+        or set(receipt["failures"]) != {f"attempt-{i:02d}" for i in range(1, attempts + 1)}
+    ):
+        raise ValueError("Invalid bounded matrix startup recovery authorization")
+    for name, evidence in receipt["failures"].items():
+        failed = root / name
+        log = Path(evidence["log"])
+        if (
+            file_sha(failed / "FAILED.json") != evidence["failure_sha256"]
+            or "/health exited before readiness" not in read_json(failed / "FAILED.json")["error"]
+            or (failed / "PROGRESS.json").exists()
+            or (failed / "COMPLETE.json").exists()
+            or any((failed / "reports").glob("*.json"))
+            or not log.resolve().is_relative_to((failed / "supervision").resolve())
+            or file_sha(log) != evidence["log_sha256"]
+            or "EADDRINUSE" not in log.read_text()
+        ):
+            raise ValueError("Recovery requires unchanged pre-evaluation port-collision failures")
+        checked_release(failed)
+    return attempts + 1
+
+
 def run_matrix(launch: Launcher, config: dict, root: Path, attempts: int) -> tuple[dict, Path]:
     _immutable_json(root / "request.json", config)
+    attempts = matrix_attempt_limit(root, attempts)
     for attempt in range(1, attempts + 1):
         output = root / f"attempt-{attempt:02d}"
         current = {**config, "run": str(output)}

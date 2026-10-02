@@ -16,6 +16,21 @@ from sao_bridge.common import SAO
 
 
 class OwnershipTests(unittest.TestCase):
+    def test_vllm_replicas_use_distinct_internal_ports_without_changing_parent(self):
+        launcher = object.__new__(Launcher)
+        launcher.env = {"VLLM_PORT": "35000"}
+        launcher.module = Mock(side_effect=[Mock(), Mock()])
+        launcher.ready = Mock()
+        launcher.stop = Mock()
+        with launcher.vllm("model", port=19801, gpus="0,1", name="solver", data_parallel=2) as urls:
+            self.assertEqual(urls, "http://127.0.0.1:19801/v1,http://127.0.0.1:19811/v1")
+            self.assertEqual(
+                [call.kwargs["env_overrides"] for call in launcher.module.call_args_list],
+                [{"VLLM_PORT": "19802"}, {"VLLM_PORT": "19812"}],
+            )
+            self.assertEqual(launcher.env, {"VLLM_PORT": "35000"})
+        self.assertEqual(launcher.stop.call_count, 2)
+
     def test_frozen_worktree_resolves_upstreams_before_hydra_import(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)
@@ -67,8 +82,12 @@ class OwnershipTests(unittest.TestCase):
             process.poll.return_value = None
             log = launcher.root / "evaluation.log"
             log.write_bytes(b"original startup error\n")
-            with patch("sao_bridge.launch.subprocess.Popen", return_value=process):
-                launcher.start(["fixture"], gpus="", name="evaluation")
+            with patch("sao_bridge.launch.subprocess.Popen", return_value=process) as spawn:
+                launcher.start(["fixture"], gpus="", name="evaluation",
+                               env_overrides={"VLLM_PORT": "19802", "CUDA_VISIBLE_DEVICES": "wrong"})
+                self.assertEqual(spawn.call_args.kwargs["env"],
+                                 {"VLLM_PORT": "19802", "CUDA_VISIBLE_DEVICES": ""})
+                self.assertEqual(launcher.env, {})
                 log.write_bytes(b"second attempt\n")
                 launcher.start(["fixture"], gpus="", name="evaluation")
             archived = sorted(
