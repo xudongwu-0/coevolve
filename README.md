@@ -88,7 +88,10 @@ W0/W1分别完整重测同200题mean@1并报告严格197题。W0列仍是W1补�
 独立更新统计，已在没有提交optimizer指标行时停止；16个Engineer动作及12个
 Solver终止outcome保留审计，不能把失败采样当免费成本。修正为整个DP组共享
 有效目标统计，真实双进程回归覆盖不同分片token数及非有限值传播。
-恢复目录`runs/alfworld_joint_async_6h_v2`，源码绑定见其`LAUNCH.json`；
+后续概率审计还发现vLLM默认raw logprob未包含Engineer的0.7采样温度，
+现显式使用`processed_logprobs`。旧试跑的真实采样和已提交更新成本另记；
+历史单角色结果不改写，但这也是MA与旧baseline间的实现差异。
+恢复目录`runs/alfworld_joint_async_6h_v4`，源码绑定见其`LAUNCH.json`；
 **尚未验证GPU联合更新或MA性能**，旧v1目录不再是活跃训练。
 
 ## ALFWorld模型起点、训练步数与checkpoint

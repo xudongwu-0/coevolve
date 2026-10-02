@@ -6,8 +6,14 @@
 但尚无已提交optimizer指标行。核查发现ValueNorm按DP分片独立更新，已停止该尝试，
 不保留其模型；两节点GPU释放及filler已确认。真实双进程回归复现了不一致，
 现改为先收集整个DP组的有效目标，再在各rank更新相同的官方统计。
-旧尝试目录`runs/alfworld_joint_async_6h_v1`保留，恢复目录为
-`runs/alfworld_joint_async_6h_v2`；这些失败采样不是免费成本，不能并入有效更新数。
+旧尝试目录`runs/alfworld_joint_async_6h_v1`保留。v2因快照的空gitlink目录内
+出现嵌套链接，在模型加载前provenance失败，0采样；修复精确链接并在两个UID下验证后，
+v3完成Editor两轮critic预热、Solver两轮预热和一次Actor更新。
+但概率审计确认默认raw logprob不包含Engineer采样温度，v3也已停止弃用：
+32个H动作、32个W终止outcome，H消费16、W消费24；未提交工作不能假定为零。
+修复显式`processed_logprobs`后用全新`runs/alfworld_joint_async_6h_v4`恢复，
+起点、温度、数据与截止时间不变。以上失败采样不是免费成本，
+不能将新的round12称为包含全部失败成本的严格同采样实验。
 最新启动绑定以恢复目录的`LAUNCH.json`为准，截止时间不变。
 
 2026-10-02 17:09 UTC的新请求尚未完成，不能因旧测评完成而结束。

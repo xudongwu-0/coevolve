@@ -1,5 +1,6 @@
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import asdict
 from pathlib import Path
 import sys
 import tempfile
@@ -17,7 +18,7 @@ from areal.utils.data import batched_call
 from sao_bridge.common import AREAL_REVISION, SAO_REVISION, read_json, verify_upstreams, write_json
 from sao_bridge.joint_critic import attach_joint_context, expand_joint_context
 from sao_bridge.joint_round import checked_behavior, install_version_publication, publish_version, record_failure, wait_versions
-from sao_bridge.joint_workflow import JointWorkflow
+from sao_bridge.joint_workflow import JointVLLMConfig, JointWorkflow
 
 
 class JointTests(unittest.TestCase):
@@ -25,6 +26,20 @@ class JointTests(unittest.TestCase):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
         self.root = Path(temporary.name)
+
+    def test_joint_vllm_returns_actual_tempered_behavior_probabilities(self):
+        from areal.api.cli_args import vLLMConfig
+        from vllm.config import ModelConfig
+
+        self.assertEqual(ModelConfig.__dataclass_fields__["logprobs_mode"].default, "raw_logprobs")
+        original = vLLMConfig(model="initial-policy", max_num_seqs=16)
+        joint = JointVLLMConfig(**asdict(original))
+        args = vLLMConfig.build_args(joint, tp_size=1, pp_size=1)
+        command = vLLMConfig.build_cmd_from_args(args)
+        self.assertEqual(args["logprobs_mode"], "processed_logprobs")
+        self.assertEqual(command[command.index("--logprobs-mode") + 1], "processed_logprobs")
+        self.assertEqual(args["max_num_seqs"], original.max_num_seqs)
+        self.assertNotIn("logprobs_mode", asdict(original))
 
     def test_first_failure_is_preserved_under_concurrent_peer_cancellation(self):
         original = {"error": "original environment failure"}

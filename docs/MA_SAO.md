@@ -32,6 +32,12 @@ own-token TIS/DIS. This is **not full MAPPO hyperparameter or architecture parit
 
 Collection may overlap learning by one round. Every action retains authentic
 behavior logprob and version; versions outside `[round-1, round]` fail closed.
+Joint rollout servers explicitly request `processed_logprobs`: the installed
+vLLM defaults to raw probabilities before temperature, which do not describe
+the Engineer's temperature0.7 behavior policy. The initial uncorrected trial
+was discarded and its sampling/update cost retained. Historical single-role
+results are unchanged; this correction is an additional implementation
+difference, not evidence isolating an algorithm-only MAPPO advantage.
 Before updating either actor, workers publish both roles' proximal likelihoods
 for the same round and slot. The actor advantage is multiplied by the partner's
 trajectory likelihood ratio clipped to[0.5,2]. This is an experimental, biased

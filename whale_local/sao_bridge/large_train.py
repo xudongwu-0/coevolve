@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import asdict
 import getpass
 import json
 import os
@@ -318,6 +319,14 @@ def main():
     cfg_path = run / "trainer.yaml"
     cfg_path.write_text(yaml.safe_dump(configure(spec, run), sort_keys=False))
     config, _ = load_expr_config(["--config", str(cfg_path)], PPOConfig)
+    if spec.get("joint_root"):
+        from .joint_workflow import JointVLLMConfig
+        config.vllm = JointVLLMConfig(**asdict(config.vllm))
+        write_json(run / "rollout_probability_contract.json", {
+            "logprobs_mode": config.vllm.logprobs_mode,
+            "temperature": config.gconfig.temperature,
+            "reason": "Behavior logprobs must include the actual sampling transforms.",
+        })
     if (config.critic is None) != (critic_mode == "none"):
         raise RuntimeError("Resolved critic configuration does not match critic_mode")
     started = time.monotonic()

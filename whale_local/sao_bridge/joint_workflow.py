@@ -1,6 +1,7 @@
 """One native action trajectory per role, sharing a cooperative terminal outcome."""
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 import json
 from pathlib import Path
 import sys
@@ -8,6 +9,7 @@ import time
 
 import torch
 from areal.api import RolloutWorkflow
+from areal.api.cli_args import vLLMConfig
 from areal.experimental.openai import ArealOpenAI
 from areal.utils.hf_utils import load_hf_tokenizer
 
@@ -16,6 +18,11 @@ from .alfworld_train_data import _immutable_json
 from .common import ROOT, read_json, write_json
 from .joint_critic import attach_joint_context
 from .joint_round import checked_behavior, record_failure, round_path, wait_record, wait_versions
+
+
+@dataclass
+class JointVLLMConfig(vLLMConfig):
+    logprobs_mode: str = field(default="processed_logprobs", init=False)
 
 
 def parse_proposal(text: str) -> tuple[dict, str | None]:
