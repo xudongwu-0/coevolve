@@ -24,6 +24,7 @@ def test_independent_rollout_does_not_join_torchrun_agent_store(monkeypatch):
     assert environment["CUDA_VISIBLE_DEVICES"] == "4,5,6,7"
     assert environment["NCCL_SOCKET_IFNAME"] == "lo"
     assert environment["HARNESS_R1_REGISTER_VLLM_TEXT"] == "1"
+    assert environment["VLLM_HOST_IP"] == "127.0.0.1"
 
 
 def test_tp1_recovery_preserves_learning_and_proposal_budgets():

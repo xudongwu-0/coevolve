@@ -242,7 +242,8 @@ def _export_actor(model, tokenizer, path, rank):
 
 def rollout_environment(gpus):
     environment = dict(os.environ, CUDA_VISIBLE_DEVICES=gpus,
-                       HARNESS_R1_REGISTER_VLLM_TEXT="1", VLLM_PLUGINS="")
+                       HARNESS_R1_REGISTER_VLLM_TEXT="1", VLLM_PLUGINS="",
+                       VLLM_HOST_IP="127.0.0.1")
     distributed_keys = {
         "RANK", "LOCAL_RANK", "WORLD_SIZE", "LOCAL_WORLD_SIZE",
         "GROUP_RANK", "ROLE_RANK", "ROLE_WORLD_SIZE", "MASTER_ADDR", "MASTER_PORT",
