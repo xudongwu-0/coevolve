@@ -144,6 +144,9 @@ This is an audit-only correction, not target clipping or a reward/optimizer
 change. Larger violations and non-finite/reversed ranges still fail. Preserve
 the original failure and source; reuse the completed training rather than
 spending another training attempt.
+For selections frozen before these two audit fields existed, verify every old
+binding exactly and publish the additive fields in `target_range_audit.json`.
+Do not rewrite the old identity or regenerate its completed proposal matrix.
 
 ## Objective and control
 

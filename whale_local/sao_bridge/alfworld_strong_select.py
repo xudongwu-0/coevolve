@@ -46,6 +46,25 @@ def publish_selection_binding(protocol: dict, state: dict) -> None:
     _immutable_json(path, selection_binding(protocol, state))
 
 
+def freeze_selection_identity(root: Path, identity: dict) -> None:
+    path = root / "identity.json"
+    if path.is_file():
+        legacy = {
+            **identity, "native_audit": {
+                key: value for key, value in identity["native_audit"].items()
+                if key not in {"critic_target_range", "critic_target_roundoff_atol"}
+            },
+        }
+        if legacy != identity and read_json(path) == legacy:
+            _immutable_json(root / "target_range_audit.json", {
+                "selection_identity_sha256": file_sha(path),
+                "native_audit": identity["native_audit"],
+                "migration": "Add raw target extrema/tolerance; retain every original binding.",
+            })
+            return
+    _immutable_json(path, identity)
+
+
 def supplement_runtime(checkpoint: Path, reference: Path) -> None:
     if any(not (checkpoint / name).is_file() for name in (
         "preprocessor_config.json", "processor_config.json",
@@ -353,7 +372,7 @@ def run(protocol_path: Path, arm: str, phase: str, training_root: Path, root: Pa
     root.mkdir(parents=True, exist_ok=True)
     with (root / "controller.lock").open("a") as lease:
         fcntl.flock(lease, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        _immutable_json(root / "identity.json", {
+        freeze_selection_identity(root, {
             "protocol_sha256": file_sha(protocol_path), "arm": arm, "phase": phase,
             "input_state_sha256": file_sha(training_root / "input_state.json"),
             "phase_completion_sha256": file_sha(training_root / "PHASE_COMPLETE.json"),

@@ -7,10 +7,10 @@ from unittest.mock import Mock, patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "whale_local"))
 from sao_bridge.alfworld_strong_select import (
     checked_matrix, matrix_config, publish_selection_binding, run_matrix,
-    select_engineer, selection_binding, supplement_runtime,
+    run as select_phase, select_engineer, selection_binding, supplement_runtime,
 )
 from sao_bridge.budget import contract_digest
-from sao_bridge.common import read_json, write_json
+from sao_bridge.common import file_sha, read_json, write_json
 
 
 class StrongSelectionTests(unittest.TestCase):
@@ -83,6 +83,51 @@ class StrongSelectionTests(unittest.TestCase):
             with patch("sao_bridge.alfworld_strong_select.ensure_model_runtime_metadata") as supplement:
                 supplement_runtime(root, root)
                 supplement.assert_called_once_with(root, root)
+
+    def test_completed_legacy_selection_keeps_identity_and_skips_gpu_work(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            training, selection = root / "training", root / "selection"
+            protocol = root / "protocol.json"
+            write_json(protocol, {"phase_orders": {"sequential": ["h2"]}})
+            write_json(training / "input_state.json", {"protocol_sha256": file_sha(protocol)})
+            write_json(training / "phase_config.json", {})
+            write_json(training / "PHASE_COMPLETE.json", {"training_root": str(training / "attempt-01")})
+            write_json(selection / "SELECTED_STATE.json", {"selected": "incumbent"})
+            complete = {"selected_state_sha256": file_sha(selection / "SELECTED_STATE.json")}
+            write_json(selection / "COMPLETE.json", complete)
+            write_json(selection / "RELEASED.json", {})
+            legacy_audit = {
+                "optimizer_steps": 32, "actor_steps": 27, "nonzero_actor_gradients": 27,
+                "warmup_isolated": True, "critic_targets_within_role_reward_range": True,
+                "metrics_sha256": "unchanged-metrics", "native_completion_sha256": "unchanged-completion",
+            }
+            identity = {
+                "protocol_sha256": file_sha(protocol), "arm": "sequential", "phase": "h2",
+                "input_state_sha256": file_sha(training / "input_state.json"),
+                "phase_completion_sha256": file_sha(training / "PHASE_COMPLETE.json"),
+                "native_audit": legacy_audit,
+            }
+            write_json(selection / "identity.json", identity)
+            before = file_sha(selection / "identity.json")
+            current_audit = {
+                **legacy_audit, "critic_target_range": [-1.0, 1.0], "critic_target_roundoff_atol": 1e-6,
+            }
+            with (
+                patch("sao_bridge.alfworld_strong_select.training_evidence", return_value=({}, current_audit)) as audit,
+                patch("sao_bridge.alfworld_strong_select.checked_release"),
+                patch("sao_bridge.alfworld_strong_select.Launcher") as launcher,
+            ):
+                for _ in range(2):
+                    self.assertEqual(select_phase(protocol, "sequential", "h2", training, selection), complete)
+                self.assertEqual(file_sha(selection / "identity.json"), before)
+                self.assertEqual(read_json(selection / "target_range_audit.json")["native_audit"], current_audit)
+                for changes in ({"actor_steps": 26}, {"metrics_sha256": "different"},
+                                {"native_completion_sha256": "different"}):
+                    audit.return_value = ({}, {**current_audit, **changes})
+                    with self.subTest(changes=changes), self.assertRaisesRegex(ValueError, "frozen"):
+                        select_phase(protocol, "sequential", "h2", training, selection)
+                launcher.assert_not_called()
 
     def test_selection_binding_rejects_counterpart_harness_and_decode_changes(self):
         with tempfile.TemporaryDirectory() as temporary:
