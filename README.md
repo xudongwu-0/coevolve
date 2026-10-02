@@ -6,19 +6,36 @@
 
 ## 当前任务与主要结论
 
-更新快照：**2026-10-02 04:11 UTC**。运行状态会继续变化，以服务器上的完成/释放收据为准。
+更新快照：**2026-10-02 04:41 UTC**。运行状态会继续变化，以服务器上的完成/释放收据为准。
 
 1. **验证 SAO 可以训练9B Solver：已通过单seed探索门槛。** 固定空harness，从官方 Agent-SFT W0 出发，80个native step包含5步critic warmup和75次非零Actor更新，选中step79。
-2. **验证 SAO 可以提高9B Engineer的修改能力：已通过单seed探索门槛。** 从官方Engineer起点继续训练，选中step15，即11次Actor更新后的模型；匹配每个模型的8个训练failure prompts、提案槽位和decode seeds。SAO-H已有正证据，尚未进行GRPO替代复现。
+2. **验证 SAO 可以提高9B Engineer的修改能力：已通过单seed探索门槛。** 从官方已训练的`harness-r1`继续训练，选中step15，即11次Actor更新后的模型；匹配每个模型的8个训练failure prompts、提案槽位和decode seeds。不是从SFT-only初始化的SAO/GRPO对照；对口的`agent-sft-harness-r1`尚未本地测评。
 3. **建立强顺序基线，再检验 MA-SAO：正在运行，尚无MA优势结论。** 先完成公平对照，再决定稳定性改进、关键组件和交替频率研究。WebShop仍是条件性的后续任务。
 
-| 单角色证据 | 评测口径 | 起点 → 训练后 | 提升及题级95%区间 |
-|---|---|---:|---|
-| 9B Solver SAO-W v4 | 独立91题，mean@2，固定空harness | 78.02% → **89.56%** | **+11.54pp**，[+3.30,+19.78]pp |
-| 9B Engineer SAO-H fast-v1 | 独立70题，对每个模型8个提案取均值 | 72.14% → **80.00%** | **+7.86pp**，[+4.46,+11.25]pp |
+主结果每行表示一个完整系统，不把“Engineer学习诊断”和“加harness的实际
+收益”混在同一张前后对照表中。官方数字来自
+[Harness-R1结果表](https://github.com/DeepExperience/Harness-R1#results)。
 
-Engineer的分数是其提案部署后带来的Solver任务表现，不是Engineer自己解题；
-训练后的80.00%也高于no-patch的75.71%。这是单训练seed、已使用过的开发
+| 系统配置 | 官方ALFWorld：500题 | 本地Weight评测：91题 | 本地Harness评测：70题 |
+|---|---:|---:|---:|
+| 原始Qwen3.5-9B，默认harness | 40.6% | 未测 | 未测 |
+| 原始Qwen3.5-9B + Harness-R1 | 53.2% | 未测 | 未测 |
+| Agent SFT，默认harness | 71.2% | 78.02% | 75.71% |
+| Agent SFT + 官方对口Harness-R1 | 84.0% | 未测 | 未测 |
+| Agent SFT + SAO-Weight，仅更新Solver | — | **89.56%** | 未测 |
+| Agent SFT + SAO-Harness，Solver不变 | — | 未测 | **80.00%** |
+| SAO更新后的Solver + SAO更新后的Harness | — | 尚未完成统一评测 | 尚未完成统一评测 |
+
+不同列不能相减或排名。我们的起点已经是Agent-SFT，不是官方40.6%的原始
+模型；同口径Weight提升为+11.54pp，题级95%区间[+3.30,+19.78]pp，
+相对不改harness的Harness收益为+4.29pp。Weight列采用mean@2；
+Harness列对8个匹配Engineer提案取Solver成功率均值，不是best-of-8。
+
+单列的Engineer学习诊断是E0提案72.14%到E15提案80.00%，+7.86pp，
+题级95%区间[+4.46,+11.25]pp。其中E0低于no-patch的75.71%；该学习增益
+不是相对无harness的增益，不能相加。E0使用面向vanilla Solver训练的
+官方`harness-r1`，而非针对Agent-SFT训练的官方`agent-sft-harness-r1`；
+尚不能据此宣称SAO胜过官方GRPO。所有本地结果是单训练seed、已使用过的开发
 cohort上的探索性证据，不是多seed稳健性或未接触过的确认性测试。
 **不能把两项单角色收益相加，当成MA-SAO的收益。**
 
@@ -28,10 +45,10 @@ cohort上的探索性证据，不是多seed稳健性或未接触过的确认性�
 两个逻辑臂；共同前缀物理上只执行一次。冻结方案见
 [alfworld_strong_sao_ma_v1.json](examples/alfworld_strong_sao_ma_v1.json)。
 
-| 节点 | 共同H1之后的顺序 | 04:11 UTC时的进度 |
+| 节点 | 共同H1之后的顺序 | 04:41 UTC时的进度 |
 |---|---|---|
-| node4 | 顺序SAO：H2 → W1 → W2 | H2/W1已完成选择；W2完成80步/75次非零Actor更新，正在选择checkpoint |
-| node3 | MA-SAO：W1 → H2 → W2 | W1/H2已完成选择；W2记录79/80步、74/75次非零Actor更新，等待完成和审计 |
+| node4 | 顺序SAO：H2 → W1 → W2 | 已完成并冻结为W0/E15/H1；W2候选62.50%/56.25%，均未采纳 |
+| node3 | MA-SAO：W1 → H2 → W2 | W2完成80步/75次非零Actor更新；基础设施恢复后正在重做选择，无最终分数 |
 
 - H2预算为32步（5 warmup +27 Actor），每个W块为80步（5+75）。当前W2
   的640行、起始Solver/critic、harness内容和更新设置已核对匹配；仅MA启用
@@ -64,12 +81,12 @@ cohort上的探索性证据，不是多seed稳健性或未接触过的确认性�
 
    | 节点 | 服务 | 用途 |
    |---|---|---|
-   | node4 | `coevolve-strong-sao-v1-sequential-arm-r2.service` | 当前顺序臂控制器；旧`arm`及`arm-r1`是保留的失败历史 |
-   | node3 | `coevolve-strong-ma-v1-arm.service` | 原MA控制器 |
-   | node3 | `coevolve-strong-ma-v1-arm-r1.service` | 以`--after-unit`等待原MA自然停止的兼容恢复控制器；若已冻结则直接退出 |
-   | node4 / node3 | `coevolve-strong-sao-v1-sequential-report.service` / `coevolve-strong-ma-v1-report.service` | 等待两臂冻结后评测 |
+   | node4 | `coevolve-strong-sao-v1-sequential-arm-r2.service` | 顺序臂已完成冻结，不重启；旧`arm`及`arm-r1`保留为失败历史 |
+   | node3 | `coevolve-strong-ma-v1-arm-r3.service` | 当前MA恢复控制器，冻结`a4eef56`，不重复native训练 |
+   | node3 | 原`arm`、`arm-r1`、`arm-r2` | 已退出的历史控制器，不应当作当前任务重启 |
+   | node4 / node3 | `coevolve-strong-sao-v1-sequential-report-r2.service` / `coevolve-strong-ma-v1-report-r2.service` | 等待两臂冻结后评测，已更新端口及取消确认逻辑 |
    | node4 | `coevolve-strong-sao-ma-v1-finalizer-r1.service` | 两侧report及GPU释放完成后产生`PAIRED_REPORT.json` |
-   | node4 / node3 | `coevolve-strong-sao-v1-sequential-cost.service` / `coevolve-strong-ma-v1-cost.service` | CPU等待各自report结束，再产生每臂`COST_AUDIT.json` |
+   | node4 / node3 | `coevolve-strong-sao-v1-sequential-cost-r2.service` / `coevolve-strong-ma-v1-cost-r2.service` | CPU等待各自当前report结束，再产生每臂`COST_AUDIT.json` |
 
 3. 继续完成W2选择、双臂冻结、配对report与成本审计，并更新本README、
    [项目状态](docs/PROJECT_STATE.md)和[实验日志](docs/EXPERIMENT_LOG.md)。
@@ -79,6 +96,11 @@ cohort上的探索性证据，不是多seed稳健性或未接触过的确认性�
    审计只容忍`1e-6`边界舍入，不裁剪target或改变训练；兼容升级保持历史
    phase/selection收据逐字节不变。相关45项测试和29个subtests，以及真实
    MA H2收据临时副本验证已通过。详见[恢复说明](docs/MA_SAO.md)。
+   MA W2选择另遇到两次vLLM内部端口冲突，以及取消请求超时后worker仍满的
+   HTTP406。分别通过独立端口和官方取消完成通知修复；51测试/28 subtests、
+   128个真实环境session取消后占用归零的CPU验证通过。两个显式哈希绑定的
+   恢复收据各增加一次基础设施尝试，**不再声称自动重试上限未变**；任务、
+   模型、seed、native预算和采纳门槛未变，失败/部分生成成本保留。
 5. 运行中的controller和子进程使用冻结Git worktree；不要修改这些worktree
    或共享upstream。新快照须链接assets及`.gitmodules`的**全部**路径，
    包括根目录WHALE，并先进行CPU导入检查。服务可跨VS Code断连存活，

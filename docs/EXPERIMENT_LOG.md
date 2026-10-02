@@ -2991,3 +2991,38 @@ It is exploratory validation, not held-out AIME. AIME test stays sealed until a 
     itself as the current method. W selection uses the original+2pp point
     floor; its recorded Bonferroni LCB is diagnostic, not a promotion condition.
     This clarification changes no running gate or training setting.
+
+106. **2026-10-02 04:41 UTC — sequential freeze and explicit MA infrastructure recovery.**
+    Sequential W2 step39/79 score62.50%/56.25% under H1, versus83.33% for
+    W0/H1; both are rejected. The sequential arm freezes its original W0/E15/H1.
+    MA W2 also completes80 native steps/75 nonzero Actor updates, but its
+    selection has no complete score yet. Two initial matrix launches fail with
+    vLLM distributed-port EADDRINUSE; c0aa909 assigns independent per-replica
+    internal ports. All eight recovered services reach HTTP200 health.
+
+    The next attempt encounters a different error: worker cancellation's
+   30-second forwarding timeout returns502, the episode adapter fails to check
+    that status, and the replacement episode receives406 from the occupied
+    worker. a4eef56 uses the official asynchronous cancellation-notice protocol
+    and waits for actual completion before returning the client's episode slot.
+    Cleanup HTTP errors are explicit; an earlier generation error remains primary.
+    51 tests/28 subtests pass. A live CPU-only test starts and cancels128 official
+    worker sessions and verifies zero remaining sessions, with zero model calls.
+
+    Separate immutable STARTUP_RECOVERY and CANCELLATION_RECOVERY authorizations
+    bind the original requests, failure logs and releases, granting one extra
+    infrastructure attempt each. The automatic max2 has therefore been extended
+    by two explicit recoveries; do not claim unchanged retry counts or free work.
+    Native training is still one completed attempt, and task/model/seed/gates are
+    unchanged. Current MA unit is coevolve-strong-ma-v1-arm-r3, sourcea4eef56.
+    Still-waiting reporters and cost jobs also migrate to that source under
+    their respective -r2 units before any report opens; original launches remain.
+
+    The README now reports complete system configurations in separate official
+   500-task, local91-task and local70-task columns. Official ALFWorld results are
+   40.6 vanilla,53.2 vanilla+Harness-R1,71.2 Agent-SFT,84.0 Agent-SFT+the matching
+   Engineer. Local SAO-W is78.02->89.56; local no-patch->SAO-H is75.71->80.00.
+    The72.14->80.00 matched-Engineer diagnostic is separate. E0 is the released,
+   already-trained vanilla-target harness-r1, not SFT-only; the target-specific
+   agent-sft-harness-r1 has not been locally evaluated. No direct superiority over
+   the paper's GRPO/84.0% result is claimed.

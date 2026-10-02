@@ -426,6 +426,27 @@ HTTP502，没有把错误记作零分。原训练与16份完整报告保留，sy
 选择；MA W2记录79步/74次非零Actor更新，仍在原native阶段。**
 两臂尚未最终冻结，report仍未打开。该快照不是实时状态；接手时先读
 `ARM_STATUS.json`及完成/释放收据，不重复已完成的W2训练。
+**04:41 UTC更新：顺序W2选择完成，step39/79为62.50%/56.25%，均低于
+83.33%的W0/H1控制组，整臂冻结为原W0/E15/H1。** MA W2也完成80步/
+75次非零Actor更新，但选择先后遭遇两次vLLM内部端口`EADDRINUSE`、
+一次真实取消超时后的worker容量HTTP406；这些没有作为模型零分。
+当前MA为`coevolve-strong-ma-v1-arm-r3`，冻结`a4eef56`源码，
+复用原W2，尚无最终选择/配对report。`c0aa909`隔离replica内部端口；
+`a4eef56`使用官方`cancel_with_notice`并等待完成通知，避免取消未完成
+就释放客户端episode槽位，且不再忽略取消HTTP502。51测试/28 subtests、
+128个真实worker start/cancel后0剩余session验证通过，无模型生成。
+`STARTUP_RECOVERY.json`及`CANCELLATION_RECOVERY.json`分别授权一次额外
+基础设施尝试，绑定请求与失败log/hash；原自动max2确实增加了两次特批
+恢复，不改变native预算/模型/任务/seed/采纳门槛。全部失败和部分生成
+仍计成本，不重写历史收据。
+
+当前report/cost均已在未打开report时迁移至`a4eef56`：
+node4`coevolve-strong-sao-v1-sequential-report-r2`与
+`coevolve-strong-sao-v1-sequential-cost-r2`，node3
+`coevolve-strong-ma-v1-report-r2`与`coevolve-strong-ma-v1-cost-r2`；
+旧report/cost及r1仅为历史服务。每臂`REPORT_PORT_MIGRATION.json`、
+`REPORT_CANCELLATION_MIGRATION.json`保留迁移，最终器仍是
+`coevolve-strong-sao-ma-v1-finalizer-r1`。下文早先的服务名是历史快照。
 
 完整pipeline已独立于agent运行：两臂`*-arm.service`推进到冻结，
 node4`coevolve-strong-sao-v1-sequential-report`与node3
