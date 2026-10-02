@@ -3101,3 +3101,13 @@ not a false claim that remaining matrix diagnostics had already finished.
 validation and source hashes. W1+H2 minus official best is**+12.50pp**,
 question-bootstrap95% interval[+2.08,+25.00]pp; reused selection/search exposure
 precludes treating this as independent significance or training-budget parity.
+
+At15:08 UTC the remaining E15 diagnostics completed and GPU release was verified.
+With the same8 historical W79 evidence prompts, proposal seeds/budgets and W0
+native24-task evaluator, E15/H1 scores**69.53% proposal mean**,**81.25% best-of8**,
+7/8 valid, versus target-specific official**80.21%/85.42%**,8/8 valid.
+Thus even granting both Engineers8-candidate selection, H1 does not outperform
+the official release in this quick comparison. All18 logical variants passed
+complete task/sample/seed/token checks; `ENGINEER_MATCHED_DIAGNOSTIC.json` persists
+the result. The previously reported six fixed-system rows and older70-task
+greedy/per-turn protocol are unchanged.
