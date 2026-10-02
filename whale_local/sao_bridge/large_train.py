@@ -184,6 +184,24 @@ def configure(spec: dict, run: Path) -> dict:
     )
     cfg["rollout"]["backend"] = f"vllm:d{rollout_gpus}p1t1"
     cfg["actor"]["optimizer"]["lr"] = spec["lr"]
+    kl_ctl = spec.get("kl_ctl", 0.0)
+    if type(kl_ctl) not in (int, float) or not 0 <= kl_ctl <= 1:
+        raise ValueError("Fixed-reference KL coefficient must be finite and in [0, 1]")
+    cfg["actor"]["kl_ctl"] = kl_ctl
+    if kl_ctl:
+        cfg["ref"] = {
+            "backend": cfg["actor"]["backend"],
+            "experiment_name": cfg["experiment_name"], "trial_name": cfg["trial_name"],
+            "path": spec.get("reference_model", spec["model"]),
+            "init_from_scratch": False, "disable_dropout": True,
+            "dtype": cfg["actor"]["dtype"], "attn_impl": cfg["actor"]["attn_impl"],
+            "temperature": "${gconfig.temperature}",
+            "optimizer": None, "mb_spec": {"max_tokens_per_mb": spec.get("microbatch_tokens", context_tokens)},
+            "scheduling_strategy": {"type": "colocation", "target": "actor"},
+            "scheduling_spec": cfg["actor"]["scheduling_spec"],
+        }
+    if spec.get("joint_root"):
+        cfg["actor"].update(eps_clip=0.2, eps_clip_higher=0.2)
     if critic_mode == "learned":
         cfg["critic"]["optimizer"]["lr"] = spec.get("critic_lr", 5 * spec["lr"])
         cfg["critic"]["path"] = spec.get("critic_model", spec["model"])
@@ -230,7 +248,9 @@ def configure(spec: dict, run: Path) -> dict:
                  "AREAL_CACHE_DIR", "FLASHINFER_WORKSPACE_BASE", "HOME", "AREAL_HOST_IP",
                  "PYTORCH_ALLOC_CONF",
                  "SAO_SEARCHQA_RETRIEVAL_URL", "SAO_ALFWORLD_CONTROLLER_URL",
-                 "SAO_ALFWORLD_TASK_NAME", "SAO_ALFWORLD_HTTP_TIMEOUT"):
+                 "SAO_ALFWORLD_TASK_NAME", "SAO_ALFWORLD_HTTP_TIMEOUT",
+                 "MA_SAO_JOINT_EPISODES", "MA_SAO_VALUE_NORM",
+                 "MA_SAO_ASYNC_JOINT_ROOT", "MA_SAO_JOINT_ROLE"):
         if name in os.environ:
             env[name] = os.environ[name]
     context = spec.get("central_context")
@@ -271,11 +291,25 @@ def main():
         if spec.get("central_context") or not spec.get("terminal_episodes"):
             raise ValueError("Joint episodes require dynamic context and complete terminal trajectories")
         os.environ["MA_SAO_JOINT_EPISODES"] = "1"
+        if spec.get("joint_max_lag", 0) == 1:
+            os.environ["MA_SAO_ASYNC_JOINT_ROOT"] = str(Path(spec["joint_root"]).resolve())
+            os.environ["MA_SAO_JOINT_ROLE"] = spec["role"]
+        else:
+            os.environ.pop("MA_SAO_ASYNC_JOINT_ROOT", None)
+            os.environ.pop("MA_SAO_JOINT_ROLE", None)
+        if spec.get("value_normalization", False):
+            os.environ["MA_SAO_VALUE_NORM"] = "1"
+        else:
+            os.environ.pop("MA_SAO_VALUE_NORM", None)
     else:
         os.environ.pop("MA_SAO_JOINT_EPISODES", None)
+        os.environ.pop("MA_SAO_VALUE_NORM", None)
+        os.environ.pop("MA_SAO_ASYNC_JOINT_ROOT", None)
+        os.environ.pop("MA_SAO_JOINT_ROLE", None)
     rows = read_json(Path(spec["data"]))
     validate_training_rows(spec, rows)
-    write_json(run / "consumed_rows.json", consumed_row_ledger(spec, rows))
+    ledger_name = "planned_rows.json" if spec.get("joint_root") else "consumed_rows.json"
+    write_json(run / ledger_name, consumed_row_ledger(spec, rows))
     capacity_audit = spec.get("capacity_audit")
     if capacity_audit is None:
         capacity_audit = training_capacity_audit(spec, rows)
@@ -322,6 +356,7 @@ def main():
                     "gconfig": config.gconfig, "joint_root": spec["joint_root"],
                     "total_tokens": spec["tokens"],
                     "context_tokens": spec["context_tokens"],
+                    "max_lag": spec.get("joint_max_lag", 0),
                 }
             trainer.train(
                 workflow=workflow, workflow_kwargs=workflow_kwargs,

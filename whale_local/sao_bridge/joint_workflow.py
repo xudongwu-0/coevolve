@@ -6,6 +6,7 @@ from pathlib import Path
 import sys
 import time
 
+import torch
 from areal.api import RolloutWorkflow
 from areal.experimental.openai import ArealOpenAI
 from areal.utils.hf_utils import load_hf_tokenizer
@@ -34,18 +35,22 @@ def parse_proposal(text: str) -> tuple[dict, str | None]:
 
 
 class JointWorkflow(RolloutWorkflow):
-    def __init__(self, role, tokenizer, gconfig, joint_root, total_tokens=4096, context_tokens=32768):
+    def __init__(self, role, tokenizer, gconfig, joint_root, total_tokens=4096,
+                 context_tokens=32768, max_lag=0):
         if role not in ("editor", "solver"):
             raise ValueError("Unknown joint role")
         self.role, self.root = role, Path(joint_root)
         self.tokenizer = load_hf_tokenizer(tokenizer)
         self.gconfig = gconfig
         self.tokens, self.context_tokens = total_tokens, context_tokens
+        if type(max_lag) is not int or max_lag not in (0, 1):
+            raise ValueError("Only verified zero/one-round joint staleness is supported")
+        self.max_lag = max_lag
 
     async def arun_episode(self, engine, data):
         version, slot = data["joint_version"], data["joint_slot"]
         root = round_path(self.root, version)
-        await wait_versions(self.root, version)
+        await wait_versions(self.root, max(0, version - self.max_lag))
         started = time.monotonic()
         client = ArealOpenAI(
             engine=engine, tokenizer=self.tokenizer, chat_template_type="concat",
@@ -65,13 +70,17 @@ class JointWorkflow(RolloutWorkflow):
                 completions.append(completion)
                 action = completion.choices[0].message.content or ""
                 patch, error = parse_proposal(action)
-                proposal = {**identity, "patch": patch, "model_error": error, "action": action}
+                proposal = {
+                    **identity, "patch": patch, "model_error": error, "action": action,
+                    "generated_at_unix": time.time(),
+                }
                 _immutable_json(root / f"proposal-{slot:03d}.json", proposal)
                 episode = await wait_record(root / f"outcome-{slot:03d}.json", self.root)
                 if any(episode[key] != value for key, value in identity.items()):
                     raise ValueError("Joint terminal outcome belongs to a different episode")
                 context = {
                     "joint_version": version, "role": self.role,
+                    "maximum_behavior_version_lag": self.max_lag,
                     "solver_task_before_action": data["task_context"],
                     "solver_observation_protocol": "ALFWorld admissible actions; frozen joint-version Solver.",
                 }
@@ -107,6 +116,7 @@ class JointWorkflow(RolloutWorkflow):
                 episode = {**episode, **identity}
                 context = {
                     "joint_version": version, "role": self.role,
+                    "maximum_behavior_version_lag": self.max_lag,
                     "engineer_pre_action_evidence": data["critic_evidence"],
                     "engineer_action_status": "valid" if proposal["model_error"] is None else "invalid_no_patch",
                     "solver_task_before_action": data["task_context"],
@@ -127,7 +137,7 @@ class JointWorkflow(RolloutWorkflow):
                     "response_logprobs": response.output_logprobs,
                     "versions": response.output_versions, "stop_reason": response.stop_reason,
                 })
-            checked_behavior(calls, version)
+            checked_behavior(calls, version, self.max_lag)
             interactions = client.export_interactions(style="concat")
             if len(interactions) != 1:
                 raise ValueError("Each joint role must supply one complete concatenated trajectory")
@@ -140,8 +150,11 @@ class JointWorkflow(RolloutWorkflow):
                 add_special_tokens=False,
             )
             trajectory = attach_joint_context(trajectory, context_ids)
+            trajectory["joint_round"] = torch.tensor([version], dtype=torch.long)
+            trajectory["joint_slot"] = torch.tensor([slot], dtype=torch.long)
             write_json(root / f"{self.role}-receipt-{slot:03d}.json", {
                 **identity, "role": self.role, "reward": reward, "calls": calls,
+                "recorded_at_unix": time.time(),
                 "context": context, "context_tokens": len(context_ids),
                 "patch": proposal["patch"], "model_error": proposal["model_error"],
                 "generated_tokens": expected, "elapsed_seconds": time.monotonic() - started,

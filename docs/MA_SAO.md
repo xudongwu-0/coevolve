@@ -1,6 +1,61 @@
 # Fixed-sample SAO / MA-SAO research protocol
 
-## Current joint-round ALFWorld pilot (2026-10-02)
+## Deadline-bound joint asynchronous continuation (2026-10-02)
+
+The requested result deadline is **23:41:31 UTC**, with a training cutoff at
+22:41:31. [joint_campaign](../whale_local/sao_bridge/joint_campaign.py) waits for
+the matched GRPO W0/W1 comparison, then launches one persistent role per node.
+Its independent `guard` writes a stop request at the cutoff and a deadline report
+even when no successful evaluation exists. A process launch or CPU test is not
+evidence of a native GPU update; this continuation is not yet GPU-validated.
+
+Starting policies/critics are E15/C15 and W79/C79, never the rejected W2.
+There are at most128 rounds,8 paired episodes per round,2 critic-only warmup
+rounds, actor LR5e-7, critic LR2.5e-6, K=2 critic updates and fixed-initial-policy
+KL coefficient0.005. Reference, proximal and rollout temperatures agree
+(Engineer0.7, Solver1). Optimizers persist across rounds. Round12 consumes192
+incremental H+W trajectories; round52 consumes832. Both include warmup and are
+saved with the four-round checkpoint cadence. The executed common prefix costs
+832 trajectories, not just the selected E15 checkpoint's96 Engineer samples.
+
+The MAPPO-inspired components are decentralized policies, same-cohort shared
+team rewards, privileged pre-action critic inputs, separate per-role PPO updates,
+batch advantage normalization, symmetric policy clipping0.2 and the hash-pinned
+official MAPPO ValueNorm. Normalization excludes prompt/padding tokens, restores
+raw values for GAE and checkpoints its moments. We retain native token-level
+terminal GAE, clipped MSE rather than MAPPO's default Huber option, and SAO's
+own-token TIS/DIS. This is **not full MAPPO hyperparameter or architecture parity**.
+
+Collection may overlap learning by one round. Every action retains authentic
+behavior logprob and version; versions outside `[round-1, round]` fail closed.
+Before updating either actor, workers publish both roles' proximal likelihoods
+for the same round and slot. The actor advantage is multiplied by the partner's
+trajectory likelihood ratio clipped to[0.5,2]. This is an experimental, biased
+truncation for asynchronous teammates, **not a standard MAPPO objective or an
+unbiased joint-policy correction guarantee**. Own-policy SAO correction remains.
+
+[joint_health](../whale_local/sao_bridge/joint_health.py) records fixed-reference
+sampled KL, raw value MSE, gradient validity, importance clipping/ESS, executable
+proposal validity, terminal reward and completion-cap rate. Nonfinite metrics,
+reference-ratio overflow or absent actor gradients stop explicitly. Three
+consecutive rounds with KL>0.10, raw MSE>4 or peer clipping fraction>0.75 request
+a shared soft stop. These conservative engineering thresholds are not calibrated
+collapse predictors; held-out outcomes decide whether performance improved.
+Only checkpoints whose save is followed by a committed native metrics row are
+recoverable; both actor and normalized critic must exist at the same round.
+
+After both nodes release training, node3 reports the predeclared round12 pair.
+Node4 selects among at most the final three common checkpoint pairs using
+selection24 mean@2 and8 new Engineer proposals per pair. Ties favor the earlier
+checkpoint, then proposal slot. No old h2 is silently substituted. Each selected
+pair is frozen before all200 mean@1/strict197 reporting; empty-harness Solver
+performance is also reported. The incumbent remains W1+h2=92%, and negative
+results are retained. Selection24 overlaps the previously used development200;
+neither this cohort nor strict197 is a new sealed generalization test.
+Generated/prefetched and consumed trajectories, actual full-run costs and the
+cost associated with a selected checkpoint are distinct reported quantities.
+
+## Historical synchronous joint-round pilot (2026-10-02)
 
 **Status:** paused before any native update to prioritize the user's matched
 core-results table. The first launch hit nested ownership supervision, fixed in

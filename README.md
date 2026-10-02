@@ -12,7 +12,8 @@
 
 新增[匹配GRPO入口](whale_local/sao_bridge/alfworld_matched_grpo.py)与
 [冻结参数](configs/alfworld_engineer_matched_grpo.json)，先完成此对照及W0/W1的200题评测，
-再继续真正联合更新的MA-SAO。目前是实现/验证阶段，不能当作已有训练结果。
+再继续真正联合更新的MA-SAO。当前GRPO为第4次独立启动尝试，
+此前均未完成首个rollout/optimizer更新，不能当作已有训练结果。
 H2此前固定W1训练，**不依赖退化的W2**；新的MA也从H1/W1而不是W2开始。
 
 - 起点仍是官方已RL的`harness-r1` H0，固定W0；不换成SFT或对口官方Engineer。
@@ -35,6 +36,34 @@ H2此前固定W1训练，**不依赖退化的W2**；新的MA也从H1/W1而不是
 W0/W1分别完整重测同200题mean@1并报告严格197题。W0列仍是W1补丁的迁移测试，
 不是为W0单独重选的最优补丁。SAO采用历史选择的step15，因此不能把此次对照
 说成checkpoint选择过程完全相同；96点保留供后续审计，不参与本轮最终选择。
+
+### 六小时联合MA-SAO窗口
+
+用户约定的报告截止是 **2026-10-02 23:41:31 UTC**，训练最迟
+22:41:31停止，最后一小时留给选择和200题评测。这是执行期限，
+**不是保证超过92%**。新持久入口为
+[joint_campaign](whale_local/sao_bridge/joint_campaign.py)；
+具体实现与限制见[MA-SAO协议](docs/MA_SAO.md)。
+
+- 从H1/E15和W1/W79及同角色critic出发，两角色每轮各8条真实配对轨迹，
+  共享终止奖励、同轮更新、Adam跨轮连续；不是先训完整H阶段再训W阶段。
+- MAPPO官方ValueNorm、集中式critic输入、优势标准化及对称PPO clip；
+  保留SAO自身TIS/DIS，允许最多一轮真实行为版本滞后。额外的截断
+  teammate轨迹权重是实验扩展，不是标准MAPPO或无偏保证。
+- 每4轮保存模型；第12轮累计新增H+W=192条，对齐成功H2续训消费预算；
+  第52轮新增832条，对齐H2加被拒绝W2的完整尝试预算。共同前缀实际消费832条。
+  预取、未完成轨迹、critic-only及模型/补丁选择成本分别记录，不算免费。
+- 固定初始policy KL、原单位value MSE、重要性截断率/ESS、梯度、
+  非法补丁和token上限比例用于预警。非有限值硬停；连续三轮超阈值软停，
+  只恢复有完整原生指标及actor/critic文件的共同checkpoint。
+- 报告固定第12轮和后期候选；后期只在selection24选择最多三个checkpoint、
+  每点8个新补丁，然后冻结再做200题单次评测。不会以旧h2冒充新Engineer。
+  200题仍是已使用开发集；未超过也必须报告，原W1+h2保持不被覆盖。
+
+当前GRPO恢复源码`3ebdcfa`，训练目录`runs/alfworld_matched_grpo_192_v4`，
+测评目录`runs/alfworld_matched_grpo_200_v3`。第2次启动为TP2 custom-allreduce
+错误；第3次为单卡TCPStore选错可达地址。分别改为TP1/eager和显式回环地址，
+目标函数、H0、192条预算均不变。MA代码CPU回归已通过，**尚未验证GPU联合更新**。
 
 ## ALFWorld模型起点、训练步数与checkpoint
 

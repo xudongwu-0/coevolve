@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import argparse
-import json
 from pathlib import Path
 import threading
 import time
@@ -14,21 +13,30 @@ from .budget import contract_digest
 from .common import ensure_model_runtime_metadata, file_sha, read_json, write_json
 from .gpu_telemetry import monitor, summarize
 from .joint_round import check_failures, record_failure
+from .joint_health import assess, metric_rows, recover_checkpoints, request_stop
 from .launch import Launcher
 from .resources import gpu_release_audit, require_research_node
 
 
 def validate_spec(spec: dict) -> None:
     rows = read_json(Path(spec["data"]))
+    asynchronous = spec["protocol"] == "joint-ma-sao-async-v1"
+    lag = 1 if asynchronous else 0
     if (
-        spec["protocol"] != "joint-ma-sao-pilot-v1"
+        spec["protocol"] not in ("joint-ma-sao-pilot-v1", "joint-ma-sao-async-v1")
         or spec["role"] not in ("editor", "solver")
         or spec["steps"] * spec["batch_size"] != len(rows)
-        or spec["staleness"] != 0 or spec["max_head_offpolicyness"] != 0
+        or spec["staleness"] != lag or spec["max_head_offpolicyness"] != lag
+        or spec.get("joint_max_lag", 0) != lag
         or spec.get("central_context") or not spec["terminal_episodes"]
         or spec["critic_mode"] != "learned"
     ):
         raise ValueError("Invalid joint pilot budget or policy-version protocol")
+    if asynchronous and (
+        not spec.get("value_normalization") or not 0 < spec.get("kl_ctl", 0) <= 1
+        or not isinstance(spec.get("training_deadline_unix"), (int, float))
+    ):
+        raise ValueError("Asynchronous joint training requires normalization, reference KL and deadline")
     for index, row in enumerate(rows):
         if (
             row["joint_version"] != index // spec["batch_size"]
@@ -80,23 +88,50 @@ def run_role(spec_path: Path) -> dict:
             gpus="0,1,2,3,4,5,6,7", name="joint_native",
         )
         deadline = time.monotonic() + 10800
+        last_count, last_progress = 0, time.monotonic()
+        asynchronous = spec["protocol"] == "joint-ma-sao-async-v1"
         while process.poll() is None:
             launch.check()
             check_failures(joint)
+            if asynchronous:
+                rows = metric_rows(root / "metrics.jsonl")
+                if len(rows) != last_count:
+                    health = assess(rows, spec)
+                    write_json(root.parent / "HEALTH.json", health)
+                    last_count, last_progress = len(rows), time.monotonic()
+                    if health["status"] == "stop":
+                        request_stop(joint, {"reason": "training_health", "role": spec["role"], "health": health})
+                if time.time() >= spec["training_deadline_unix"]:
+                    request_stop(joint, {"reason": "evaluation_reserve_deadline", "role": spec["role"]})
+                if time.monotonic() - last_progress > 1800:
+                    request_stop(joint, {"reason": "no_optimizer_progress_for_1800s", "role": spec["role"]})
+                if (joint / "STOP.json").exists():
+                    launch.stop(process)
+                    break
             if time.monotonic() >= deadline:
                 raise TimeoutError("Joint native learner timed out")
             time.sleep(2)
-        if process.returncode:
+        stopped = asynchronous and (joint / "STOP.json").exists()
+        if process.returncode and not stopped:
             raise RuntimeError(f"Joint native learner failed ({process.returncode}); inspect its log")
-        if spec["role"] == "solver":
+        if spec["role"] == "solver" and not stopped:
             environment.join(timeout=30)
             if environment.is_alive():
                 raise RuntimeError("Joint environment did not finish its final round")
         check_failures(joint)
-        trained = read_json(root / "trained.json")
-        rows = [json.loads(line) for line in (root / "metrics.jsonl").read_text().splitlines() if line.strip()]
+        rows = metric_rows(root / "metrics.jsonl")
+        if asynchronous:
+            history = recover_checkpoints(spec, rows)
+            last = max(map(int, history))
+            trained = {
+                "actor_steps": max(0, len(rows) - spec["critic_warmup_steps"]),
+                "critic_steps": len(rows) * spec["critic_updates_per_step"],
+                "checkpoints": history[str(last)],
+            }
+        else:
+            trained = read_json(root / "trained.json")
         warmup = spec["critic_warmup_steps"]
-        if len(rows) != spec["steps"] or trained["actor_steps"] != spec["steps"] - warmup:
+        if not stopped and (len(rows) != spec["steps"] or trained["actor_steps"] != spec["steps"] - warmup):
             raise ValueError("Joint native learner did not complete its declared update budget")
         for index, row in enumerate(rows):
             gradient = row["metrics"].get("ppo_actor/update/grad_norm")
@@ -106,13 +141,32 @@ def run_role(spec_path: Path) -> dict:
                 raise ValueError("Joint Actor omitted a nonzero update")
         ensure_model_runtime_metadata(Path(trained["checkpoints"]["actor"]), Path(spec["model"]))
         result = {
-            "status": "completed", "role": spec["role"], "steps": len(rows),
+            "status": "stopped_with_checkpoints" if stopped else "completed",
+            "role": spec["role"], "steps": len(rows),
             "actor_updates": trained["actor_steps"], "critic_updates": trained["critic_steps"],
             "metrics_sha256": file_sha(root / "metrics.jsonl"),
             "checkpoints": trained["checkpoints"], "elapsed_seconds": time.time() - started,
-            "joint_rounds": spec["steps"], "optimizer_resets_between_rounds": False,
+            "joint_rounds": len(rows), "optimizer_resets_between_rounds": False,
             "finished_at_unix": time.time(),
         }
+        if asynchronous:
+            count = len(rows) * spec["batch_size"]
+            consumed = read_json(Path(spec["data"]))[:count]
+            write_json(root / "consumed_rows.json", {
+                "rows": count, "ids": [row["id"] for row in consumed],
+                "fresh_ids": [row["id"] for row in consumed], "replay_ids": [],
+                "sample_indices": list(range(count)),
+                "metrics_committed_prefix_only": True,
+            })
+            result.update(
+                checkpoint_history=history,
+                stop=read_json(joint / "STOP.json") if stopped else None,
+                consumed_policy_trajectories=len(rows) * spec["batch_size"],
+                generated_policy_trajectories=sum(
+                    1 for _ in joint.glob(f"round-*/{spec['role']}-receipt-*.json")
+                ),
+                sampled_engineer_actions=sum(1 for _ in joint.glob("round-*/proposal-*.json")),
+            )
     except BaseException as exc:
         failure = {"error": repr(exc), "role": spec["role"], "failed_at_unix": time.time()}
         write_json(root.parent / "FAILED.json", failure)

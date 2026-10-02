@@ -1,6 +1,9 @@
 """Complete-episode boundaries applied after worker RPC tensors materialize."""
 from __future__ import annotations
 
+import os
+from pathlib import Path
+
 import torch
 from areal.engine.fsdp_engine import FSDPPPOActor
 from areal.utils.data import batched_call
@@ -33,4 +36,20 @@ class TerminalFSDPPPOActor(FSDPPPOActor):
         return batched_call(self._terminal_advantages, data, pass_meta=True)
 
     def _terminal_advantages(self, data, meta):
-        return self.actor._compute_advantages(zero_terminal_value(data), meta)
+        joint_root = os.environ.get("MA_SAO_ASYNC_JOINT_ROOT")
+        weights = None
+        if joint_root:
+            from .joint_updates import prepare_joint_update
+            from areal.utils import stats_tracker
+            weights, stats = prepare_joint_update(
+                data, Path(joint_root), os.environ["MA_SAO_JOINT_ROLE"], self.get_version(),
+            )
+            with stats_tracker.scope("joint_policy"):
+                stats_tracker.scalar(**stats)
+        result = self.actor._compute_advantages(zero_terminal_value(data), meta)
+        if weights is not None:
+            peer_weights = torch.tensor(
+                weights, device=result["advantages"].device, dtype=result["advantages"].dtype,
+            ).unsqueeze(-1)
+            result["advantages"] = result["advantages"] * peer_weights
+        return result

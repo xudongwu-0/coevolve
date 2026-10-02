@@ -14,6 +14,23 @@ MA从H1/W1起步，第一目标超过W1+h2的92%，第二目标同H+W累计预�
 需要真实联合更新、异步行为概率审核、崩溃预警与incumbent保护。
 旧joint试跑没有有效native更新，staleness=0骨架不能冒充已完成异步MAPPO。
 
+**18:34 UTC恢复记录：** GRPO v2在TP2 custom-allreduce启动阶段失败；
+v3的TP1引擎卡在TCPStore，py-spy及TCP探针确认网卡地址拒绝连接而127.0.0.1可达。
+均没有完成首轮或optimizer commit，失败目录保留。修复`3ebdcfa`已推送，
+当前源码`runs/source-snapshots/alfworld-matched-grpo-v4`，
+训练`runs/alfworld_matched_grpo_192_v4`，自动评测`runs/alfworld_matched_grpo_200_v3`。
+node3服务`coevolve-matched-grpo192-v4-target`、`coevolve-matched-grpo200-v3-w0`；
+node4对应`coevolve-matched-grpo192-v4-train`、`coevolve-matched-grpo200-v3-w1`和summary。
+启动命令成功不代表真实训练；下一步须核验首个rollout、非零更新及192消费收据。
+
+新[joint_campaign](../whale_local/sao_bridge/joint_campaign.py)接入等待GRPO比较、
+联合异步训练、健康止损、共同checkpoint恢复、双节点匹配/后期200题报告及持久deadline guard。
+用户17:41:31要求6小时结论：**23:41:31 UTC报告、22:41:31训练截止**。
+48项CPU测试及14个subtests通过，含原生PPO配置解析与同温度固定reference、
+joint元数据批处理、健康条件、已提交checkpoint过滤。MA仍未GPU验证，不得称为完成。
+准备新运行目录时先执行`joint_campaign --mode prepare`冻结数据与截止时间，
+随后持久部署editor/solver、matched/best及guard，不能只写计划不启动。
+
 ## 最新完成：实际W2+h2的200题补测
 
 2026-10-02 16:48:39 UTC完成，约11分钟。输出

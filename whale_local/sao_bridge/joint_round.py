@@ -65,16 +65,18 @@ async def wait_versions(root: Path, version: int, timeout: float = 1800) -> None
             raise ValueError("Joint policy publication identity changed")
 
 
-def checked_behavior(calls: list[dict], version: int) -> None:
+def checked_behavior(calls: list[dict], version: int, max_lag: int = 0) -> None:
     import math
 
-    if not calls:
+    if not calls or type(max_lag) is not int or max_lag not in (0, 1):
         raise ValueError("Joint episode has no authentic policy action")
     for call in calls:
         size = len(call["response_ids"])
         if (
             not size or len(call["response_logprobs"]) != size
-            or call["versions"] != [version] * size
+            or len(call["versions"]) != size
+            or any(type(value) is not int or not max(0, version - max_lag) <= value <= version
+                   for value in call["versions"])
             or any(not math.isfinite(value) or value > 1e-6 for value in call["response_logprobs"])
         ):
             raise ValueError("Joint trajectory crossed policy versions or lost behavior probabilities")
