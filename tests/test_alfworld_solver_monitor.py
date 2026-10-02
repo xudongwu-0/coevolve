@@ -61,7 +61,10 @@ class AlfworldSolverMonitorTests(unittest.TestCase):
             (1, "ppo_actor/update/grad_norm", float("nan")),
             (1, "ppo_actor/n_seqs", 16),
             (1, "ppo_critic/update/target_value/max", 1.01),
+            (1, "ppo_critic/update/target_value/max", 1.00001),
+            (1, "ppo_critic/update/target_value/min", -0.00001),
             (1, "ppo_critic/update/target_value/min", float("nan")),
+            (1, "ppo_critic/update/target_value/max", float("inf")),
         ]
         for step, name, value in cases:
             with self.subTest(name=name, value=value):
@@ -75,6 +78,16 @@ class AlfworldSolverMonitorTests(unittest.TestCase):
             native_metrics(self.metrics(rows), self.spec)
         with self.assertRaisesRegex(ValueError, "budget"):
             native_metrics(self.metrics(self.rows() + self.rows()[:1]), self.spec)
+
+    def test_accepts_fp32_roundoff_without_clipping_raw_targets(self):
+        rows = self.rows()
+        rows[1]["metrics"].update({
+            "ppo_critic/update/target_value/min": -3.725290298461914e-9,
+            "ppo_critic/update/target_value/max": 1.0000001192092896,
+        })
+        report = native_metrics(self.metrics(rows), self.spec)
+        self.assertEqual(report["critic_target_range"], [-3.725290298461914e-9, 1.0000001192092896])
+        self.assertEqual(report["critic_target_roundoff_atol"], 1e-6)
 
     def make_run(self, seed):
         root = self.root / f"seed-{seed}"

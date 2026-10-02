@@ -1,4 +1,4 @@
-"""Paired question-level uncertainty, without treating samples as training seeds."""
+"""Native target audits and paired question-level, not training-seed, uncertainty."""
 from __future__ import annotations
 
 from collections import defaultdict
@@ -10,6 +10,18 @@ from pathlib import Path
 import numpy as np
 
 from .common import read_json, write_json
+
+
+NATIVE_TARGET_ROUNDOFF_ATOL = 1e-6
+
+
+def validate_terminal_target_range(low: float, high: float, *, minimum_reward: float = 0.0) -> None:
+    # FP32 GAE subtraction/addition can leave tiny residuals at a reward boundary.
+    if not (
+        math.isfinite(low) and math.isfinite(high)
+        and minimum_reward - NATIVE_TARGET_ROUNDOFF_ATOL <= low <= high <= 1 + NATIVE_TARGET_ROUNDOFF_ATOL
+    ):
+        raise ValueError("Native terminal critic targets left the role reward range")
 
 
 def paired_lower_bound(control: dict, candidate: dict, *, alpha: float, seed=42,

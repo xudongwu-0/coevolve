@@ -17,6 +17,7 @@ from .alfworld_train_data import (
     _immutable_json, evaluation_paths, goal_group, solver_rows, training_catalogue,
 )
 from .alfworld_w_train import assignment_schedule_audit
+from .analysis import NATIVE_TARGET_ROUNDOFF_ATOL, validate_terminal_target_range
 from .common import file_sha, read_json, write_json
 from .budget import contract_digest
 from .evaluation import stable_id_seed_offset
@@ -355,13 +356,14 @@ def training_evidence(root: Path, config: dict) -> tuple[dict, dict]:
     if [row["global_step"] for row in rows] != list(range(config["steps"])):
         raise ValueError("Native metric steps do not cover the frozen phase budget")
     nonzero = 0
+    targets = []
     low_bound = -1.0 if trained["role"] == "editor" else 0.0
     for index, row in enumerate(rows):
         metrics = row["metrics"]
         low, high = (metrics["ppo_critic/update/target_value/min"],
                      metrics["ppo_critic/update/target_value/max"])
-        if not low_bound <= low <= high <= 1.0:
-            raise ValueError("Native terminal critic targets left the role reward range")
+        validate_terminal_target_range(low, high, minimum_reward=low_bound)
+        targets.extend((low, high))
         gradient = metrics.get("ppo_actor/update/grad_norm")
         if index < warmup:
             if gradient is not None:
@@ -376,6 +378,8 @@ def training_evidence(root: Path, config: dict) -> tuple[dict, dict]:
         "optimizer_steps": len(rows), "actor_steps": trained["actor_steps"],
         "nonzero_actor_gradients": nonzero, "warmup_isolated": True,
         "critic_targets_within_role_reward_range": True,
+        "critic_target_range": [min(targets), max(targets)],
+        "critic_target_roundoff_atol": NATIVE_TARGET_ROUNDOFF_ATOL,
         "metrics_sha256": file_sha(root / "optimizer/metrics.jsonl"),
         "native_completion_sha256": file_sha(root / "COMPLETE.json"),
     }

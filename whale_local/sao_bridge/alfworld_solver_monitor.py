@@ -8,6 +8,7 @@ from pathlib import Path
 import time
 
 from .alfworld_solver_pair_gate import evaluate_pair
+from .analysis import NATIVE_TARGET_ROUNDOFF_ATOL, validate_terminal_target_range
 from .common import file_sha, read_json, write_json
 
 
@@ -26,8 +27,7 @@ def native_metrics(path: Path, spec: dict) -> dict:
         metrics = row["metrics"]
         low = metrics["ppo_critic/update/target_value/min"]
         high = metrics["ppo_critic/update/target_value/max"]
-        if not 0 <= low <= high <= 1:
-            raise ValueError("Complete Solver episode targets escaped [0, 1]")
+        validate_terminal_target_range(low, high)
         targets.extend((low, high))
         gradient = metrics.get("ppo_actor/update/grad_norm")
         if step < warmup:
@@ -45,6 +45,7 @@ def native_metrics(path: Path, spec: dict) -> dict:
         "actor_updates": actor_updates,
         "nonzero_actor_updates": nonzero_actor_updates,
         "critic_target_range": [min(targets), max(targets)] if targets else None,
+        "critic_target_roundoff_atol": NATIVE_TARGET_ROUNDOFF_ATOL,
         "last_metric_at": rows[-1]["recorded_at_unix"] if rows else None,
         "metrics_write_in_progress": bool(lines and not lines[-1].endswith(b"\n")),
     }

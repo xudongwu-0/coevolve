@@ -210,6 +210,22 @@ class StrongPhaseTests(unittest.TestCase):
             write_json(root / "optimizer/trained.json", {**trained, "role": "solver"})
             with self.assertRaisesRegex(ValueError, "reward range"):
                 training_evidence(root, config)
+            for row in rows:
+                row["metrics"]["ppo_critic/update/target_value/min"] = -3.725290298461914e-9
+            path.write_text("".join(json.dumps(row) + "\n" for row in rows))
+            _, audit = training_evidence(root, config)
+            self.assertEqual(audit["critic_target_range"], [-3.725290298461914e-9, 0.5])
+            self.assertEqual(audit["critic_target_roundoff_atol"], 1e-6)
+            for low, high in ((-0.00001, 0.5), (0, 1.00001), (0.2, 0.1),
+                              (float("nan"), 1), (0, float("inf"))):
+                with self.subTest(low=low, high=high):
+                    rows[0]["metrics"].update({
+                        "ppo_critic/update/target_value/min": low,
+                        "ppo_critic/update/target_value/max": high,
+                    })
+                    path.write_text("".join(json.dumps(row) + "\n" for row in rows))
+                    with self.assertRaisesRegex(ValueError, "reward range"):
+                        training_evidence(root, config)
 
     def test_phase_retries_are_persistent_bounded_and_do_not_repeat_success(self):
         with tempfile.TemporaryDirectory() as temporary:

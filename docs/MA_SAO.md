@@ -136,6 +136,15 @@ If both arms select identical Solver weights and harness, the method-improvement
 gate cannot pass: any separately measured score difference is evaluation
 variation, not a policy improvement. Raw paired scores are still preserved.
 
+Native terminal-target audits allow absolute FP32 roundoff of at most `1e-6`
+at the role reward boundaries, retaining the raw extrema and tolerance in each
+receipt. Sequential W1 completed all 80 steps but the original exact-bound audit
+stopped its controller on a single `-3.725290298461914e-9` residual at step26.
+This is an audit-only correction, not target clipping or a reward/optimizer
+change. Larger violations and non-finite/reversed ranges still fail. Preserve
+the original failure and source; reuse the completed training rather than
+spending another training attempt.
+
 ## Objective and control
 
 The primary endpoint is final held-out task accuracy under the same declared
