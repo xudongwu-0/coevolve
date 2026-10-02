@@ -28,8 +28,14 @@ node4对应`coevolve-matched-grpo192-v4-train`、`coevolve-matched-grpo200-v3-w1
 用户17:41:31要求6小时结论：**23:41:31 UTC报告、22:41:31训练截止**。
 48项CPU测试及14个subtests通过，含原生PPO配置解析与同温度固定reference、
 joint元数据批处理、健康条件、已提交checkpoint过滤。MA仍未GPU验证，不得称为完成。
-准备新运行目录时先执行`joint_campaign --mode prepare`冻结数据与截止时间，
-随后持久部署editor/solver、matched/best及guard，不能只写计划不启动。
+已冻结并排队`runs/alfworld_joint_async_6h_v1`，实际源码`6832612`，
+快照`runs/source-snapshots/alfworld-joint-async-6h-v1`。node3持久服务
+`coevolve-joint-async6h-v1-editor`、`coevolve-joint-async6h-v1-matched`；
+node4对应solver、best、guard。18:37全部active，尚在等GRPO对照而非MA训练中。
+真实部署绑定见该目录`LAUNCH.json`；协议继承的旧source_commit不是当前执行源码。
+18:48:13，GRPO v4首个32条真实rollout成功，reward均值0.009375，
+范围[-0.6,0.2]；随后py-spy确认进入native autograd backward，四个训练GPU有负载。
+这仍不是最终192条完成收据；等待`progress.json`中的已提交更新，勿把预取条数当消费。
 
 ## 最新完成：实际W2+h2的200题补测
 
