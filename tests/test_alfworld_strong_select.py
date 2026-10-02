@@ -51,6 +51,26 @@ class StrongSelectionTests(unittest.TestCase):
             write_json(root / "attempt-01/PROGRESS.json", {"completed": 1})
             with self.assertRaisesRegex(ValueError, "pre-evaluation"):
                 matrix_attempt_limit(root, 2)
+            (root / "attempt-01/PROGRESS.json").unlink()
+            failed = root / "attempt-03"
+            write_json(failed / "FAILED.json", {"error": "HTTPStatusError('406 Not Acceptable')"})
+            write_json(failed / "RELEASED.json", read_json(root / "attempt-01/RELEASED.json"))
+            log = failed / "environment/controller.log"
+            log.parent.mkdir()
+            log.write_text("ALFWorld worker transport failed at http://127.0.0.1:28101/api/cancel: ReadTimeout('')\n")
+            cleanup = {
+                "reason": "worker-cancellation-timeout", "request_sha256": file_sha(root / "request.json"),
+                "failed_attempt": 3, "additional_attempts": 1,
+                "failure_sha256": file_sha(failed / "FAILED.json"),
+                "controller_log_sha256": file_sha(log),
+            }
+            write_json(root / "CANCELLATION_RECOVERY.json", cleanup)
+            self.assertEqual(matrix_attempt_limit(root, 2), 4)
+            for change in ({"additional_attempts": 2}, {"failed_attempt": 4},
+                           {"controller_log_sha256": "different"}):
+                write_json(root / "CANCELLATION_RECOVERY.json", {**cleanup, **change})
+                with self.subTest(change=change), self.assertRaisesRegex(ValueError, "cancellation"):
+                    matrix_attempt_limit(root, 2)
 
     @staticmethod
     def proposals():

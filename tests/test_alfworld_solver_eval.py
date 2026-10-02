@@ -38,11 +38,14 @@ class AlfworldSolverEvaluationTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "nonempty"):
             validate_assignment_cohorts([], harness_matrix=True)
 
-    def episode(self, completion, *, total_tokens=4096, environment_finishes=True):
+    def episode(self, completion, *, total_tokens=4096, environment_finishes=True,
+                cancellation_status=200):
         requests = []
 
         def handle(request):
             requests.append((request.url.path, json.loads(request.content)))
+            if request.url.path == "/api/cancel" and cancellation_status != 200:
+                return httpx.Response(cancellation_status, json={"detail": "worker still occupied"})
             payload = {"status": "RUNNING", "messages": [], "tools": []}
             if request.url.path == "/api/interact" and environment_finishes:
                 payload.update(status="COMPLETED", reward=1.0)
@@ -147,6 +150,16 @@ class AlfworldSolverEvaluationTests(unittest.TestCase):
         error = httpx.HTTPStatusError("invalid model", request=request, response=response)
         with self.assertRaises(httpx.HTTPStatusError):
             self.episode(error)
+
+    def test_failed_cleanup_is_not_a_successful_zero_reward_evaluation(self):
+        with self.assertLogs(alfworld_logger, level="WARNING"), self.assertRaises(httpx.HTTPStatusError):
+            self.episode(self.completion('{"action": "look"}', tokens=8),
+                         total_tokens=8, environment_finishes=False, cancellation_status=502)
+        original = RuntimeError("original generation failure")
+        with self.assertLogs(alfworld_logger, level="WARNING"), self.assertRaisesRegex(
+            RuntimeError, "original generation failure",
+        ):
+            self.episode(original, cancellation_status=502)
 
     def test_sampler_preserves_http_rejection_details(self):
         async def run():

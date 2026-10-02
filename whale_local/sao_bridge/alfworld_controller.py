@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+import asyncio
 from contextlib import asynccontextmanager
 import itertools
 import logging
@@ -31,6 +32,7 @@ def worker_api(address: str, endpoint: str) -> str:
 def create_app(*, transport: httpx.AsyncBaseTransport | None = None) -> FastAPI:
     workers: dict[str, dict[str, dict]] = {}
     sessions: dict[int, str] = {}
+    cancellations: dict[int, asyncio.Event] = {}
     counter = itertools.count(1)
 
     @asynccontextmanager
@@ -171,8 +173,15 @@ def create_app(*, transport: httpx.AsyncBaseTransport | None = None) -> FastAPI:
             raise HTTPException(400, "Invalid session_id") from exc
         address = sessions.get(sid)
         if address is not None:
-            response_body(await forward(address, "cancel", payload={"session_id": sid}, timeout=30))
-            sessions.pop(sid, None)
+            finished = cancellations.setdefault(sid, asyncio.Event())
+            response_body(await forward(
+                address, "cancel_with_notice", payload={"session_id": sid}, timeout=30,
+            ))
+            try:
+                await asyncio.wait_for(finished.wait(), timeout=300)
+            except TimeoutError as exc:
+                logger.error("ALFWorld worker did not acknowledge cancellation of session %s", sid)
+                raise HTTPException(504, f"Worker cancellation not completed for session {sid}") from exc
         return {"session_id": sid}
 
     @app.post("/api/cancel_notice")
@@ -180,7 +189,11 @@ def create_app(*, transport: httpx.AsyncBaseTransport | None = None) -> FastAPI:
         sid = payload.get("session_id")
         if sid is not None:
             try:
-                sessions.pop(int(sid), None)
+                session = int(sid)
+                sessions.pop(session, None)
+                finished = cancellations.pop(session, None)
+                if finished is not None:
+                    finished.set()
             except (TypeError, ValueError) as exc:
                 raise HTTPException(400, "Invalid session_id") from exc
         return {"ok": True}

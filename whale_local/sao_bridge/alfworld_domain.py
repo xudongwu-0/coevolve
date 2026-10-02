@@ -4,6 +4,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import sys
 from urllib.parse import urlsplit
 
 import httpx
@@ -189,12 +190,16 @@ async def run_episode(row: dict, spec: dict, generate, total_tokens=4096, seed=4
             }
         finally:
             if session_id is not None and not terminal:
+                active_exception = sys.exc_info()[0]
                 try:
-                    await client.post(
+                    cancelled = await client.post(
                         base + "/cancel", headers={"session_id": session_id}, json={},
                     )
+                    cancelled.raise_for_status()
                 except httpx.HTTPError:
                     logger.warning(
                         "Could not cancel ALFWorld session %s", session_id,
                         exc_info=True,
                     )
+                    if active_exception is None:
+                        raise

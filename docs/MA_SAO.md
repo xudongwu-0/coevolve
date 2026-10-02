@@ -75,6 +75,16 @@ release and rejects any earlier completed/progress reports. This is an extra
 **infrastructure attempt**, not an unchanged retry budget; its time and work
 remain charged. It does not extend native training, change model/data/seeds,
 relax the selection gate, or treat startup failure as a zero-reward sample.
+The recovered MA matrix then exposed a separate lifecycle fault: the blocking
+30-second worker cancellation timed out, its HTTP502 was not checked by the
+episode adapter, and a replacement episode hit the still-full worker's406.
+The controller now requests official `cancel_with_notice` and holds the client's
+episode slot until the worker confirms completion, with a bounded300-second
+deadline. Cleanup HTTP failures propagate instead of returning a zero-score
+evaluation; an earlier generation exception remains the primary error.
+One further explicit `CANCELLATION_RECOVERY.json` can bind this failed attempt
+and its controller log for a single retry. The original attempts and any partial
+generation remain charged; no model, task, seed or selection threshold changes.
 
 The matrix runner and train-only context support have CPU regression coverage.
 The full paired continuation is not yet a completed experiment; runtime receipts

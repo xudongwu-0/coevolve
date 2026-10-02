@@ -133,7 +133,27 @@ def matrix_attempt_limit(root: Path, attempts: int) -> int:
         ):
             raise ValueError("Recovery requires unchanged pre-evaluation port-collision failures")
         checked_release(failed)
-    return attempts + 1
+    limit = attempts + 1
+    cleanup = root / "CANCELLATION_RECOVERY.json"
+    if not cleanup.is_file():
+        return limit
+    receipt = read_json(cleanup)
+    failed = root / f"attempt-{limit:02d}"
+    log = failed / "environment/controller.log"
+    if (
+        receipt["reason"] != "worker-cancellation-timeout"
+        or receipt["request_sha256"] != file_sha(root / "request.json")
+        or receipt["failed_attempt"] != limit
+        or receipt["additional_attempts"] != 1
+        or receipt["failure_sha256"] != file_sha(failed / "FAILED.json")
+        or receipt["controller_log_sha256"] != file_sha(log)
+        or "406 Not Acceptable" not in read_json(failed / "FAILED.json")["error"]
+        or "api/cancel: ReadTimeout" not in log.read_text()
+        or (failed / "COMPLETE.json").exists()
+    ):
+        raise ValueError("Invalid hash-bound worker cancellation recovery")
+    checked_release(failed)
+    return limit + 1
 
 
 def run_matrix(launch: Launcher, config: dict, root: Path, attempts: int) -> tuple[dict, Path]:

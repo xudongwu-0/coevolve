@@ -113,9 +113,10 @@ class AlfworldControllerTests(unittest.TestCase):
                     return httpx.Response(200, json={"env_out": {
                         "status": "COMPLETED", "reward": 1.0,
                     }})
-                if endpoint == "cancel" and fail_cancel:
+                if endpoint == "cancel_with_notice" and fail_cancel:
                     raise httpx.ReadError("fixture transport failure", request=request)
-                if endpoint == "cancel":
+                if endpoint == "cancel_with_notice":
+                    await client.post("/api/cancel_notice", json={"session_id": payload["session_id"]})
                     return httpx.Response(200, json={"ok": True})
                 if endpoint == "calculate_overall":
                     return httpx.Response(503, text="fixture upstream failure")
@@ -152,6 +153,41 @@ class AlfworldControllerTests(unittest.TestCase):
                 self.assertIn(("POST", "start_sample", {
                     "index": 7, "custom_task": None, "session_id": 1,
                 }), calls)
+        asyncio.run(run())
+
+    def test_cancel_ack_does_not_release_client_before_worker_completion_notice(self):
+        async def run():
+            accepted = asyncio.Event()
+
+            async def worker(request):
+                endpoint = request.url.path.rsplit("/", 1)[-1]
+                if endpoint == "worker_status":
+                    return httpx.Response(200, json={"current": 1})
+                if endpoint == "start_sample":
+                    return httpx.Response(200, json={"status": "RUNNING"})
+                if endpoint == "cancel_with_notice":
+                    accepted.set()
+                    return httpx.Response(200, json={"session_id": 1})
+                raise AssertionError(endpoint)
+
+            app = create_app(transport=httpx.MockTransport(worker))
+            async with app.router.lifespan_context(app), httpx.AsyncClient(
+                transport=httpx.ASGITransport(app=app), base_url="http://test",
+            ) as client:
+                heartbeat = {
+                    "name": "task", "address": "http://127.0.0.1:28100/api",
+                    "concurrency": 1, "indices": [7],
+                }
+                self.assertEqual((await client.post("/api/receive_heartbeat", json=heartbeat)).status_code, 200)
+                started = await client.post("/api/start_sample", json={"name": "task", "index": 7})
+                sid = started.headers["session_id"]
+                cancellation = asyncio.create_task(client.post("/api/cancel", json={"session_id": sid}))
+                await asyncio.wait_for(accepted.wait(), timeout=1)
+                self.assertFalse(cancellation.done())
+                self.assertEqual((await client.post("/api/receive_heartbeat", json=heartbeat)).status_code, 200)
+                await client.post("/api/cancel_notice", json={"session_id": sid})
+                self.assertEqual((await asyncio.wait_for(cancellation, timeout=1)).status_code, 200)
+                self.assertEqual((await client.post("/api/interact", json={"session_id": sid})).status_code, 404)
         asyncio.run(run())
 
     def test_unknown_or_expired_worker_and_invalid_address_are_errors(self):
