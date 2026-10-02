@@ -2903,3 +2903,39 @@ It is exploratory validation, not held-out AIME. AIME test stays sealed until a 
     Raw paired scores remain available. The CPU-only finalizer migrated to
     `coevolve-strong-sao-ma-v1-finalizer-r1`, with its original launch retained.
     Filler remained active and unchanged throughout both numerical recoveries.
+
+103. **2026-10-02 — actual W1 collapse, retained incumbent and honest cost bounds.**
+    Sequential W1 step39/79 both score0% on selection24 mean@2, with and
+    without H1. All48 deployed-policy samples at each checkpoint reach the
+    4096-token limit. This is genuine policy degradation, not an HTTP failure
+    converted to a score and not caused by the later numerical-audit repair.
+    Native mean task reward is70.83% across steps5-19, then0 across20-59;
+    finite nonzero gradients do not establish stable learning.
+    Both checkpoints are rejected, retaining the original W0/H1. Full W2
+    begins from that incumbent with its frozen disjoint training offset/seed.
+    MA W1 had75%/77.08% and also retained the incumbent. Do not describe
+    any future MA comparison as beating a deliberately deployed0% baseline.
+
+    MA H2 generation preserves8/8 valid incumbent proposals,8/8 at local
+    step15 and2/8 at step31. Its first selection matrix completes16/20
+    unique harnesses before a worker28116 transport`ReadError`propagates
+    as HTTP502. The worker has no recorded fatal exception and subsequently
+    shuts down gracefully; a later cancel request logs`ClientDisconnect`.
+    Do not infer a model-quality failure from that transport incident.
+    All completed reports and the failed attempt remain. The bounded systemd
+    controller launches matrix attempt2 without retraining or regenerating
+    Engineer proposals; no final H2 decision exists at this observation.
+
+    Cost audit tooling counts actual saved generations, not just the input
+    ledger: sequential H2 has198 receipts for192 inputs; W1 has648 for640.
+    W1's2,156,802 recorded completion tokens include495 token-limit episodes,
+    142 completed,7 malformed-tool and4 environment-invalid-action episodes.
+    H2 adds116 distinct successful official reward jobs/1,160 task episodes.
+    Its selection records576 physical native episodes plus24 Engineer
+    generation responses; logical duplicate harness labels are not charged
+    as extra inference. Failed attempts' saved work still counts.
+    15 cost/report tests and8 subtests pass, and these real completed artifacts
+    validate the receipt schemas. Complete per-arm cost publication remains
+    gated on final freeze/report release. Lost in-flight work is an explicit
+    lower-bound gap, never a zero-cost assumption; reserved node time starts
+    at the original phase launch and includes all recovery and waiting.

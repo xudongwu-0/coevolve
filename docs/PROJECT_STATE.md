@@ -28,6 +28,13 @@ Engineer准备与验证不再等待Solver的双seed门槛；MA-SAO仍须先有�
 78.02%提升到89.56%，+11.54pp，题级95%区间[+3.30,+19.78]pp。
 两侧学习证据现在成立，可以进入新的公平SAO/MA-SAO对比；尚未证明MA更强。**
 
+**新的固定H1续训也暴露出SAO稳定性问题，不能把上述正证据说成“任意配置
+都稳定”。** 顺序臂W1的step39/79在24题mean@2上，无论no-patch还是H1
+均为0%，全部评测episode耗尽4096-token预算。原W0/H1没有被替换，最终
+顺序基线不会被偷换成这个崩坏checkpoint。MA同预算W1为75%/77.08%，
+同样未超过83.33%控制组。最终比较仍须等完整W2和独立于本轮选择的report；
+即使有最终MA收益，也不能借此声称顺序SAO已收敛或已解决稳定性。
+
 - 旧 SAO / MA-SAO 实验的主要收益来自 Solver 权重；多次交替实验始终保留 h0。
 - 32条数据的4B Harness-R1小试未通过输出/执行门槛，不能评价有效RL学习。
 - 官方9B Engineer在ALFWorld能够生成并实际应用修改，解决了执行能力的校准问题。
@@ -406,7 +413,11 @@ MA W1在固定H1上的step39/79分别为75.00%/77.08%，低于83.33%控制组，
 MA H2正确沿用W0原packet，并没有伪称发生新的counterpart refresh。
 顺序W1现已完成80个native step/75次非零Actor更新；MA H2也已完成
 32步/27次非零Actor更新，先前较旧的状态文件不代表训练卡死。
-当前两者均处于匹配checkpoint/proposal选择，之后各自执行完整W2。
+顺序W1两个候选均出现真实token-limit失效，故保留W0/H1，现已启动完整W2。
+MA H2的incumbent/step15/step31分别8/8、8/8、2/8合法提案；
+其matrix首试完成16/20个unique harness后遇到worker transport ReadError/
+HTTP502，没有把错误记作零分。原训练与16份完整报告保留，systemd已自动
+启动第二次matrix；没有重新训练，也没有重采样Engineer提案。
 
 完整pipeline已独立于agent运行：两臂`*-arm.service`推进到冻结，
 node4`coevolve-strong-sao-v1-sequential-report`与node3
@@ -432,6 +443,16 @@ failure归档；这些停顿也应计入成本。node3的MA原unit继续运行�
 称为评测波动，不能通过MA方法优势gate；原始配对分数仍保留。
 `7067440`及`FINALIZER_IDENTITY_GUARD_MIGRATION.json`记录该纯解释性迁移。
 上述恢复中用户filler一直active，没有停止或更改参数。
+
+成本工具`alfworld_strong_cost`已加入并在真实已完成阶段上验证：
+顺序H2声明192行，实际保存198次生成，额外6次是prefetch重复输入；
+W1声明640行，实际648次生成、2,156,802个completion tokens，
+其中495次token-limit、142次completed、7次非法tool arguments、
+4次environment invalid action，全部保留。H2另有116次真实官方reward
+evaluation，共1,160个task episodes。不能把声明行数当全部采样成本，
+也不能凭相同ID任挑一个receipt作为optimizer实际消费的行为。
+最终成本审计要等两臂冻结和report释放；无收据的中断生成只能报告下界，
+原始启动至report释放之间的恢复/等待仍全部计入8卡分配时间。
 
 利用率必须区分filler：顺序H2整个phase实验SM25.95%、filler15.28%；
 MA W1整个phase实验SM43.87%、filler7.79%。这些是每进程pmon采样均值，
