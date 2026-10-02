@@ -137,6 +137,7 @@ class ResidentEngine:
                 seed=seed, enable_prefix_caching=False, logprobs_mode="processed_logprobs",
                 gdn_prefill_backend=config["rollout_gdn_prefill_backend"],
                 worker_extension_cls="harness_r1_searchqa.workflow.Qwen35TextWorkerExtension",
+                **({"language_model_only": True} if config.get("domain") == "alfworld" else {}),
             )
             self.signature = signature
         elif signature != self.signature:
@@ -157,7 +158,6 @@ class ResidentEngine:
 def rollout_job(job_path: Path, resident: ResidentEngine | None = None):
     from transformers import AutoTokenizer
     from vllm import SamplingParams
-    from .reward import reward_func, _validate_metadata, _rows_by_id
 
     register_text_engine()
     job = json.loads(job_path.read_text())
@@ -166,12 +166,18 @@ def rollout_job(job_path: Path, resident: ResidentEngine | None = None):
     identity = checkpoint_identity(actor)
     if identity["sha256"] != job["actor_sha256"]:
         raise ValueError("actor checkpoint changed before rollout engine reload")
-    reward_args = SimpleNamespace(**job["reward_config"])
-    train_ids = _rows_by_id(reward_args.harness_r1_searchqa_data)
-    for row in rows:
-        task_ids, *_ = _validate_metadata(reward_args, row["metadata"])
-        if any(task not in train_ids for task in task_ids):
-            raise ValueError("non-train task in reward metadata")
+    alfworld = job.get("domain", "searchqa") == "alfworld"
+    if alfworld:
+        from sao_bridge.alfworld_matched_grpo import validate_reward_rows, score_records
+        validate_reward_rows(rows, job["reward_config"])
+    else:
+        from .reward import reward_func, _validate_metadata, _rows_by_id
+        reward_args = SimpleNamespace(**job["reward_config"])
+        train_ids = _rows_by_id(reward_args.harness_r1_searchqa_data)
+        for row in rows:
+            task_ids, *_ = _validate_metadata(reward_args, row["metadata"])
+            if any(task not in train_ids for task in task_ids):
+                raise ValueError("non-train task in reward metadata")
     tokenizer = AutoTokenizer.from_pretrained(str(actor), local_files_only=True)
     prompts = [thinking_prompt(tokenizer, row["prompt"]) for row in rows]
     if any(len(prompt) > config["max_prompt_tokens"] for prompt in prompts):
@@ -213,9 +219,13 @@ def rollout_job(job_path: Path, resident: ResidentEngine | None = None):
                 "finish_reason": completion.finish_reason,
             })
     validate_rollouts(records, rows, identity["sha256"])
-    results = asyncio.run(reward_func(
-        reward_args, [SimpleNamespace(**record) for record in records]))
-    scores = validate_rewards(results, len(records))
+    if alfworld:
+        results = asyncio.run(score_records(records, job["reward_config"], job["seed"]))
+        scores = [result["score"] for result in results]
+    else:
+        results = asyncio.run(reward_func(
+            reward_args, [SimpleNamespace(**record) for record in records]))
+        scores = validate_rewards(results, len(records))
     for record, result, score in zip(records, results, scores, strict=True):
         record.update(reward=score, reward_result=result)
     atomic_json(Path(job["result"]), {"records": records, "actor_sha256": identity["sha256"],

@@ -1,5 +1,19 @@
 # 项目状态与 Agent 接手指南
 
+## 当前进行：Matched GRPO，然后联合异步MA-SAO
+
+2026-10-02 17:09 UTC的新请求尚未完成，不能因旧测评完成而结束。
+先从原SAO的同一个H0续训Harness-R1 GRPO，精确匹配24提示*8=192条；
+固定W0，6个32条rollout、24个optimizer minibatch step，保存96/192条点。
+新增`alfworld_matched_grpo`复用SearchQA现有FSDP trainer与官方hash-pinned
+Relax objective，显式适配原生Qwen3.5 VLM checkpoint和既有ALFWorld reward服务。
+属于后端适配，不是原作者完整Relax运行栈。实现验证中，尚无新训练成绩。
+
+之后必须完成新Engineer在W0/W1上的200题单次测评，再继续联合MA。
+MA从H1/W1起步，第一目标超过W1+h2的92%，第二目标同H+W累计预算超过；
+需要真实联合更新、异步行为概率审核、崩溃预警与incumbent保护。
+旧joint试跑没有有效native更新，staleness=0骨架不能冒充已完成异步MAPPO。
+
 ## 最新完成：实际W2+h2的200题补测
 
 2026-10-02 16:48:39 UTC完成，约11分钟。输出

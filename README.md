@@ -8,6 +8,26 @@
 
 更新快照：**2026-10-02：E15/W79 的8小时自动交替实验**。运行状态以服务器上的完成/释放收据为准。
 
+### 新任务：同起点、同192条预算的Harness-R1对照
+
+新增[匹配GRPO入口](whale_local/sao_bridge/alfworld_matched_grpo.py)与
+[冻结参数](configs/alfworld_engineer_matched_grpo.json)，先完成此对照及W0/W1的200题评测，
+再继续真正联合更新的MA-SAO。目前是实现/验证阶段，不能当作已有训练结果。
+H2此前固定W1训练，**不依赖退化的W2**；新的MA也从H1/W1而不是W2开始。
+
+- 起点仍是官方已RL的`harness-r1` H0，固定W0；不换成SFT或对口官方Engineer。
+- 精确复用SAO的24个提示及奖励metadata，每个8条，共192条；6个rollout，
+  每轮32条分4个8条minibatch，**不是4个epoch**。保留消费96/192条的checkpoint。
+- 直接调用hash固定的官方Relax GRPO奖励标准化、clip及TIS函数，
+  运行器为FSDP/vLLM后端适配，**不是完整Relax/Megatron执行栈复现**。
+- 同4096 response/32768 context上限，但保留官方GRPO优化器参数；
+  轨迹预算相同不代表token/FLOPs相同。SAO的192条包含30条critic-only，
+  GRPO没有critic预热。额外reward环境执行、下一轮预取另记，不能隐藏成本。
+- 原模型严格加载原生Qwen3.5多模态checkpoint，文本任务不提供视觉输入；
+  不重映射或随机初始化语言权重，不改原SearchQA的默认模型约束。
+- 排除已有200题训练实例，基础设施故障抛错而非记零分；保留filler，
+  固定目标服务与训练器均有独立超时、失败记录和GPU释放审计。
+
 ## ALFWorld模型起点、训练步数与checkpoint
 
 基础架构均为**Qwen3.5-9B**。Solver从官方`target-agent-sft`开始，

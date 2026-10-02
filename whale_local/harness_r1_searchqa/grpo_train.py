@@ -32,6 +32,7 @@ def parser():
     result.add_argument("--rollout-gpus", required=True, help="physical GPU ids, disjoint from actor")
     result.add_argument("--resume", type=Path, help="committed checkpoint-NNNNNN directory")
     result.add_argument("--seed", type=int, default=42)
+    result.add_argument("--domain", choices=("searchqa", "alfworld"), default="searchqa")
     return result
 
 
@@ -149,25 +150,34 @@ def _rank_zero(action, rank):
     return message[0]["value"]
 
 
-def validate_engineer_scale(model_type: str, parameters: int, *, allow_4b: bool = False) -> None:
+def validate_engineer_scale(model_type: str, parameters: int, *, allow_4b: bool = False,
+                            allow_vlm: bool = False) -> None:
     if model_type == "qwen3_5_text" and parameters >= 8_000_000_000:
+        return
+    if allow_vlm and model_type == "qwen3_5" and parameters >= 8_000_000_000:
         return
     if allow_4b and model_type == "qwen3" and 3_500_000_000 <= parameters <= 4_500_000_000:
         return
     raise ValueError("Expected full 9B text Engineer or explicitly enabled native 4B pilot")
 
 
-def _load_fsdp(path, device, *, frozen=False, allow_4b=False):
+def _load_fsdp(path, device, *, frozen=False, allow_4b=False, allow_vlm=False):
     import torch
     from transformers import AutoConfig, AutoModelForCausalLM
     from torch.distributed.fsdp import FullyShardedDataParallel as FSDP, MixedPrecision
     from torch.distributed.fsdp.wrap import transformer_auto_wrap_policy
     config = AutoConfig.from_pretrained(str(path), local_files_only=True)
-    if config.model_type != "qwen3_5_text" and not (allow_4b and config.model_type == "qwen3"):
+    vlm = allow_vlm and config.model_type == "qwen3_5"
+    if not vlm and config.model_type != "qwen3_5_text" and not (
+            allow_4b and config.model_type == "qwen3"):
         raise ValueError("expected fresh text-only Qwen3.5 Engineer SFT, not the untouched VLM base")
     # Load on CPU; auto-wrap moves/shards one decoder at a time. Do not put the
     # entire FP32 9B model and Adam on a single GPU before sharding.
-    model, loading = AutoModelForCausalLM.from_pretrained(
+    loader = AutoModelForCausalLM
+    if vlm:
+        from transformers import AutoModelForImageTextToText
+        loader = AutoModelForImageTextToText
+    model, loading = loader.from_pretrained(
         str(path), dtype=torch.float32, local_files_only=True, attn_implementation="sdpa",
         output_loading_info=True)
     errors = {key: loading.get(key) for key in
@@ -177,7 +187,7 @@ def _load_fsdp(path, device, *, frozen=False, allow_4b=False):
         raise ValueError(f"Engineer checkpoint must load strictly without remapping/random weights: {errors}")
     model.config.use_cache = False
     validate_engineer_scale(config.model_type, sum(p.numel() for p in model.parameters()),
-                            allow_4b=allow_4b)
+                            allow_4b=allow_4b, allow_vlm=allow_vlm)
     model.requires_grad_(not frozen)
     names = set(model._no_split_modules or ())
     classes = {type(module) for module in model.modules()
@@ -250,6 +260,7 @@ def _generate(args, config, reward_config, rows, actor, actor_sha, update, *,
     result_path = args.output / f"rollout-{update:06d}.json"
     atomic_json(job_path, {
         "config": config, "reward_config": reward_config, "rows": rows,
+        "domain": args.domain,
         "actor": str(actor.resolve()), "actor_sha256": actor_sha,
         "result": str(result_path.resolve()), "seed": args.seed + update,
         "verify_only": verify_only,
@@ -311,29 +322,36 @@ def main():
         if args.output.exists() and any(args.output.iterdir()) and args.resume is None:
             raise FileExistsError("output is nonempty; use --resume or a fresh output")
         args.output.mkdir(parents=True, exist_ok=True)
-        rows = [json.loads(line) for line in args.data.read_text().splitlines() if line.strip()]
-        packet_batch(rows, 0, args.seed)
         reward_config = yaml.safe_load(args.reward_config.read_text())
-        if reward_config.get("harness_r1_response_protocol") != "prefill_think_patch":
-            raise ValueError("reward config must use prefill_think_patch")
-        from .reward import _validate_metadata, _rows_by_id
-        from types import SimpleNamespace
-        reward_args = SimpleNamespace(**reward_config)
-        train = _rows_by_id(reward_args.harness_r1_searchqa_data)
-        for row in rows:
-            ids, *_ = _validate_metadata(reward_args, row.get("metadata"))
-            if any(task not in train for task in ids):
-                raise ValueError("failure packet contains non-train task identities")
+        extra_provenance = {}
+        if args.domain == "alfworld":
+            from sao_bridge.alfworld_matched_grpo import preflight as alfworld_preflight
+            rows, extra_provenance = alfworld_preflight(args, config, reward_config)
+        else:
+            rows = [json.loads(line) for line in args.data.read_text().splitlines() if line.strip()]
+            if reward_config.get("harness_r1_response_protocol") != "prefill_think_patch":
+                raise ValueError("reward config must use prefill_think_patch")
+            from .reward import _validate_metadata, _rows_by_id
+            from types import SimpleNamespace
+            reward_args = SimpleNamespace(**reward_config)
+            train = _rows_by_id(reward_args.harness_r1_searchqa_data)
+            for row in rows:
+                ids, *_ = _validate_metadata(reward_args, row.get("metadata"))
+                if any(task not in train for task in ids):
+                    raise ValueError("failure packet contains non-train task identities")
+            extra_provenance["searchqa_manifest_sha256"] = sha256(
+                Path(reward_args.harness_r1_searchqa_data) / "manifest.json")
+        packet_batch(rows, 0, args.seed)
         source_root = Path(__file__).resolve().parent
         provenance = {
             "backend": BACKEND, "upstream_commit": UPSTREAM_COMMIT,
-            "sft_checkpoint": checkpoint_identity(args.model),
+            "initial_checkpoint": checkpoint_identity(args.model),
             "data_sha256": sha256(args.data), "reward_config_sha256": sha256(args.reward_config),
-            "searchqa_manifest_sha256": sha256(Path(reward_args.harness_r1_searchqa_data) / "manifest.json"),
             "config": config, "world_size": world, "seed": args.seed,
             "source_sha256": {name: sha256(source_root / name)
                               for name in ("grpo_train.py", "grpo_objective.py", "upstream_ppo.py",
-                                           "workflow.py", "reward.py")},
+                                           "workflow.py", "reward.py",
+                                           "../sao_bridge/alfworld_matched_grpo.py")},
             "upstream_source_sha256": {
                 name: sha256(Path(__file__).resolve().parents[2] /
                              "third_party/harness-r1-upstream" / name)
@@ -342,6 +360,10 @@ def main():
                              "code/Relax/relax/utils/training/ppo_utils.py",
                              "code/Relax/relax/backends/megatron/loss.py")},
         }
+        provenance.update(extra_provenance)
+        if args.domain == "searchqa":
+            provenance["sft_checkpoint"] = provenance.pop("initial_checkpoint")
+            provenance["source_sha256"].pop("../sao_bridge/alfworld_matched_grpo.py")
         start = 0
         if args.resume:
             saved = json.loads((args.resume / "COMMITTED.json").read_text())
@@ -362,7 +384,8 @@ def main():
     load_path = args.resume / "actor" if args.resume else args.model
     tokenizer = AutoTokenizer.from_pretrained(str(load_path), local_files_only=True)
     allow_4b = config.get("engineer_scale") == "4b_pilot"
-    model = _load_fsdp(load_path, device, allow_4b=allow_4b)
+    model = _load_fsdp(load_path, device, allow_4b=allow_4b,
+                       allow_vlm=args.domain == "alfworld")
     if (tokenizer.eos_token_id is None
             or model.module.config.eos_token_id != tokenizer.eos_token_id):
         raise ValueError("fresh SFT must export tokenizer im_end EOS into the text model config")
@@ -391,6 +414,14 @@ def main():
         checkpoint_dir = args.output / f"checkpoint-{update + 1:06d}"
         actor_path = checkpoint_dir / "actor"
         identity = _export_actor(model, tokenizer, actor_path, rank)
+        if args.domain == "alfworld":
+            def supplement():
+                from sao_bridge.common import ensure_model_runtime_metadata
+                ensure_model_runtime_metadata(actor_path, args.model)
+                updated = checkpoint_identity(actor_path)
+                atomic_json(actor_path / "actor_identity.json", updated)
+                return updated
+            identity = _rank_zero(supplement, rank)
         from torch.distributed.fsdp import FullyShardedDataParallel as FSDP, StateDictType
         with FSDP.state_dict_type(model, StateDictType.LOCAL_STATE_DICT):
             local_state = model.state_dict()
@@ -421,6 +452,8 @@ def main():
                 "engine_reloaded_from_disk": True, "metrics_by_rank": all_metrics,
                 "rank_state_sha256": {
                     str(i): sha256(checkpoint_dir / f"rank-{i:04d}.pt") for i in range(world)},
+                "consumed_policy_trajectories": (update + 1) * 32,
+                "generated_policy_trajectories": min(update + 2, args.updates) * 32,
             }
             atomic_json(checkpoint_dir / "COMMITTED.json", state)
             atomic_json(args.output / "progress.json", state)
