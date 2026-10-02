@@ -2870,3 +2870,36 @@ It is exploratory validation, not held-out AIME. AIME test stays sealed until a 
     episodes is9.080 versus7.922s, with different warmup proportions.
     Neither comparison isolates a6/2 allocation effect, and v5 did not
     pass its quality gate.
+
+102. **2026-10-02 — preserve numerical evidence and resume without retraining.**
+    Sequential W1 completed80 native/75 nonzero Actor updates. Its original
+    strict target-range audit rejected one FP32 boundary residual at step26,
+    `-3.725290298461914e-9`; the native training and release were successful.
+    Add a shared absolute`1e-6` audit tolerance and retain raw extrema.
+    Larger/nonfinite/reversed ranges still fail; no target clipping, reward
+    change, optimizer change, or extra training occurs.
+
+    The first audit-only CPU controller migration exposed a coupled legacy
+    cache issue: recomputed audit metadata added two fields to the frozen
+    H2 selection identity. Preserve this failure too. The corrected migration
+    verifies all old fields exactly and records the extra extrema/tolerance
+    separately, leaving the original identity unchanged.34 tests/21 subtests
+    and a disposable-copy check of the real historical H2 selection pass.
+    The immutable`55a5b31`controller is now node4 unit
+    `coevolve-strong-sao-v1-sequential-arm-r2`; verified W1 metrics SHA
+    `86d2c2990c09d15854064fff935af9785c915a96fa0b6be710c4f3f6f1c766e4`
+    is unchanged, native attempts remain1, and step39 selection has launched.
+    Both recovery receipts and prior failures remain in the arm directory.
+    Native budgets must not be inflated by falsely describing this as retraining,
+    but the controller recovery delay must remain in reserved GPU-time accounting.
+
+    MA H2 independently completed32 native/27 nonzero Actor updates and entered
+    matched selection; it was not stalled. Its active controller was not stopped.
+    Both arms still need W2 and final selection; no final report has been opened.
+
+    Before report opening, commit`7067440`also added an identity-aware final gate:
+    identical final Solver weight and harness hashes cannot be algorithmic
+    improvement, regardless of independently served score variation.
+    Raw paired scores remain available. The CPU-only finalizer migrated to
+    `coevolve-strong-sao-ma-v1-finalizer-r1`, with its original launch retained.
+    Filler remained active and unchanged throughout both numerical recoveries.

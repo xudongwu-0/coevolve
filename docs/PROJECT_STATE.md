@@ -1,6 +1,6 @@
 # 项目状态与 Agent 接手指南
 
-更新：2026-10-01 UTC。这是当前研究主线的入口；历史细节见
+更新：2026-10-02 UTC。这是当前研究主线的入口；历史细节见
 [实验日志](EXPERIMENT_LOG.md)，算法定义见 [MA-SAO](MA_SAO.md)、
 [Harness-R1 SearchQA适配](../whale_local/harness_r1_searchqa/README.md)和
 [ALFWorld复现入口](../whale_local/harness_r1_alfworld/README.md)。
@@ -404,15 +404,34 @@ step31为0/8，出现明显过训退化，不能只展示较好checkpoint。
 MA W1在固定H1上的step39/79分别为75.00%/77.08%，低于83.33%控制组，
 因此保留W0；**不能因为训练75次真实更新就宣称MA提升**。W没有被接受，
 MA H2正确沿用W0原packet，并没有伪称发生新的counterpart refresh。
-当前自动执行顺序W1与MA H2，之后各自完成剩余W块和选择。
+顺序W1现已完成80个native step/75次非零Actor更新；MA H2也已完成
+32步/27次非零Actor更新，先前较旧的状态文件不代表训练卡死。
+当前两者均处于匹配checkpoint/proposal选择，之后各自执行完整W2。
 
 完整pipeline已独立于agent运行：两臂`*-arm.service`推进到冻结，
 node4`coevolve-strong-sao-v1-sequential-report`与node3
 `coevolve-strong-ma-v1-report`等待两臂冻结才评测，node4
-`coevolve-strong-sao-ma-v1-finalizer`等待两侧report与release后汇总。
+`coevolve-strong-sao-ma-v1-finalizer-r1`等待两侧report与release后汇总。
 最终输出为`runs/alfworld_strong_sao_ma_v1/PAIRED_REPORT.json`。
 所有systemd启动参数、代码worktree和输入SHA均有run内收据；不依赖本次
 终端观察器存活。report尚未打开，最终MA增益尚无结论。
+
+**当前顺序臂unit为`coevolve-strong-sao-v1-sequential-arm-r2`，不是旧的
+`...-arm`或`...-arm-r1`。** W1训练已成功，但原精确区间审计在step26的
+`-3.725290298461914e-9` FP32残差上拒绝完成。现在仅审计容差为`1e-6`，
+保留原始极值，不裁剪target、不改reward/optimizer。第一次CPU恢复因新增
+审计字段与旧H2选择identity形状不一致而停止；兼容修复逐项验证旧绑定，
+只另写`target_range_audit.json`，不改旧identity。34测试/21 subtests及
+真实H2历史收据的临时副本验证通过。`55a5b31`冻结源码已部署；
+原W1的metrics SHA不变、attempt仍为1，已经真实开始step39选择，无重训。
+所有失败及两次恢复均保存在顺序臂的`TARGET_ROUNDOFF_RECOVERY*.json`和
+failure归档；这些停顿也应计入成本。node3的MA原unit继续运行，未打断。
+
+最终器在任何report打开前增加了policy identity防误报：
+若两臂最终Solver权重SHA和harness SHA均相同，独立serving得到的分差只能
+称为评测波动，不能通过MA方法优势gate；原始配对分数仍保留。
+`7067440`及`FINALIZER_IDENTITY_GUARD_MIGRATION.json`记录该纯解释性迁移。
+上述恢复中用户filler一直active，没有停止或更改参数。
 
 利用率必须区分filler：顺序H2整个phase实验SM25.95%、filler15.28%；
 MA W1整个phase实验SM43.87%、filler7.79%。这些是每进程pmon采样均值，
