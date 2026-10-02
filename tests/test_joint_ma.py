@@ -29,6 +29,7 @@ class JointTests(unittest.TestCase):
 
     def test_joint_vllm_returns_actual_tempered_behavior_probabilities(self):
         from areal.api.cli_args import vLLMConfig
+        from areal.infra.rpc.serialization import deserialize_value, serialize_value
         from vllm.config import ModelConfig
 
         self.assertEqual(ModelConfig.__dataclass_fields__["logprobs_mode"].default, "raw_logprobs")
@@ -40,6 +41,11 @@ class JointTests(unittest.TestCase):
         self.assertEqual(command[command.index("--logprobs-mode") + 1], "processed_logprobs")
         self.assertEqual(args["max_num_seqs"], original.max_num_seqs)
         self.assertNotIn("logprobs_mode", asdict(original))
+        restored = deserialize_value(serialize_value(joint))
+        self.assertIsInstance(restored, JointVLLMConfig)
+        self.assertEqual(asdict(restored), asdict(joint))
+        with self.assertRaisesRegex(ValueError, "processed"):
+            JointVLLMConfig(logprobs_mode="raw_logprobs")
 
     def test_first_failure_is_preserved_under_concurrent_peer_cancellation(self):
         original = {"error": "original environment failure"}

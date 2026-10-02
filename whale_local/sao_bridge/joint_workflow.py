@@ -1,7 +1,7 @@
 """One native action trajectory per role, sharing a cooperative terminal outcome."""
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 import json
 from pathlib import Path
 import sys
@@ -22,7 +22,11 @@ from .joint_round import checked_behavior, record_failure, round_path, wait_reco
 
 @dataclass
 class JointVLLMConfig(vLLMConfig):
-    logprobs_mode: str = field(default="processed_logprobs", init=False)
+    logprobs_mode: str = "processed_logprobs"
+
+    def __post_init__(self):
+        if self.logprobs_mode != "processed_logprobs":
+            raise ValueError("Joint rollouts require processed behavior logprobs")
 
 
 def parse_proposal(text: str) -> tuple[dict, str | None]:
