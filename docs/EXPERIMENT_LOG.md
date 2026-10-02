@@ -2828,3 +2828,23 @@ It is exploratory validation, not held-out AIME. AIME test stays sealed until a 
     weight digests and immutable raw baseline identities; all-pass calibration
     is retained without invented traces.46 tests/23 subtests pass.
     This is not yet a completed SAO-versus-MA result.
+
+101. **2026-10-02 — native CTDE budget complete; report opening remains gated.**
+    MA W1 completes80 native steps/75 nonzero Actor updates with bounded
+    terminal targets and critic-only warmup isolation. Quality selection is
+    still running. Sequential H2's matched generator retains6/8 valid
+    incumbent proposals,4/8 at continuation step15 and0/8 at step31.
+    This is real late-phase regression; do not hide it or reinterpret
+    invalid/no-patch fallbacks as useful editing. Selection still follows
+    the frozen rules and does not read report scores.
+
+    Implement a separate frozen-report runner and final comparison. Both arm
+    freeze hashes are mandatory before any report model access/allocation;
+    each final Solver is crossed with no-patch/common-H1/both final harnesses.
+    The MA reporter also supplies W0. Persist raw trajectories and report
+    hashes, recompute mean@2 and paired question bootstrap, require both
+    +5pp and positive95% lower bound, and label the interaction contrast
+    without causal overclaiming.50 tests/23 subtests pass, including exact
+    +5pp acceptance, a smaller positive gain rejection and a positive mean
+    with nonpositive lower-bound rejection. The real current experiment
+    also refuses premature report opening. No final arm result exists yet.

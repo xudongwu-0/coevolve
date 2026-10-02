@@ -113,6 +113,24 @@ stops for a protocol decision rather than fabricating an equal-budget H2.
 These per-turn-budget packets are not replaced by the earlier native
 total-token-budget diagnostic. No Solver behavior log-probabilities are invented.
 
+### Frozen report opening
+
+`python -m sao_bridge.alfworld_strong_report --protocol FROZEN_JSON --arm ARM --wait`
+waits for **both** immutable arm freezes before allocating report GPUs or
+reading report outcomes. It verifies the frozen selected model/harness and
+evaluates no-patch, common H1 and both final harnesses under the arm's final
+Solver. The MA-side reporter also supplies the common W0 cross-harness row.
+Identical patches retain all aliases without duplicate inference.
+
+After both reporter units finish and release GPUs,
+`python -m sao_bridge.alfworld_strong_report --protocol FROZEN_JSON --compare`
+rechecks freeze/report hashes, exact task/sample seeds and binary trajectories,
+then writes `PAIRED_REPORT.json`. The +5pp floor is tested at its exact boundary;
+a positive paired 95% lower bound is separately required. It also reports the
+cross-harness final-policy interaction, without claiming a causal component
+ablation. All outputs explicitly retain the reused-development/single-seed
+limitation. Missing or inconsistent freezes cannot be bypassed by a report flag.
+
 ## Objective and control
 
 The primary endpoint is final held-out task accuracy under the same declared

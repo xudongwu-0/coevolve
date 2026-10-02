@@ -55,13 +55,16 @@ def supplement_runtime(checkpoint: Path, reference: Path) -> None:
 
 def matrix_config(
     protocol: dict, solver: str, version: str, harnesses: dict[str, str], root: Path,
+    *, split: str = "selection",
 ) -> dict:
+    if split not in {"selection", "report"}:
+        raise ValueError("Unknown paired evaluation split")
     evaluation = protocol["evaluation"]
     manifest = read_json(Path(evaluation["task_manifest"]))
     return {
         "run": str(root), "solver_model": solver, "solver_version": version,
         "no_patch": protocol["no_patch"], "harnesses": harnesses,
-        "task_ids": manifest["selection_task_ids"],
+        "task_ids": manifest[f"{split}_task_ids"],
         **{key: evaluation[key] for key in (
             "samples", "seed", "temperature", "solver_tokens", "eval_concurrency",
             "environment_concurrency", "matrix_concurrency",
@@ -107,8 +110,10 @@ def run_matrix(launch: Launcher, config: dict, root: Path, attempts: int) -> tup
     raise SelectionAttemptsExhausted(f"Selection matrix exhausted {attempts} attempts: {root}")
 
 
-def matrix_reports(matrix: dict, protocol: dict) -> dict[str, dict]:
-    task_ids = read_json(Path(protocol["evaluation"]["task_manifest"]))["selection_task_ids"]
+def matrix_reports(matrix: dict, protocol: dict, *, split: str = "selection") -> dict[str, dict]:
+    if split not in {"selection", "report"}:
+        raise ValueError("Unknown paired evaluation split")
+    task_ids = read_json(Path(protocol["evaluation"]["task_manifest"]))[f"{split}_task_ids"]
     reports = {}
     for label, value in matrix["variants"].items():
         report = checked_native_report(

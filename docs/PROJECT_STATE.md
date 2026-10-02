@@ -391,6 +391,13 @@ node3`coevolve-strong-ma-v1-w1`用共同H1与train-only centralized critic训练
 整臂持久控制器会按冻结顺序继续proposal/checkpoint选择、必要的train-only
 counterpart refresh与后续W块，不重复首块，不提前打开report。
 这些执行器的46项CPU测试/23个subtests通过；两臂的最终比较尚未完成。
+MA W1随后已完成80步/75次非零Actor更新，critic target和warmup隔离审计通过；
+这证明当前CTDE+concat+terminal接线真实跑通，但还不是质量提升结论。
+顺序H2的匹配生成保留全部结果：incumbent6/8合法、续训step15为4/8、
+step31为0/8，出现明显过训退化，不能只展示较好checkpoint。
+仍按冻结规则选择，最终report尚未打开。
+报告执行器已实现并测试：必须两臂同时冻结后才能打开70题mean@2 report；
+真实未冻结实验上的拒绝门也已验证。整套相关50测试/23 subtests通过。
 
 复现数据准备（仓库根目录，无模型调用）：
 ```bash
