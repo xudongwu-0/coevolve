@@ -221,6 +221,11 @@ def configure(spec: dict, run: Path) -> dict:
     cfg["actor"]["mb_spec"]["max_tokens_per_mb"] = microbatch_tokens
     if cfg["critic"] is not None:
         cfg["critic"]["mb_spec"]["max_tokens_per_mb"] = microbatch_tokens + 2048
+    if spec.get("joint_root"):
+        # Qwen3.5's HF recurrent layers do not reset at packed sequence boundaries.
+        for name in ("actor", "critic", "ref"):
+            if cfg.get(name) is not None:
+                cfg[name]["mb_spec"]["n_mbs"] = spec["batch_size"] // actor_gpus
     cfg["rollout"].update(
         max_head_offpolicyness=spec.get(
             "max_head_offpolicyness", spec.get("staleness", 4)

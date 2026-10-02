@@ -91,7 +91,9 @@ Solver终止outcome保留审计，不能把失败采样当免费成本。修正�
 后续概率审计还发现vLLM默认raw logprob未包含Engineer的0.7采样温度，
 现显式使用`processed_logprobs`。旧试跑的真实采样和已提交更新成本另记；
 历史单角色结果不改写，但这也是MA与旧baseline间的实现差异。
-恢复目录`runs/alfworld_joint_async_6h_v4`，源码绑定见其`LAUNCH.json`；
+进一步核查发现HF Qwen3.5循环层未在packed序列间重置状态；联合训练改为
+每个microbatch只放一条轨迹，保持有效batch/梯度累积预算不变。
+恢复目录`runs/alfworld_joint_async_6h_v5`，源码绑定见其`LAUNCH.json`；
 **尚未验证GPU联合更新或MA性能**，旧v1目录不再是活跃训练。
 
 ## ALFWorld模型起点、训练步数与checkpoint

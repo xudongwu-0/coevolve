@@ -11,7 +11,10 @@
 v3完成Editor两轮critic预热、Solver两轮预热和一次Actor更新。
 但概率审计确认默认raw logprob不包含Engineer采样温度，v3也已停止弃用：
 32个H动作、32个W终止outcome，H消费16、W消费24；未提交工作不能假定为零。
-修复显式`processed_logprobs`后用全新`runs/alfworld_joint_async_6h_v4`恢复，
+v4显式`processed_logprobs`后，初始policy审计仍发现packed microbatch的第二条
+轨迹偏差；安装的HF Qwen3.5循环层没有packed边界重置。已停止v4（各角色2轮
+critic预热，24个H动作/24个W终止outcome），采用原生allocator每microbatch一条，
+有效batch及梯度累积不变。最新恢复目录为`runs/alfworld_joint_async_6h_v5`，
 起点、温度、数据与截止时间不变。以上失败采样不是免费成本，
 不能将新的round12称为包含全部失败成本的严格同采样实验。
 最新启动绑定以恢复目录的`LAUNCH.json`为准，截止时间不变。

@@ -38,6 +38,12 @@ the Engineer's temperature0.7 behavior policy. The initial uncorrected trial
 was discarded and its sampling/update cost retained. Historical single-role
 results are unchanged; this correction is an additional implementation
 difference, not evidence isolating an algorithm-only MAPPO advantage.
+The installed HF Qwen3.5 recurrent layers also lack packed-sequence state resets.
+Initial-policy audits showed the first trajectory in a packed microbatch
+matching inference while the next diverged. Joint actor/reference/critic use
+one trajectory per microbatch via the native allocator; optimizer batch size,
+gradient accumulation and sample budget are unchanged. This additional
+historical implementation risk is not yet a proven explanation of W2's decline.
 Before updating either actor, workers publish both roles' proximal likelihoods
 for the same round and slot. The actor advantage is multiplied by the partner's
 trajectory likelihood ratio clipped to[0.5,2]. This is an experimental, biased

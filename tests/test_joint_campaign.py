@@ -12,7 +12,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "third_party/sao/ve
 
 from areal.api.cli_args import PPOConfig, load_expr_config
 from areal.infra.workflow_executor import check_trajectory_format
-from areal.utils.data import batched_call
+from areal.utils.data import allocate_balanced_mbs, batched_call
 from sao_bridge.common import read_json, write_json
 from sao_bridge.joint_campaign import select_pair, share_checkpoints, wait_comparison
 from sao_bridge.joint_health import assess, metric_rows, recover_checkpoints, request_stop
@@ -64,6 +64,11 @@ def test_reference_and_proximal_probabilities_have_same_resolved_temperature(tmp
     assert resolved.actor.eps_clip == resolved.actor.eps_clip_higher == 0.2
     assert resolved.ref.optimizer is None
     assert resolved.actor.should_compute_prox_logp()
+    for component in (resolved.actor, resolved.critic, resolved.ref):
+        assert component.mb_spec.n_mbs == 2
+        for lengths in ([6000, 10000], [16, 18000], [31000, 32000]):
+            groups = allocate_balanced_mbs(component.mb_spec, lengths)
+            assert sorted(groups) == [[0], [1]]
 
 
 def test_joint_round_and_slot_survive_native_batching(tmp_path):
