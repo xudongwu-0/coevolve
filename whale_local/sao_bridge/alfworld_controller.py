@@ -39,7 +39,8 @@ def create_app(*, transport: httpx.AsyncBaseTransport | None = None) -> FastAPI:
     async def lifespan(app: FastAPI):
         async with httpx.AsyncClient(
             timeout=300, trust_env=False, transport=transport,
-            limits=httpx.Limits(max_connections=512, max_keepalive_connections=256),
+            # Reusing a worker connection can race its close between environment turns.
+            limits=httpx.Limits(max_connections=512, max_keepalive_connections=0),
         ) as client:
             app.state.worker_client = client
             yield
@@ -54,7 +55,10 @@ def create_app(*, transport: httpx.AsyncBaseTransport | None = None) -> FastAPI:
                 method, url, json=payload, timeout=timeout,
             )
         except httpx.RequestError as exc:
-            logger.error("ALFWorld worker transport failed at %s: %r", url, exc)
+            logger.error(
+                "ALFWorld worker transport failed at %s (session=%s): %r",
+                url, payload.get("session_id") if payload else None, exc,
+            )
             raise HTTPException(502, f"Worker transport failed at {url}: {exc!r}") from exc
 
     def alive(name: str) -> list[dict]:

@@ -15,6 +15,56 @@ from sao_bridge.common import ROOT
 
 
 class AlfworldControllerTests(unittest.TestCase):
+    def test_real_worker_connections_are_not_reused_or_actions_retried(self):
+        async def run():
+            connections = []
+            requests = []
+            writers = []
+
+            async def worker(reader, writer):
+                connections.append(writer.get_extra_info("peername"))
+                writers.append(writer)
+                try:
+                    await reader.readuntil(b"\r\n\r\n")
+                    requests.append("first")
+                    writer.write(b"HTTP/1.1 200 OK\r\nContent-Length: 2\r\n\r\n{}")
+                    await writer.drain()
+                    await reader.readuntil(b"\r\n\r\n")
+                    requests.append("unsafe-reuse")
+                    writer.transport.abort()
+                except asyncio.IncompleteReadError:
+                    pass
+                finally:
+                    writer.close()
+                    await writer.wait_closed()
+
+            server = await asyncio.start_server(worker, "127.0.0.1", 0)
+            port = server.sockets[0].getsockname()[1]
+            url = f"http://127.0.0.1:{port}/api/worker_status"
+            try:
+                async with httpx.AsyncClient(trust_env=False) as pooled:
+                    self.assertEqual((await pooled.get(url)).status_code, 200)
+                    with self.assertRaises(httpx.RequestError):
+                        await pooled.get(url)
+                self.assertEqual(requests, ["first", "unsafe-reuse"])
+                requests.clear()
+                connections.clear()
+                app = create_app()
+                async with app.router.lifespan_context(app):
+                    for _ in range(4):
+                        self.assertEqual(
+                            (await app.state.worker_client.get(url)).status_code, 200,
+                        )
+                self.assertEqual(requests, ["first"] * 4)
+                self.assertEqual(len(connections), 4)
+            finally:
+                server.close()
+                await server.wait_closed()
+                for writer in writers:
+                    writer.close()
+
+        asyncio.run(run())
+
     def test_original_blocking_controller_expires_workers_during_start_burst(self):
         path = ROOT / "third_party/harness-r1-upstream/code/life-harness/AgentBench/scripts/local_agentrl_controller.py"
         spec = importlib.util.spec_from_file_location("original_controller_fixture", path)
