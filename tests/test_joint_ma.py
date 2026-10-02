@@ -47,6 +47,31 @@ class JointTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "processed"):
             JointVLLMConfig(logprobs_mode="raw_logprobs")
 
+    def test_only_frozen_joint_reference_releases_unused_forward_cache(self):
+        from areal.engine.fsdp_engine import FSDPPPOActor
+        from sao_bridge.terminal_actor import TerminalFSDPPPOActor
+
+        engine = object.__new__(TerminalFSDPPPOActor)
+        expected = [torch.tensor([0.25])]
+        for joint, optimizer, released in (("1", None, True), ("1", object(), False), ("0", None, False)):
+            engine.config = SimpleNamespace(optimizer=optimizer)
+            with (
+                patch.dict("os.environ", {"MA_SAO_JOINT_EPISODES": joint}),
+                patch.object(FSDPPPOActor, "compute_logp", return_value=expected),
+                patch("sao_bridge.terminal_actor.current_platform") as platform,
+            ):
+                self.assertIs(engine.compute_logp([]), expected)
+                self.assertEqual(platform.empty_cache.call_count, int(released))
+        engine.config = SimpleNamespace(optimizer=None)
+        with (
+            patch.dict("os.environ", {"MA_SAO_JOINT_EPISODES": "1"}),
+            patch.object(FSDPPPOActor, "compute_logp", side_effect=RuntimeError("forward failed")),
+            patch("sao_bridge.terminal_actor.current_platform") as platform,
+        ):
+            with self.assertRaisesRegex(RuntimeError, "forward failed"):
+                engine.compute_logp([])
+            platform.empty_cache.assert_not_called()
+
     def test_first_failure_is_preserved_under_concurrent_peer_cancellation(self):
         original = {"error": "original environment failure"}
         record_failure(self.root, "solver", original)

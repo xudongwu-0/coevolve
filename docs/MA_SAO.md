@@ -44,6 +44,15 @@ matching inference while the next diverged. Joint actor/reference/critic use
 one trajectory per microbatch via the native allocator; optimizer batch size,
 gradient accumulation and sample budget are unchanged. This additional
 historical implementation risk is not yet a proven explanation of W2's decline.
+The six-hour run subsequently OOMed on a24075-token Solver trajectory: the
+reference process reserved40.40GiB while only8.80GiB was allocated, leaving
+insufficient space for the actor's11.25GiB backward allocation. Future joint
+runs release the frozen reference's unused CUDA cache after `compute_logp`;
+live tensors, probabilities and learner optimizer state are not freed.
+This was not hot-applied to the failed run or counted as a successful retraining.
+A real node3 CUDA check released exactly8GiB of synthetic unused workspace and
+preserved all live output tensors. This verifies the cache-release hook, not a
+successful repeat of the full24075-token PPO backward pass.
 Before updating either actor, workers publish both roles' proximal likelihoods
 for the same round and slot. The actor advantage is multiplied by the partner's
 trajectory likelihood ratio clipped to[0.5,2]. This is an experimental, biased

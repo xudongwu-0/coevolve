@@ -2,6 +2,31 @@
 
 ## 当前进行：Matched GRPO，然后联合异步MA-SAO
 
+**22:46 UTC最新接手入口：** 正确性修复后的训练v5在22:33:19发生Solver Actor
+CUDA OOM，不能继续称训练中。H/W各有6条完整指标行（各4次Actor、12次critic更新），
+但共同持久检查点只有global_step3（第4轮，各2次Actor更新）。
+该检查点的真实权重张量及ValueNorm8次更新已经验证。
+初始HF/vLLM action平均logprob差最大H0.001488、W0.007527nats/token，
+通过显式0.01工程阈值；前6轮每role48条轨迹中40条实际有一轮滞后，
+配对ID/reward/slot一致。失败前固定reference KL约H0.000335/W0.000028，
+value MSE约0.170/0.172；健康loss没有预报显存耗尽，不是性能崩溃结论。
+
+**当前只做评测：** `runs/alfworld_joint_async_6h_v5_recovered`，
+node4 `coevolve-joint-recovered-v1-best`及guard；
+node3 matched入口已明确写`unavailable`，不伪造round12。
+旧v5的FAILED和原生OOM日志完整保留；恢复结果标
+`recovered_committed_checkpoints_after_training_failure`。
+评测沿用冻结`f3563e6`/`runs/source-snapshots/alfworld-joint-async-6h-v7`，
+当前main后续修复没有热改运行源。23:41:31报告期限不变。
+新尝试实际消费96条，加前期72条已提交消费共168条；仅所选点为64条。
+生成至少260个policy action（包含未获reward的H动作），另有未完成W工作，
+以及后续补丁选择/评测成本；不能把模型路径成本当整个搜索成本。
+
+OOM发生时reference已分配8.80GiB却保留40.40GiB缓存，actor反传需11.25GiB、
+仅余6.04GiB。main已加reference-only缓存释放，41项测试及3个subtests通过；
+node3真实CUDA检查释放8GiB且保留全部活跃输出。此证据只验证缓存释放，
+**不是已重跑通过完整24075-token PPO**，不改写此次OOM失败。
+
 **21:42 UTC恢复：** 首次native MA生成了16个Engineer动作、12个Solver终止outcome，
 但尚无已提交optimizer指标行。核查发现ValueNorm按DP分片独立更新，已停止该尝试，
 不保留其模型；两节点GPU释放及filler已确认。真实双进程回归复现了不一致，

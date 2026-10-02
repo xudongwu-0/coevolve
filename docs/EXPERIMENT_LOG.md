@@ -3229,3 +3229,51 @@ Actual frozen source43c3de0 is bound by `LAUNCH_v4.json` under
 `runs/alfworld_joint_async_6h_v1`; prior waiting queue versions consumed no MA
 samples. Initialization is not a verified joint update or a performance result.
 The22:41:31 training cutoff and23:41:31 reporting deadline remain unchanged.
+
+## 2026-10-02 22:46 UTC: genuine joint updates, then OOM and checkpoint-only recovery
+
+During initial native validation, three concrete correctness issues were found:
+independent per-DP-shard ValueNorm moments; raw vLLM logprobs excluding the
+Engineer's0.7 temperature; and HF Qwen3.5 recurrent-state leakage between
+packed trajectories. Fixes4b850a7/b028cad/f3563e6 gather full-DP active targets,
+request processed sampling logprobs, and allocate one trajectory per microbatch.
+The effective batch remains8 per role. Real two-process tests reproduced and
+fixed the normalization mismatch. These implementation differences prevent an
+algorithm-only comparison against historical single-role runs without reruns.
+A separate gitlink-bootstrap failure occurred before any model loading.
+All attempts were retained, not relabelled as successful training.
+
+Final corrected training `runs/alfworld_joint_async_6h_v5` started22:14:20UTC,
+sourcef3563e6. Initial behavior/proximal consistency passed for all16 trajectories:
+maximum absolute token-mean log-ratio H0.001488/W0.007527nats, explicit engineering
+tolerance0.01. Same paired IDs/rewards/versions/slots verified. Across six committed
+rounds,40/48 trajectories in each role actually exhibited the permitted lag1.
+Both roles completed6 native steps, including2 critic-only warmups and4 nonzero
+Actor updates. K=2 was retained. Healthy KL/value losses are not validation scores.
+
+At22:33:19 Solver actor backward OOMed on a24075-token trajectory. The allocation
+needed11.25GiB with6.04GiB free; the colocated reference had8.80GiB allocated but
+40.40GiB reserved. The first joint failure receipt reflected peer cancellation;
+the actual CUDA cause remains explicit in `solver/optimizer/training_active.json`
+and the native actor traceback. No infrastructure exception became a reward0.
+
+Only common globalstep3/round4 had complete actor/critic files and committed
+metrics before failure. Its actors each contain2 updates. Real projection tensors
+changed447542(H)/443087(W) of33554432 inspected parameters, and both critic
+normalizers recorded8 updates. No partially saved/later in-memory model was used.
+The separate `runs/alfworld_joint_async_6h_v5_recovered` publishes these models
+with explicit recovered-after-failure status and evaluates eight new proposals,
+selection24 mean@2, then frozen all200 mean@1/strict197. Round12 is unavailable.
+Node4 best/guard and node3 unavailable-matched receipts are persistent.
+
+Actual corrected-run consumption is96 H+W trajectories, not the selected point's64.
+Previous failed attempts consumed another72 committed trajectories. Generated
+policy actions across attempts are at least260, including unrewarded H actions;
+incomplete W work and proposal-selection/evaluation costs are additional.
+No claim of full-search matched budget is possible.
+
+Main5d3c0b9 separately fixes typed RPC config roundtripping; running source was
+not mutated. The reference-only cache-release correction passes41 tests+3 subtests.
+A real node3 CUDA check freed8589934592bytes while preserving live tensors and
+16384allocated bytes. This validates cache release, not a full long-context PPO
+retry. The failed run remains failed, and the W1+h2 incumbent remains unchanged.

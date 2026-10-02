@@ -6,6 +6,7 @@ from pathlib import Path
 
 import torch
 from areal.engine.fsdp_engine import FSDPPPOActor
+from areal.infra.platforms import current_platform
 from areal.utils.data import batched_call
 
 
@@ -31,6 +32,14 @@ def zero_terminal_value(trajectory: dict) -> dict:
 
 
 class TerminalFSDPPPOActor(FSDPPPOActor):
+    @torch.no_grad()
+    def compute_logp(self, *args, **kwargs):
+        result = super().compute_logp(*args, **kwargs)
+        if self.config.optimizer is None and os.environ.get("MA_SAO_JOINT_EPISODES") == "1":
+            # The colocated reference has a separate allocator from the learner.
+            current_platform.empty_cache()
+        return result
+
     @torch.no_grad()
     def compute_advantages(self, data):
         return batched_call(self._terminal_advantages, data, pass_meta=True)
