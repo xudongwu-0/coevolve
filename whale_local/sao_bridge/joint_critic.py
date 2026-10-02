@@ -7,7 +7,9 @@ import os
 from pathlib import Path
 
 import torch
+import torch.distributed as dist
 from areal.engine.fsdp_engine import FSDPPPOCritic
+from areal.utils.data import all_gather_tensor_container
 
 from .central_critic import prepend_context
 from .common import ROOT, file_sha, read_json, write_json
@@ -45,13 +47,21 @@ class JointValueNorm:
         self.behavior_mean, self.behavior_std = self.moments()
         return [value * self.behavior_std + self.behavior_mean for value in values]
 
-    def prepare_update(self, rows: list[dict]) -> tuple[list[dict], dict]:
+    def prepare_update(
+        self, rows: list[dict], *, group=None, device: torch.device | None = None,
+    ) -> tuple[list[dict], dict]:
         targets = torch.cat([
-            row["returns"][row["loss_mask"].bool()].detach().float().cpu() for row in rows
+            row["returns"][row["loss_mask"].bool()].detach().float() for row in rows
         ])
         old = torch.cat([
-            row["values"][row["loss_mask"].bool()].detach().float().cpu() for row in rows
+            row["values"][row["loss_mask"].bool()].detach().float() for row in rows
         ])
+        active = torch.stack((targets, old))
+        if dist.is_initialized() and dist.get_world_size(group) > 1:
+            if device is not None:
+                active = active.to(device)
+            active = torch.cat(all_gather_tensor_container(active, group=group), dim=1)
+        targets, old = active.cpu()
         if not targets.numel() or not torch.isfinite(targets).all() or not torch.isfinite(old).all():
             raise FloatingPointError("Joint critic has empty or nonfinite active value targets")
         self.normalizer.update(targets.unsqueeze(-1))
@@ -146,7 +156,9 @@ class JointEpisodeCritic(FSDPPPOCritic):
         expanded = [expand_joint_context(row)[0] for row in data]
         if self.value_norm is not None:
             from areal.utils import stats_tracker
-            expanded, stats = self.value_norm.prepare_update(expanded)
+            expanded, stats = self.value_norm.prepare_update(
+                expanded, group=self.data_parallel_group, device=self.device,
+            )
             with stats_tracker.scope("joint_value_norm"):
                 stats_tracker.scalar(**stats)
         return super().ppo_update(expanded)
@@ -154,7 +166,6 @@ class JointEpisodeCritic(FSDPPPOCritic):
     def save(self, meta):
         super().save(meta)
         if self.value_norm is not None:
-            import torch.distributed as dist
             if not dist.is_initialized() or dist.get_rank() == 0:
                 write_json(Path(meta.path) / "joint_value_norm.json", self.value_norm.state())
 

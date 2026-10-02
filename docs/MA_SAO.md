@@ -21,8 +21,12 @@ saved with the four-round checkpoint cadence. The executed common prefix costs
 The MAPPO-inspired components are decentralized policies, same-cohort shared
 team rewards, privileged pre-action critic inputs, separate per-role PPO updates,
 batch advantage normalization, symmetric policy clipping0.2 and the hash-pinned
-official MAPPO ValueNorm. Normalization excludes prompt/padding tokens, restores
-raw values for GAE and checkpoints its moments. We retain native token-level
+official MAPPO ValueNorm. Normalization gathers active targets across the
+data-parallel group before updating identical moments on every rank, excludes
+prompt/padding tokens, restores raw values for GAE and checkpoints its moments.
+The first native attempt exposed independently updated DP-shard statistics;
+it was stopped without a committed update, and an unequal-token two-process
+regression reproduces the discrepancy and verifies the correction. We retain native token-level
 terminal GAE, clipped MSE rather than MAPPO's default Huber option, and SAO's
 own-token TIS/DIS. This is **not full MAPPO hyperparameter or architecture parity**.
 

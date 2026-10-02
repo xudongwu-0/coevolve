@@ -78,3 +78,42 @@ def test_invalid_and_constant_targets_are_reported_explicitly():
         state = {**norm.state(), field: float("inf")}
         with pytest.raises(ValueError, match="checkpoint moments"):
             norm.restore(state)
+
+
+def _distributed_value_norm_worker(rank, rendezvous):
+    import torch.distributed as dist
+
+    dist.init_process_group("gloo", init_method=f"file://{rendezvous}", rank=rank, world_size=2)
+    try:
+        row = {
+            "returns": torch.tensor([[float(rank)] * 3 + [999.]]),
+            "values": torch.full((1, 4), 0.5),
+            "loss_mask": torch.tensor([[1, rank, rank, 0]]),
+        }
+        norm = JointValueNorm()
+        norm.denormalize([row["values"]])
+        _, stats = norm.prepare_update([row], group=dist.group.WORLD, device=torch.device("cpu"))
+        expected = official_value_norm()(1)
+        expected.update(torch.tensor([[0.], [1.], [1.], [1.]]))
+        mean, variance = expected.running_mean_var()
+        assert norm.moments() == (mean.item(), variance.sqrt().item())
+        assert stats["active_value_tokens"] == 4
+        assert stats["raw_value_mse"] == 0.25
+        states = [None, None]
+        dist.all_gather_object(states, norm.state())
+        assert states[0] == states[1]
+        if rank == 1:
+            row["returns"][0, 0] = float("nan")
+        with pytest.raises(FloatingPointError):
+            norm.prepare_update([row])
+    finally:
+        dist.destroy_process_group()
+
+
+def test_distributed_statistics_match_full_batch_with_unequal_active_tokens(tmp_path):
+    torch.multiprocessing.spawn(
+        _distributed_value_norm_worker,
+        args=(str(tmp_path / "value-norm-rendezvous"),),
+        nprocs=2,
+        join=True,
+    )

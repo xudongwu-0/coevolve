@@ -2,6 +2,14 @@
 
 ## 当前进行：Matched GRPO，然后联合异步MA-SAO
 
+**21:42 UTC恢复：** 首次native MA生成了16个Engineer动作、12个Solver终止outcome，
+但尚无已提交optimizer指标行。核查发现ValueNorm按DP分片独立更新，已停止该尝试，
+不保留其模型；两节点GPU释放及filler已确认。真实双进程回归复现了不一致，
+现改为先收集整个DP组的有效目标，再在各rank更新相同的官方统计。
+旧尝试目录`runs/alfworld_joint_async_6h_v1`保留，恢复目录为
+`runs/alfworld_joint_async_6h_v2`；这些失败采样不是免费成本，不能并入有效更新数。
+最新启动绑定以恢复目录的`LAUNCH.json`为准，截止时间不变。
+
 2026-10-02 17:09 UTC的新请求尚未完成，不能因旧测评完成而结束。
 先从原SAO的同一个H0续训Harness-R1 GRPO，精确匹配24提示*8=192条；
 固定W0，6个32条rollout、24个optimizer minibatch step，保存96/192条点。

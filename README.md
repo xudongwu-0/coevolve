@@ -6,7 +6,7 @@
 
 ## 当前任务与主要结论
 
-更新快照：**2026-10-02 21:31 UTC：同预算GRPO对照完成，联合MA-SAO开始初始化**。运行状态以服务器上的完成/释放收据为准。
+更新快照：**2026-10-02 21:42 UTC：同预算GRPO对照完成，联合MA-SAO修正分布式归一化后恢复**。运行状态以服务器上的完成/释放收据为准。
 
 ### 新任务：同起点、同192条预算的Harness-R1对照
 
@@ -84,9 +84,12 @@ W0/W1分别完整重测同200题mean@1并报告严格197题。W0列仍是W1补�
 当前GRPO恢复源码`3ebdcfa`，训练目录`runs/alfworld_matched_grpo_192_v4`，
 测评目录`runs/alfworld_matched_grpo_200_v3`。第2次启动为TP2 custom-allreduce
 错误；第3次为单卡TCPStore选错可达地址。分别改为TP1/eager和显式回环地址，
-目标函数、H0、192条预算均不变。MA冻结源码`43c3de0`，
-部署收据为`runs/alfworld_joint_async_6h_v1/LAUNCH_v4.json`；
-21:31两节点原生训练进程已启动初始化，**尚未验证GPU联合更新或MA性能**。
+目标函数、H0、192条预算均不变。MA的首个native尝试发现ValueNorm按DP分片
+独立更新统计，已在没有提交optimizer指标行时停止；16个Engineer动作及12个
+Solver终止outcome保留审计，不能把失败采样当免费成本。修正为整个DP组共享
+有效目标统计，真实双进程回归覆盖不同分片token数及非有限值传播。
+恢复目录`runs/alfworld_joint_async_6h_v2`，源码绑定见其`LAUNCH.json`；
+**尚未验证GPU联合更新或MA性能**，旧v1目录不再是活跃训练。
 
 ## ALFWorld模型起点、训练步数与checkpoint
 
