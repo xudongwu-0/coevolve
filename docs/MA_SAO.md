@@ -195,8 +195,8 @@ CUDA_VISIBLE_DEVICES='' PYTHONPATH=whale_local python -B \
 ```
 
 For the current run, CPU-only systemd jobs are already queued:
-`coevolve-strong-sao-v1-sequential-cost` on node4 and
-`coevolve-strong-ma-v1-cost` on node3, using frozen42a521f.
+`coevolve-strong-sao-v1-sequential-cost-r2` on node4 and
+`coevolve-strong-ma-v1-cost-r2` on node3, using frozena4eef56.
 Each waits for its existing report unit to stop, then invokes this CLI.
 `COST_AUDIT_LAUNCH.json` records the command/source; a stopped or failed reporter
 is not assumed successful, because the audit still validates actual completion,
@@ -215,6 +215,31 @@ telemetry separates experiment/filler; nested matrix telemetry is not counted
 again when its selection parent already covers it. Original shared-prefix
 training/search and common H1 selection are additional equal charges; the separate
 Solver-v5 and train-probe explorations remain separately reported R&D.
+
+### E15/W79 eight-hour successor (2026-10-02)
+
+The next user-requested experiment is a **different frozen run**, not a restart
+of the W0 comparison above. Its [persistent controller](../whale_local/sao_bridge/alfworld_alternating_campaign.py)
+starts both arms at validated E15/critic15 and v4-W79/critic79. Both orders are
+H2 then W2; only the MA critic receives pre-action centralized context. Common
+W79 train-only evidence is freshly collected with the official greedy/per-turn
+protocol, then E15 proposes eight harnesses for this actual partner.
+
+H2 uses32 native/27 Actor updates, W2 uses80/75, with matched role settings and
+selection budgets. Native and scoring attempts remain bounded at2. The fixed
+eight-hour wall deadline does not restart with a coordinator. Independent
+systemd timers stop only the explicitly named campaign services, reserve the
+last hour for reporting, and never stop the adaptive GPU filler. A timeout
+freezes the last validated state; an incomplete phase budget disables a claim
+of MA superiority. The `final_systems` report mode retains the necessary initial,
+H2-intermediate and W2-final systems, but omits cross-swap interaction ablations.
+
+The target-specific released `agent-sft-harness-r1` has also been downloaded and
+hash-verified. Its [matched-baseline evaluator](../whale_local/sao_bridge/alfworld_matched_engineer_baseline.py)
+reuses frozen SAO proposals and re-evaluates them beside eight matched official
+proposals, preserving invalid slots. That GPU experiment is **deferred** while
+the eight-hour alternating campaign has priority; no new official-baseline score
+has been claimed.
 
 ## Objective and control
 

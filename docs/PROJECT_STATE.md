@@ -1,5 +1,27 @@
 # 项目状态与 Agent 接手指南
 
+## 最新交接：E15/W79 的8小时自动交替实验
+
+用户最新要求优先部署离线也能完成的实验，而非继续延长旧W0训练。新入口是
+[自动控制器](../whale_local/sao_bridge/alfworld_alternating_campaign.py)：node4
+`sequential`为普通SAO对照，node3为`ma`。两臂均从已验证的E15 Engineer、
+v4-W79 Solver及各自匹配critic起步，都执行H2 → W2。不要把旧实验保留的
+W0或旧的不同更新顺序带入本轮。
+
+运行目录为`runs/alfworld_alternating_e15_w79_8h_v1`。冻结协议保存绝对8小时
+截止和服务名；先共同收集W79真实train-only失败证据及E15初始harness。
+H2为32/27 native/Actor更新，W2为80/75；至少留最后1小时做70题mean@2终评。
+独立systemd timer在协调器失效时仍能终止本实验计算服务，GPU filler始终
+不在停止列表。截止仅保留已验证状态，部分预算未完成时不宣称MA胜出。
+不做多seed/参数扫/交叉harness消融，不使用node0–node2。
+实际启动时间及接回方式见根[README](../README.md)与运行收据。
+
+旧两臂均已完成native预算但保留同一W0/E15/H1。MA W2选择为45.83%/75.00%，
+均低于83.33%的incumbent；step39端口/取消修复后获得真实分数，step79的
+一次worker ReadError在原有第二次尝试中恢复。相同最终策略的分差不能视作
+MA进化收益。官方对口`agent-sft-harness-r1`权重已校验下载完毕，但其GPU
+基线评测推迟到本次8小时实验之后。
+
 更新：2026-10-02 UTC。这是当前研究主线的入口；历史细节见
 [实验日志](EXPERIMENT_LOG.md)，算法定义见 [MA-SAO](MA_SAO.md)、
 [Harness-R1 SearchQA适配](../whale_local/harness_r1_searchqa/README.md)和

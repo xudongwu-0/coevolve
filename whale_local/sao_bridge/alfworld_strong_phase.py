@@ -142,7 +142,7 @@ def train_calibration(packets: list[dict], solver_version: str) -> dict:
     }
 
 
-def finalize_common(protocol: dict, matrix_root: Path) -> dict:
+def finalize_common(protocol: dict, matrix_root: Path, *, initial_state: dict | None = None) -> dict:
     checked_release(matrix_root)
     config = read_json(matrix_root / "config.json")
     complete = read_json(matrix_root / "COMPLETE.json")
@@ -195,25 +195,44 @@ def finalize_common(protocol: dict, matrix_root: Path) -> dict:
         Path(protocol["common_prefix"]["engineer_training"]) / "optimizer/trained.json"
     )
     pair = checkpoint_pair(trained, protocol["common_prefix"]["selected_checkpoint_step"])
-    template = read_json(Path(protocol["h2"]["template"]))
-    packets_path = Path(template["data"]).parent / "packets.json"
-    packets = read_json(packets_path)
-    calibration = train_calibration(packets, template["solver_version"])
-    state = {
-        "engineer": pair["actor"], "engineer_critic": pair["critic"],
-        "solver": protocol["initial_solver"], "solver_critic": protocol["initial_solver"],
-        "solver_version": template["solver_version"], "solver_epoch_version": 0,
-        "engineer_version": 1, "harness_version": int(selected != "no_patch"),
+    if initial_state is None:
+        template = read_json(Path(protocol["h2"]["template"]))
+        packets_path = Path(template["data"]).parent / "packets.json"
+        packets = read_json(packets_path)
+        state = {
+            "engineer": pair["actor"], "engineer_critic": pair["critic"],
+            "solver": protocol["initial_solver"], "solver_critic": protocol["initial_solver"],
+            "solver_version": template["solver_version"], "solver_epoch_version": 0,
+            "engineer_version": 1,
+            "packets": str(packets_path), "packets_sha256": file_sha(packets_path),
+            "packet_solver": protocol["initial_solver"],
+            "calibration": train_calibration(packets, template["solver_version"]),
+        }
+    else:
+        state = dict(initial_state)
+        if (
+            state["engineer"] != pair["actor"] or state["engineer_critic"] != pair["critic"]
+            or Path(state["solver"]).resolve() != Path(protocol["initial_solver"]).resolve()
+            or Path(state["packet_solver"]).resolve() != Path(state["solver"]).resolve()
+            or config["solver_version"] != state["solver_version"]
+            or state["packets_sha256"] != file_sha(Path(state["packets"]))
+            or state["protocol_sha256"] != file_sha(Path(protocol["run"]) / "frozen_protocol.json")
+            or state["calibration"]["split"] != "train"
+            or state["calibration"]["solver_version"] != state["solver_version"]
+        ):
+            raise ValueError("Warm-start common state changed its models or current-partner evidence")
+        for packet in read_json(Path(state["packets"])):
+            validate_metadata(packet["metadata"], state["solver_version"])
+    state.update({
+        "harness_version": int(selected != "no_patch"),
         "harness": str(harness), "harness_sha256": contract_digest(expected[selected]),
-        "packets": str(packets_path), "packets_sha256": file_sha(packets_path),
-        "packet_solver": protocol["initial_solver"], "calibration": calibration,
         "selection_report": str(common / "selected_report.json"),
         "selection_label": selected, "selection_accuracy": reports[selected]["accuracy"],
         "selection_no_patch_accuracy": baseline,
         "protocol_sha256": file_sha(Path(protocol["run"]) / "frozen_protocol.json"),
         "source_matrix": str(matrix_root.resolve()),
         "source_matrix_completion_sha256": file_sha(matrix_root / "COMPLETE.json"),
-    }
+    })
     _immutable_json(common / "INITIAL_STATE.json", state)
     return state
 

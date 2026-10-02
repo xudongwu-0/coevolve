@@ -12,7 +12,7 @@ from sao_bridge.evaluation import stable_id_seed_offset
 
 
 class StrongReportTests(unittest.TestCase):
-    def fixture(self, root, *, extra_successes=7, noisy=False, identical_policy=False):
+    def fixture(self, root, *, extra_successes=7, noisy=False, identical_policy=False, minimal=False, incomplete=False):
         manifest = root / "manifest.json"
         ids = list(range(300, 370))
         write_json(manifest, {"selection_task_ids": [240, 241], "report_task_ids": ids})
@@ -28,6 +28,11 @@ class StrongReportTests(unittest.TestCase):
                 "bootstrap_draws": 1000,
             },
         }
+        initial_group = "initial_w1" if minimal else "initial_w0"
+        if minimal:
+            protocol["initial_solver_group"] = initial_group
+            protocol["evaluation"]["report_mode"] = "final_systems"
+            protocol["phase_orders"] = {"sequential": ["h2", "w2"], "ma": ["h2", "w2"]}
         protocol_path = root / "frozen_protocol.json"
         write_json(protocol_path, protocol)
         states = {}
@@ -45,6 +50,7 @@ class StrongReportTests(unittest.TestCase):
                 "solver_model": state["solver"],
                 "solver_weights_sha256": "same-weights" if identical_policy else arm + "-weights",
                 "harness_sha256": state["harness_sha256"], "phase_order": protocol["phase_orders"][arm],
+                "all_phases_completed": not incomplete,
             })
         freeze_hashes = {arm: file_sha(root / arm / "ARM_FROZEN.json") for arm in states}
 
@@ -69,16 +75,20 @@ class StrongReportTests(unittest.TestCase):
         for arm in states:
             report_root = root / arm / "final_report"
             groups = {}
-            for group in ([arm, "initial_w0"] if arm == "ma" else [arm]):
+            for group in ([arm, initial_group] if arm == "ma" else [arm]):
                 values = {}
-                for harness in ("no_patch", "common_h1", "sequential_final", "ma_final"):
+                harnesses = (
+                    ("no_patch", f"{group}_final") if minimal and group != initial_group
+                    else ("no_patch", "common_h1", "sequential_final", "ma_final")
+                )
+                for harness in harnesses:
                     path = report_root / group / f"{harness}.json"
                     write_json(path, report(group == "ma" and harness == "ma_final"))
                     values[harness] = {"path": str(path), "sha256": file_sha(path)}
                 groups[group] = {
-                    "solver": "w0" if group == "initial_w0" else states[group]["solver"],
+                    "solver": "w0" if group == initial_group else states[group]["solver"],
                     "solver_weights_sha256": (
-                        "initial" if group == "initial_w0" else
+                        "initial" if group == initial_group else
                         "same-weights" if identical_policy else group + "-weights"
                     ),
                     "reports": values,
@@ -130,6 +140,24 @@ class StrongReportTests(unittest.TestCase):
                 self.assertRaisesRegex(TimeoutError, "released GPUs"),
             ):
                 wait_reports(path, timeout=1)
+
+    def test_minimal_warm_start_report_excludes_cross_swap_ablation(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            root = Path(temporary)
+            path, protocol, states = self.fixture(root, minimal=True)
+            config = report_config(protocol, states, root / "matrix", states["ma"]["solver"], "frozen-ma")
+            self.assertEqual(set(config["harnesses"]), {"ma_final"})
+            initial = report_config(protocol, states, root / "initial", "w0", "frozen-initial-W1")
+            self.assertEqual(set(initial["harnesses"]), {"common_h1", "sequential_final", "ma_final"})
+            result = compare(path)
+            self.assertEqual(set(result["report_matrix"]), {"sequential", "ma", "initial_w1"})
+            self.assertEqual(result["cross_harness_interaction"]["status"], "not_run")
+            self.assertTrue(result["gate_passed"])
+        with tempfile.TemporaryDirectory() as temporary:
+            path, _, _ = self.fixture(Path(temporary), minimal=True, incomplete=True)
+            result = compare(path)
+            self.assertFalse(result["matched_completed_phase_budgets"])
+            self.assertFalse(result["gate_passed"])
 
     def test_exact_five_point_threshold_and_paired_positive_bound(self):
         with tempfile.TemporaryDirectory() as temporary:

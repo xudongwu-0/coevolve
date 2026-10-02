@@ -73,6 +73,12 @@ def wait_reports(protocol_path: Path, timeout: float = 86400) -> None:
 
 
 def report_config(protocol: dict, states: dict, root: Path, solver: str, label: str) -> dict:
+    arm = label.removeprefix("frozen-")
+    if protocol["evaluation"].get("report_mode") == "final_systems" and arm in states:
+        return matrix_config(
+            protocol, solver, label, {f"{arm}_final": states[arm]["harness"]},
+            root, split="report",
+        )
     return matrix_config(
         protocol, solver, label, {
             "common_h1": str(Path(protocol["run"]) / "common/selected_harness.json"),
@@ -98,6 +104,9 @@ def run(protocol_path: Path, arm: str, *, wait: bool = False) -> dict:
     if wait:
         wait_frozen(protocol_path)
     protocol, states, freezes = frozen_states(protocol_path)
+    initial_group = protocol.get("initial_solver_group", "initial_w0")
+    if initial_group not in {"initial_w0", "initial_w1"}:
+        raise ValueError("Unknown initial Solver report group")
     root = Path(protocol["run"]) / arm / "final_report"
     root.mkdir(parents=True, exist_ok=True)
     with (root / "controller.lock").open("a") as lease:
@@ -148,23 +157,25 @@ def run(protocol_path: Path, arm: str, *, wait: bool = False) -> dict:
             if arm == "ma":
                 _, initial_weights = model_digests(Path(protocol["initial_solver"]))
                 if (
-                    weights == initial_weights
+                    protocol["evaluation"].get("report_mode") != "final_systems"
+                    and weights == initial_weights
                     and Path(states[arm]["solver"]).resolve() == Path(protocol["initial_solver"]).resolve()
                 ):
-                    groups["initial_w0"] = {**groups[arm], "reuse_reason": "identical frozen Solver path/weights and all report settings"}
+                    groups[initial_group] = {**groups[arm], "reuse_reason": "identical frozen Solver path/weights and all report settings"}
                 else:
                     initial_config = report_config(
-                        protocol, states, root / "initial_w0_matrix",
-                        protocol["initial_solver"], "frozen-initial-W0",
+                        protocol, states, root / f"{initial_group}_matrix",
+                        protocol["initial_solver"],
+                        "frozen-initial-W1" if initial_group == "initial_w1" else "frozen-initial-W0",
                     )
                     initial, initial_output = run_matrix(
-                        launch, initial_config, root / "initial_w0_matrix", protocol["max_phase_attempts"],
+                        launch, initial_config, root / f"{initial_group}_matrix", protocol["max_phase_attempts"],
                     )
                     initial_reports = matrix_reports(initial, protocol, split="report")
-                    groups["initial_w0"] = {
+                    groups[initial_group] = {
                         "solver": protocol["initial_solver"], "solver_weights_sha256": initial_weights,
                         "matrix": str(initial_output),
-                        "reports": publish_reports(root / "initial_w0", initial_reports),
+                        "reports": publish_reports(root / initial_group, initial_reports),
                     }
             complete = {
                 "status": "completed", "identity": identity, "report_groups": groups,
@@ -183,6 +194,8 @@ def run(protocol_path: Path, arm: str, *, wait: bool = False) -> dict:
 
 def compare(protocol_path: Path) -> dict:
     protocol, states, freezes = frozen_states(protocol_path)
+    initial_group = protocol.get("initial_solver_group", "initial_w0")
+    minimal = protocol["evaluation"].get("report_mode") == "final_systems"
     root = Path(protocol["run"])
     freeze_hashes = {arm: file_sha(root / arm / "ARM_FROZEN.json") for arm in states}
     groups = {}
@@ -201,7 +214,7 @@ def compare(protocol_path: Path) -> dict:
             if label in groups:
                 raise ValueError("Duplicate final report Solver group")
             groups[label] = group
-    if set(groups) != {"sequential", "ma", "initial_w0"}:
+    if initial_group not in {"initial_w0", "initial_w1"} or set(groups) != {"sequential", "ma", initial_group}:
         raise ValueError("Final report omitted a declared Solver group")
     for arm in states:
         if (
@@ -209,7 +222,7 @@ def compare(protocol_path: Path) -> dict:
             or groups[arm]["solver_weights_sha256"] != freezes[arm]["solver_weights_sha256"]
         ):
             raise ValueError("Final report evaluated a different frozen Solver")
-    if Path(groups["initial_w0"]["solver"]).resolve() != Path(protocol["initial_solver"]).resolve():
+    if Path(groups[initial_group]["solver"]).resolve() != Path(protocol["initial_solver"]).resolve():
         raise ValueError("Initial-model report evaluated a different Solver")
     task_ids = read_json(Path(protocol["evaluation"]["task_manifest"]))["report_task_ids"]
     reports = {}
@@ -220,7 +233,11 @@ def compare(protocol_path: Path) -> dict:
             if file_sha(path) != value["sha256"]:
                 raise ValueError("Final report changed after publication")
             values[harness] = checked_native_report(read_json(path), task_ids, protocol["evaluation"])
-        if set(values) != {"no_patch", "common_h1", "sequential_final", "ma_final"}:
+        expected = (
+            {"no_patch", f"{label}_final"} if minimal and label in states
+            else {"no_patch", "common_h1", "sequential_final", "ma_final"}
+        )
+        if set(values) != expected:
             raise ValueError("Cross-harness report matrix is incomplete")
         reports[label] = values
     evaluation = protocol["evaluation"]
@@ -228,10 +245,13 @@ def compare(protocol_path: Path) -> dict:
         reports["sequential"]["sequential_final"], reports["ma"]["ma_final"],
         seed=evaluation["bootstrap_seed"], draws=evaluation["bootstrap_draws"],
     )
-    interaction = difference_in_differences(
+    interaction = None if minimal else difference_in_differences(
         reports["sequential"]["sequential_final"], reports["ma"]["sequential_final"],
         reports["sequential"]["ma_final"], reports["ma"]["ma_final"],
         seed=evaluation["bootstrap_seed"] + 1, draws=evaluation["bootstrap_draws"],
+    )
+    matched_budget = all(
+        receipt.get("all_phases_completed", True) for receipt in freezes.values()
     )
     identical_final_policy = (
         freezes["sequential"]["solver_weights_sha256"] == freezes["ma"]["solver_weights_sha256"]
@@ -240,11 +260,12 @@ def compare(protocol_path: Path) -> dict:
     result = {
         "status": "completed",
         "gate_passed": (
-            not identical_final_policy
+            matched_budget and not identical_final_policy
             and difference["candidate_minus_control"] >= evaluation["minimum_ma_gain"]
             and difference["paired_question_bootstrap_95pct"][0] > 0
         ),
         "identical_final_policy": identical_final_policy,
+        "matched_completed_phase_budgets": matched_budget,
         "identity_interpretation": (
             "Both arms selected identical Solver weights and harness. Any measured score "
             "difference is evaluation variation, not an algorithmic policy improvement."
@@ -257,6 +278,8 @@ def compare(protocol_path: Path) -> dict:
             for solver, values in reports.items()
         },
         "cross_harness_interaction": {
+            "status": "not_run", "reason": "Cross-swap ablation excluded from the time-bounded campaign.",
+        } if interaction is None else {
             "estimand": "[J(W_ma,H_ma)-J(W_ma,H_seq)]-[J(W_seq,H_ma)-J(W_seq,H_seq)]",
             "difference": interaction["ma_change_minus_sao_change"],
             "paired_question_bootstrap_95pct": interaction["paired_question_bootstrap_95pct"],
@@ -272,7 +295,16 @@ def compare(protocol_path: Path) -> dict:
             "Single training seed and reused development report; no training-seed uncertainty.",
             "Shared selected prefix; full prior search/training cost is charged to both arms.",
             "Bounded continuation budget, not proof of convergence.",
-            "Order and centralized critic change together; no component attribution without follow-up.",
+            (
+                "Order and centralized critic change together; no component attribution without follow-up."
+                if protocol["phase_orders"]["sequential"] != protocol["phase_orders"]["ma"] else
+                "Same H-to-W order; MA adds pre-action centralized critic context. No multi-seed claim."
+            ),
+            (
+                "Both arms completed their assigned phase budgets."
+                if matched_budget else
+                "At least one phase budget was incomplete; no MA advantage claim is licensed."
+            ),
             "No cadence search or WebShop claim is licensed merely by finishing this comparison.",
         ],
     }

@@ -450,6 +450,44 @@ def _status(root: Path, stage: str, **extra) -> None:
     })
 
 
+def evaluation_sources() -> dict[str, str]:
+    paths = [
+        Path(__file__),
+        *(Path(__file__).with_name(name) for name in (
+            "analysis.py", "alfworld_runtime.py", "alfworld_train_data.py",
+            "budget.py", "common.py", "launch.py", "resources.py", "gpu_telemetry.py",
+        )),
+        ROOT / "whale_local/harness_r1_alfworld/driver.py",
+        UPSTREAM / "code/Relax/examples/harness_r1/eval_alfworld_patches.py",
+        UPSTREAM / "code/Relax/examples/harness_r1/reward_alfworld_patch.py",
+        UPSTREAM / "code/life-harness/AgentBench/scripts/harness_r1_patch.py",
+        UPSTREAM / "code/life-harness/AgentBench/scripts/harness_r1_batch_debug.py",
+    ]
+    return {str(path.relative_to(ROOT)): file_sha(path) for path in paths}
+
+
+def check_attempt_budget(root: Path) -> None:
+    jobs_root = root / "jobs"
+    if not jobs_root.exists():
+        return
+    credits = retry_credits(root)
+    for job_root in jobs_root.iterdir():
+        if not job_root.is_dir() or (job_root / "result.json").exists():
+            continue
+        attempts_path = job_root / "attempts.json"
+        if not attempts_path.exists():
+            continue
+        attempts = read_json(attempts_path)
+        recovered = any(
+            (job_root / f"attempt-{index + 1}" / "result.json").exists()
+            for index in range(len(attempts))
+        )
+        if not recovered and len(attempts) >= 2 + credits.get(job_root.name, 0):
+            raise EvaluationAttemptsExhausted(
+                f"Evaluation job exhausted its attempts before GPU allocation: {job_root.name}"
+            )
+
+
 def _model_options(model: str, *, port: int, gpus: str, name: str, replicas: int, context: int):
     return {
         "model": model, "port": port, "gpus": gpus, "name": name,
@@ -496,23 +534,11 @@ def run(spec_path: Path) -> dict:
     spec, manifest, prompts = validate_spec(spec_path)
     root = Path(spec["run"])
     root.mkdir(parents=True, exist_ok=True)
-    source_files = [
-        Path(__file__),
-        *(Path(__file__).with_name(name) for name in (
-            "analysis.py", "alfworld_runtime.py", "alfworld_train_data.py",
-            "budget.py", "common.py", "launch.py", "resources.py", "gpu_telemetry.py",
-        )),
-        ROOT / "whale_local/harness_r1_alfworld/driver.py",
-        UPSTREAM / "code/Relax/examples/harness_r1/eval_alfworld_patches.py",
-        UPSTREAM / "code/Relax/examples/harness_r1/reward_alfworld_patch.py",
-        UPSTREAM / "code/life-harness/AgentBench/scripts/harness_r1_patch.py",
-        UPSTREAM / "code/life-harness/AgentBench/scripts/harness_r1_batch_debug.py",
-    ]
     frozen = {
         "spec": spec, "data_manifest_sha256": file_sha(Path(spec["data_manifest"])),
         "solver_identity_sha256": file_sha(Path(spec["solver_identity_receipt"])),
         "evaluation_catalogue_sha256": file_sha(ALFWORLD_DATA / "test_set.json"),
-        "sources": {str(path.relative_to(ROOT)): file_sha(path) for path in source_files},
+        "sources": evaluation_sources(),
         "infrastructure_recovery_sha256": (
             file_sha(root / "infrastructure_recovery.json")
             if (root / "infrastructure_recovery.json").exists() else None
@@ -550,24 +576,7 @@ def run(spec_path: Path) -> dict:
         validate_spec(spec_path)
         if any(file_sha(ROOT / path) != digest for path, digest in frozen["sources"].items()):
             raise ValueError("Engineer evaluator source changed while waiting for training")
-        jobs_root = root / "jobs"
-        if jobs_root.exists():
-            credits = retry_credits(root)
-            for job_root in jobs_root.iterdir():
-                if not job_root.is_dir() or (job_root / "result.json").exists():
-                    continue
-                attempts_path = job_root / "attempts.json"
-                if not attempts_path.exists():
-                    continue
-                attempts = read_json(attempts_path)
-                recovered = any(
-                    (job_root / f"attempt-{index + 1}" / "result.json").exists()
-                    for index in range(len(attempts))
-                )
-                if not recovered and len(attempts) >= 2 + credits.get(job_root.name, 0):
-                    raise EvaluationAttemptsExhausted(
-                        f"Evaluation job exhausted its attempts before GPU allocation: {job_root.name}"
-                    )
+        check_attempt_budget(root)
         audit = read_json(root.parent / "TRAINING_NATIVE_AUDIT.json")
         if audit["status"] != "complete" or not audit["source_manifest_matches"]:
             raise ValueError("Engineer training audit is incomplete")

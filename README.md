@@ -6,7 +6,68 @@
 
 ## 当前任务与主要结论
 
-更新快照：**2026-10-02 04:41 UTC**。运行状态会继续变化，以服务器上的完成/释放收据为准。
+更新快照：**2026-10-02：E15/W79 的8小时自动交替实验**。运行状态以服务器上的完成/释放收据为准。
+
+## 最新任务：已验证 H1/W1 起点的自动交替实验
+
+用户离线期间，node4跑普通SAO对照，node3跑MA-SAO。**两臂都从同一份
+Engineer E15/critic15与Solver v4 W79/critic79开始，都按H2 → W2顺序训练。**
+不要把上一轮保留下来的官方Agent-SFT W0误当成本轮的W1，也不要把已有
+官方RL训练的Engineer起点误写成SFT-only。
+
+| 项目 | 两臂相同的设置 |
+|---|---|
+| 共同准备 | 用W79在train0–239收集真实官方失败轨迹；E15针对它生成8个harness，开发集选择共同初始harness |
+| H2 | 32 native steps，5 critic warmup +27 Actor更新，batch6；比较step15/31与E15的匹配8提案 |
+| W2 | 从W79及其critic继续，80 native steps，5 warmup +75 Actor更新，batch8；使用offset640的新训练输入，比较step39/79 |
+| 采纳规则 | 开发集至少+2pp才更换相应组件；退化则保留已验证模型，不部署未评测checkpoint |
+| 终评 | 固定70题、mean@2；报告初始W1/H1、W1/H2、W2/H2及两臂最终系统。不做多种子、参数扫或交叉harness消融 |
+| MA差异 | 仅MA critic加入动作发生前的伙伴/当前harness/训练集校准信息；Actor仍用同一SAO更新，不宣称是逐字复现MAPPO |
+
+运行入口是[自动控制器](whale_local/sao_bridge/alfworld_alternating_campaign.py)。
+本次冻结协议及所有输出在服务器的
+`runs/alfworld_alternating_e15_w79_8h_v1/`，**不属于要推送的中间数据/权重**。
+协议的`autonomous`字段保存绝对启动、共同准备、训练截止、总截止时间、
+节点与服务名；重启读取原时间，绝不重新获得8小时。
+
+- 最多约1小时共同准备，最晚第7小时停止训练，至少留1小时终评；若提前完成，
+  可以提前出结果，不为耗满8小时继续无收益训练。
+- 两个CPU协调器管理独立systemd计算服务；崩溃后接回原服务与已有收据，
+  不重复创建正在运行的训练。native/测评各保留原有最多2次尝试。
+- **独立的绝对时间systemd timer**负责停止本实验的计算服务，即便协调器挂掉
+  也不延长预算。截止时只冻结最后一个完整验证过的状态；部分训练不冒充完成。
+- 如果某臂预算没有完整执行，仍尽可能报告已验证系统，但不据此声称MA胜出。
+- `bruli-h200-load.service`保持开启，不在任何停止列表中。算法退出后由其自行
+  填补负载。node0–node2不被占用。
+- 当前node4系统盘已满；本实验临时文件使用`/dev/shm`，日志和收据写3FS，
+  不清理或删除其他用户的数据。
+- systemd服务能跨VS Code/Agent断开继续运行；不承诺机器重启后仍保有
+  `/dev/shm`解释器和运行环境。
+
+查看`sequential/COORDINATOR_STATUS.json`、`ma/COORDINATOR_STATUS.json`、
+各臂`ARM_STATUS.json`和`optimizer/metrics.jsonl`；最终查看`PAIRED_REPORT.json`。
+若终评未完成，脚本明确写`COMPARISON_UNAVAILABLE.json`，不会补造分数。
+每臂`*_command.json`、`*_launches.json`和`*_expiry.json`保存实际命令、
+重启历史及独立截止保护，`*.service.log`保存无需journal权限即可读取的日志。
+
+手动接回同一个实验时，在**冻结源码工作树**中运行：
+
+```bash
+CUDA_VISIBLE_DEVICES='' TMPDIR=/dev/shm PYTHONPATH=whale_local \
+  /dev/shm/sao-venv-ppo/bin/python -B -m sao_bridge.alfworld_alternating_campaign \
+  --protocol /mnt/3fs/xudong/coevolve/runs/alfworld_alternating_e15_w79_8h_v1/frozen_protocol.json \
+  --arm sequential
+```
+
+node3使用`--arm ma`。已有协调器在线时不要重复启动；也不要修改冻结协议、
+部署中的源码或删掉失败收据。需要暂停时停止该臂协调器及其`common/arm/report`
+计算服务，保留expiry timer；恢复只重启原协调器，原截止时间仍有效。
+不要停止GPU filler。开启新实验需新目录、独立服务前缀和新冻结协议。
+
+下方旧强对比的服务表是历史快照，不是本轮的入口。旧两臂已均冻结为相同
+W0/E15/H1；MA的W2选择45.83%/75.00%，普通对照62.50%/56.25%，均未超过
+83.33%的旧incumbent。旧报告若不能及时收尾，交接仅停止我们的旧服务并保留
+全部证据，优先把GPU交给本轮E15/W79实验。
 
 1. **验证 SAO 可以训练9B Solver：已通过单seed探索门槛。** 固定空harness，从官方 Agent-SFT W0 出发，80个native step包含5步critic warmup和75次非零Actor更新，选中step79。
 2. **验证 SAO 可以提高9B Engineer的修改能力：已通过单seed探索门槛。** 从官方已训练的`harness-r1`继续训练，选中step15，即11次Actor更新后的模型；匹配每个模型的8个训练failure prompts、提案槽位和decode seeds。不是从SFT-only初始化的SAO/GRPO对照；对口的`agent-sft-harness-r1`尚未本地测评。
