@@ -3186,3 +3186,46 @@ a29x efficiency result: SAO continuation inherits the already-RL-trained officia
 Engineer, budgets/outcomes differ, and target reruns/critic/search/prefetch matter.
 The pinned fooSynaptic SAO implementation explicitly declares itself unofficial;
 its underlying AReaL revision and our integration changes are documented separately.
+
+## 2026-10-02 21:31 UTC: matched192 GRPO completed; joint MA initialization
+
+Frozen GRPO source3ebdcfa, run `runs/alfworld_matched_grpo_192_v4`,
+completed six committed32-trajectory bundles and24 optimizer minibatches.
+Generated=consumed=192; no final extra training generation. All four ranks'
+gradients were finite and nonzero in all commits. Final checkpoint000006 actor
+identity is8f2c62db0003175e275b7a957543478ee667fc7008322f4492af40e7a6e6f0d9.
+The96-trajectory audit checkpoint was retained but not selected by evaluation.
+Earlier import/TP2-allreduce/TP1-TCPStore failures are retained; none completed a
+training rollout or optimizer commit. Final training verified20:57UTC, later than
+the original estimate because full FP32 checkpoint export/verification dominated.
+
+Evaluation `runs/alfworld_matched_grpo_200_v3` completed21:30:47UTC.
+Eight proposals, seven valid. Slots00/07 both scored46/48 on W1 selection24;
+the predeclared lowest-slot tie break selected00. Its patch digest is
+fd04c0f9147d0e03364ffab2c5cf2f4d982e2d528fdd5717da7c6bc587f94dde.
+The identical frozen patch was deployed to W0 and W1.
+
+| System | all200 mean@1 | strict197 |
+|---|---:|---:|
+| W0 no-patch, fresh rerun | 150/200 =75.00% | 147/197 =74.62% |
+| W0 + matched GRPO h1 | 167/200 =83.50% | 165/197 =83.76% |
+| W1 no-patch, fresh rerun | 176/200 =88.00% | 174/197 =88.32% |
+| W1 + matched GRPO h1 | 176/200 =88.00% | 174/197 =88.32% |
+
+Against historical SAO h1, W0 gains9.5pp, question-level paired95% interval
+[5,14]pp; W1 loses2.5pp,[-6.5,1.5]pp. Against W1+h2=92%, the new W1 system
+loses4pp,[-8.5,0]pp. This does not establish general algorithm superiority.
+The selection95.83% did not persist on200. Fresh no-patch scores differ from old
+73.5%/87%; fixed cohort/seeds do not imply bitwise deterministic serving.
+Reports have verified hashes,200 unique task/sample identities, declared seeds
+and token budgets, and both GPU release audits. Same192 training trajectories is
+not matched tokens, FLOPs, critic, reward-environment or selection cost.
+Selection24 is included in development200; strict197 does not remove tuning
+exposure. SAO selected step15 whereas GRPO used its predeclared final point.
+
+Immediately after comparison completion, persistent MA services launched native
+learners on node3/editor and node4/solver, PIDs294695/1939420 at21:31UTC.
+Actual frozen source43c3de0 is bound by `LAUNCH_v4.json` under
+`runs/alfworld_joint_async_6h_v1`; prior waiting queue versions consumed no MA
+samples. Initialization is not a verified joint update or a performance result.
+The22:41:31 training cutoff and23:41:31 reporting deadline remain unchanged.

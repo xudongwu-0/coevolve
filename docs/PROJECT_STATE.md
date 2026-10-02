@@ -7,7 +7,8 @@
 固定W0，6个32条rollout、24个optimizer minibatch step，保存96/192条点。
 新增`alfworld_matched_grpo`复用SearchQA现有FSDP trainer与官方hash-pinned
 Relax objective，显式适配原生Qwen3.5 VLM checkpoint和既有ALFWorld reward服务。
-属于后端适配，不是原作者完整Relax运行栈。实现验证中，尚无新训练成绩。
+属于后端适配，不是原作者完整Relax运行栈。GRPO训练和200题对照已完成，
+联合MA-SAO正在初始化；整个请求仍未完成。
 
 之后必须完成新Engineer在W0/W1上的200题单次测评，再继续联合MA。
 MA从H1/W1起步，第一目标超过W1+h2的92%，第二目标同H+W累计预算超过；
@@ -21,18 +22,23 @@ v3的TP1引擎卡在TCPStore，py-spy及TCP探针确认网卡地址拒绝连接�
 训练`runs/alfworld_matched_grpo_192_v4`，自动评测`runs/alfworld_matched_grpo_200_v3`。
 node3服务`coevolve-matched-grpo192-v4-target`、`coevolve-matched-grpo200-v3-w0`；
 node4对应`coevolve-matched-grpo192-v4-train`、`coevolve-matched-grpo200-v3-w1`和summary。
-启动命令成功不代表真实训练；下一步须核验首个rollout、非零更新及192消费收据。
+20:57已核验最终192条生成/消费、6个commit、24次optimizer更新，
+各rank梯度有限且非零，最终actor identity
+`8f2c62db0003175e275b7a957543478ee667fc7008322f4492af40e7a6e6f0d9`。
 
 新[joint_campaign](../whale_local/sao_bridge/joint_campaign.py)接入等待GRPO比较、
 联合异步训练、健康止损、共同checkpoint恢复、双节点匹配/后期200题报告及持久deadline guard。
 用户17:41:31要求6小时结论：**23:41:31 UTC报告、22:41:31训练截止**。
-48项CPU测试及14个subtests通过，含原生PPO配置解析与同温度固定reference、
-joint元数据批处理、健康条件、已提交checkpoint过滤。MA仍未GPU验证，不得称为完成。
-已冻结并排队`runs/alfworld_joint_async_6h_v1`，实际源码`6832612`，
-快照`runs/source-snapshots/alfworld-joint-async-6h-v1`。node3持久服务
-`coevolve-joint-async6h-v1-editor`、`coevolve-joint-async6h-v1-matched`；
-node4对应solver、best、guard。18:37全部active，尚在等GRPO对照而非MA训练中。
-真实部署绑定见该目录`LAUNCH.json`；协议继承的旧source_commit不是当前执行源码。
+CPU回归含原生PPO配置解析、同温度固定reference、joint元数据批处理、
+健康条件、已提交checkpoint过滤及跨UID仅共享checkpoint的权限边界。
+MA仍未GPU验证，不得称为完成。运行目录`runs/alfworld_joint_async_6h_v1`，
+实际源码`43c3de0`，快照`runs/source-snapshots/alfworld-joint-async-6h-v4`。
+node3持久服务`coevolve-joint-async6h-v4-editor`、`coevolve-joint-async6h-v4-matched`；
+node4对应solver、best、guard。**21:31两个native训练进程开始初始化**，
+分别PID294695与1939420；下一步须核验同轮配对轨迹、真实版本滞后、
+双方proximal交换及warmup后非零Actor梯度，不能把初始化或filler当作训练成果。
+真实部署绑定见该目录`LAUNCH_v4.json`；协议继承的旧source_commit不是当前执行源码。
+之前v1/v2/v3 MA等待队列都在0样本时停止换版，没有隐藏的MA更新。
 18:48:13，GRPO v4首个32条真实rollout成功，reward均值0.009375，
 范围[-0.6,0.2]；随后py-spy确认进入native autograd backward，四个训练GPU有负载。
 这仍不是最终192条完成收据；等待`progress.json`中的已提交更新，勿把预取条数当消费。
@@ -46,6 +52,23 @@ MA的22:41训练截止与23:41报告截止不变。
 明确STOP之后的worker退出记CANCELLED，不让正常停训污染checkpoint恢复。
 缺失固定reference、非有限值仍硬停，连续3轮KL>0.10或value MSE>4仍软停；
 STOP之前的真实首个FAILED不会被覆盖。实际队列版本以最新LAUNCH收据为准。
+
+**21:30:47 UTC同预算GRPO对照完成：**
+
+| 系统 | 新GRPO h1的200题 | strict197 | 此前SAO h1的200题 |
+|---|---:|---:|---:|
+| W0 | 167/200 = 83.50% | 165/197 = 83.76% | 74.00% |
+| W1 | 176/200 = 88.00% | 174/197 = 88.32% | 90.50% |
+
+最终192点预先固定；8提案7合法，slot00/07快测同为46/48，按预定规则选00。
+补丁digest `fd04c0f9147d0e03364ffab2c5cf2f4d982e2d528fdd5717da7c6bc587f94dde`，
+两节点部署完全相同，W0是迁移测试。完整报告的hash、200唯一题/单样本、
+seed、token上限及GPU释放收据已核验。
+相对SAO h1，W0 +9.5pp，题级95%区间[5,14]；W1 -2.5pp，[-6.5,1.5]。
+相对W1+h2的92%，新GRPO组合低4pp，[-8.5,0]，未超过当前系统。
+新空harness重测为W0 75%、W1 88%，与旧73.5%/87%有随机运行差异，必须分别标识。
+24题选点95.83%未延续到200题；selection24包含在200中，不能称独立测试。
+此阶段输出`runs/alfworld_matched_grpo_200_v3/COMPLETE.json`，不要重跑已完成训练。
 
 ## 最新完成：实际W2+h2的200题补测
 
