@@ -399,6 +399,28 @@ step31为0/8，出现明显过训退化，不能只展示较好checkpoint。
 报告执行器已实现并测试：必须两臂同时冻结后才能打开70题mean@2 report；
 真实未冻结实验上的拒绝门也已验证。整套相关50测试/23 subtests通过。
 
+最新phase选择结果：顺序H2的incumbent/step15/step31 proposal mean分别为
+73.44%/68.75%/68.75%，没有提升，保留E15和共同H1（83.33% selection）。
+MA W1在固定H1上的step39/79分别为75.00%/77.08%，低于83.33%控制组，
+因此保留W0；**不能因为训练75次真实更新就宣称MA提升**。W没有被接受，
+MA H2正确沿用W0原packet，并没有伪称发生新的counterpart refresh。
+当前自动执行顺序W1与MA H2，之后各自完成剩余W块和选择。
+
+完整pipeline已独立于agent运行：两臂`*-arm.service`推进到冻结，
+node4`coevolve-strong-sao-v1-sequential-report`与node3
+`coevolve-strong-ma-v1-report`等待两臂冻结才评测，node4
+`coevolve-strong-sao-ma-v1-finalizer`等待两侧report与release后汇总。
+最终输出为`runs/alfworld_strong_sao_ma_v1/PAIRED_REPORT.json`。
+所有systemd启动参数、代码worktree和输入SHA均有run内收据；不依赖本次
+终端观察器存活。report尚未打开，最终MA增益尚无结论。
+
+利用率必须区分filler：顺序H2整个phase实验SM25.95%、filler15.28%；
+MA W1整个phase实验SM43.87%、filler7.79%。这些是每进程pmon采样均值，
+不是8卡始终占满，也不是纯optimizer窗口。filler全程active。
+v5/v4活动时间按Actor实际消费episode归一化仅从9.685降至9.506秒/episode
+（约1.85%），按全部optimizer episode则从9.080降至7.922；不同warmup比例
+与样本/更新预算导致口径差异，不能称为明显速度突破，且v5质量门未过。
+
 复现数据准备（仓库根目录，无模型调用）：
 ```bash
 PYTHONPATH=whale_local python3 -m sao_bridge.alfworld_train_data \

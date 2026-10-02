@@ -2848,3 +2848,25 @@ It is exploratory validation, not held-out AIME. AIME test stays sealed until a 
     +5pp acceptance, a smaller positive gain rejection and a positive mean
     with nonpositive lower-bound rejection. The real current experiment
     also refuses premature report opening. No final arm result exists yet.
+
+    Subsequent selection is now complete: sequential H2 mean proposal score
+    incumbent73.4375%, step15/step31 both68.75%; retain incumbent E15 and
+    H1 at83.33% native selection. MA W1 step39=75%, step79=77.0833% versus
+    83.3333% control; reject both and retain W0. MA H2 therefore reuses
+    unchanged-W0 evidence rather than claiming a partner refresh occurred.
+    The arm controllers proceed to sequential W1 and MA H2.
+
+    Both report units and the CPU-only finalizer are deployed as independent
+    systemd services. They wait for both immutable arm freezes and both
+    complete/released reports respectively. Final output is
+    `runs/alfworld_strong_sao_ma_v1/PAIRED_REPORT.json`; no report was opened
+    while wiring or testing the pipeline.
+
+    Whole-phase pmon means: sequential H2 experiment25.95%, filler15.28%;
+    MA W1 experiment43.87%, filler7.79%. Filler remained active.
+    A consistent speed denominator also qualifies the v5 result:
+    v4 active5811.107s/600 Actor episodes=9.685s versus
+    v5 active4562.918s/480=9.506s (only1.85% lower). Per all optimizer
+    episodes is9.080 versus7.922s, with different warmup proportions.
+    Neither comparison isolates a6/2 allocation effect, and v5 did not
+    pass its quality gate.
