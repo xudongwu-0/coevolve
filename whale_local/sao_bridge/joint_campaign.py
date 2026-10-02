@@ -3,7 +3,6 @@ from __future__ import annotations
 
 import argparse
 import copy
-import os
 from pathlib import Path
 import time
 
@@ -97,19 +96,28 @@ def wait_comparison(protocol: dict) -> None:
         raise ValueError("Required GRPO comparison is incomplete")
 
 
+def share_checkpoints(optimizer: Path, result: dict) -> None:
+    from .domain_campaign import public_tree
+
+    optimizer = optimizer.resolve()
+    for pair in result["checkpoint_history"].values():
+        for value in pair.values():
+            checkpoint = Path(value).resolve()
+            if not checkpoint.is_relative_to(optimizer):
+                raise ValueError("Cannot change permissions outside this role's optimizer run")
+            public_tree(checkpoint)
+            for parent in checkpoint.parents:
+                if not parent.is_relative_to(optimizer):
+                    break
+                parent.chmod(parent.stat().st_mode | 0o001)
+
+
 def train(root: Path, role: str) -> dict:
     protocol = read_json(root / "protocol.json")
     try:
         wait_comparison(protocol)
         result = run_role(root / f"{role}_spec.json")
-        # Only this campaign's new checkpoint tree is shared across node UIDs.
-        optimizer = root / role / "optimizer"
-        for parent, dirs, files in os.walk(optimizer):
-            Path(parent).chmod(Path(parent).stat().st_mode | 0o055)
-            for name in files:
-                path = Path(parent) / name
-                if not path.is_symlink():
-                    path.chmod(path.stat().st_mode | 0o044)
+        share_checkpoints(root / role / "optimizer", result)
         _immutable_json(root / f"{role}_SHARED.json", {"ready": True, "result": result})
         return result
     except BaseException as exc:

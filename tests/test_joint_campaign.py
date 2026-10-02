@@ -14,7 +14,7 @@ from areal.api.cli_args import PPOConfig, load_expr_config
 from areal.infra.workflow_executor import check_trajectory_format
 from areal.utils.data import batched_call
 from sao_bridge.common import read_json, write_json
-from sao_bridge.joint_campaign import select_pair, wait_comparison
+from sao_bridge.joint_campaign import select_pair, share_checkpoints, wait_comparison
 from sao_bridge.joint_health import assess, metric_rows, recover_checkpoints, request_stop
 from sao_bridge.large_train import configure
 
@@ -148,3 +148,22 @@ def test_required_grpo_failure_prevents_silent_ma_start(tmp_path):
     write_json(tmp_path / "w1_FAILED.json", {"error": "reward infrastructure"})
     with pytest.raises(RuntimeError, match="Required GRPO"):
         wait_comparison({"comparison": str(tmp_path), "training_deadline_unix": time.time() + 3600})
+
+
+def test_cross_uid_sharing_only_exposes_checkpoints_not_runtime_control_files(tmp_path):
+    optimizer = tmp_path / "optimizer"
+    checkpoint = optimizer / "engine/checkpoints/actor/step3"
+    checkpoint.mkdir(parents=True, mode=0o700)
+    weights = checkpoint / "model.safetensors"
+    weights.write_bytes(b"weights")
+    weights.chmod(0o600)
+    private = optimizer / "runtime-control"
+    private.write_text("private runtime metadata")
+    private.chmod(0o600)
+    result = {"checkpoint_history": {"3": {"actor": str(checkpoint)}}}
+    share_checkpoints(optimizer, result)
+    assert weights.stat().st_mode & 0o004
+    assert checkpoint.stat().st_mode & 0o005 == 0o005
+    assert private.stat().st_mode & 0o077 == 0
+    with pytest.raises(ValueError, match="outside"):
+        share_checkpoints(optimizer, {"checkpoint_history": {"3": {"actor": str(tmp_path)}}})
