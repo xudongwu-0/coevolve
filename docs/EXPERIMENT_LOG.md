@@ -3353,3 +3353,30 @@ consumption, frozen proposal identity, native/compact report equality, hashes,
 coverage/seeds/token caps and node4 release. Actual learning remains gated on
 full-context native optimizer memory validation; synthetic engineering steps
 must not be presented as MA research training.
+
+## 2026-10-03 02:05 UTC: original H0/W0 first real joint updates verified
+
+The native long-context memory checks exposed a second boundary: after Adam
+state warmed, learner-held unused cache could OOM the colocated reference.
+Joint PPO learners now release unused allocator cache after updates, complementing
+the existing frozen-reference release. W0 passed two real32768-token Actor/ref
+and33792-token critic updates; H0 passed K2 with one critic-only warmup, two Actor
+and six critic updates. Reference outputs were bitwise unchanged. Neither test
+saved model files. Five full-context warmup rounds were not claimed as tested.
+Regression source, exact configuration and node3 release are recorded in
+`runs/alfworld_joint_memory_20261003/`; integrated tests passed38+3subtests.
+
+Production sourceb481fb0 was frozen separately from initial-evaluation415fd64.
+Both real learners then started under persistent services. By02:05 both had
+committed six native steps: five actual critic-only rounds, followed by one Actor
+update. Each consumed48 real role trajectories, total96; K2 gave12 critic updates.
+Actor gradients were H2.5064785/W0.5334495, finite and nonzero.
+Each role's first48 trajectories included40 with actual behavior lag1.
+Initial action token-mean log-ratio maxima were H0.0008099/W0.00022165, below the
+explicit0.01 engineering threshold; IDs, slots, versions and shared rewards matched.
+
+`FIRST_ACTOR_AUDIT.json`, `INITIAL_POLICY_CHECK.json` and `TRAINING_LAUNCH.json`
+preserve this evidence. No post-training evaluation exists at this point;
+healthy initial updates are not evidence that the85% initial system improved.
+The original W1+h2 incumbent remains untouched. Independent matched/best services
+and the deadline guard continue without the agent; filler remains enabled.

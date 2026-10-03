@@ -2,6 +2,26 @@
 
 ## 当前请求：H0/W0独立MA，先验证长序列OOM修复
 
+**02:05UTC正式训练已核验，当前仍在继续：** root为
+`runs/alfworld_joint_h0w0_8h_v1`，训练冻结源码`b481fb0`，
+快照`runs/source-snapshots/alfworld-joint-h0w0-v2`。
+node3 `coevolve-joint-h0w0-v2-editor`、node4 `coevolve-joint-h0w0-v2-solver`已各完成
+6个native步骤：5轮critic-only后1次Actor更新，K2共12次critic更新，
+各消费48、H+W96；不是synthetic显存测试的更新。
+首个Actor梯度H2.50648/W0.53345，有限非零；每role48条中40条真实lag1。
+`FIRST_ACTOR_AUDIT.json`、`INITIAL_POLICY_CHECK.json`及`TRAINING_LAUNCH.json`
+保存精确证据。初始概率偏差上限H0.000810/W0.000222nats/token，小于0.01工程阈值。
+这证明真实更新与版本协议，不证明性能已提升；训练后200题尚未完成。
+
+持久评测：node3 `coevolve-joint-h0w0-v2-matched`（round64/1024条）、
+node4 `coevolve-joint-h0w0-v2-best`；node4原`coevolve-joint-h0w0-v1-guard`
+控制07:49:31UTC训练截止及08:49:31UTC报告截止。
+初始基线是W0空harness74%、H0新h0+W0为85%，不是旧W1/H1。
+两节点filler保留。下一步监督有效checkpoint与完整matched/best结果；
+在完成真实结果核验前不能把本轮任务标为全部完成。
+
+以下为本轮准备历史：
+
 2026-10-03 00:49UTC用户要求从原始H0/W0训练，不继承H1/W1。
 新目录`runs/alfworld_joint_h0w0_8h_v1`，初始评测源码冻结`415fd64`，
 快照`runs/source-snapshots/alfworld-joint-h0w0-v1`。node4持久服务
@@ -42,7 +62,7 @@ H0的K2验证为1轮critic-only预热、2次Actor和6次critic更新，**不是5
 进一步复现暖Adam状态下reference OOM，修复为joint learner在PPO更新后也释放
 unused cache（reference-only释放不够）。执行源hash必须匹配显存收据才放行。
 具体peak/配置/source/释放证据在`runs/alfworld_joint_memory_20261003/`两份报告。
-集成38测试+3subtests通过；随后将冻结训练源码并启动两角色，尚不能把上述
+集成38测试+3subtests通过；随后冻结训练源码并启动两角色，不能把上述
 synthetic optimizer steps当本轮研究训练。
 
 ## 当前结论：六小时窗口已报告，MA目标未达成
