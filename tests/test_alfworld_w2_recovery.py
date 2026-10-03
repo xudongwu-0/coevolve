@@ -9,7 +9,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "third_party/sao/ve
 
 from areal.utils.data import allocate_balanced_mbs
 from areal.api.cli_args import MicroBatchSpec
-from sao_bridge.alfworld_w2_recovery import continuation_config, wait_predecessor
+from sao_bridge.alfworld_w2_recovery import continuation_config, evaluate_point, wait_predecessor
 from sao_bridge.alfworld_w_train import training_spec
 from sao_bridge.common import write_json
 from sao_bridge.large_train import configure
@@ -81,3 +81,24 @@ def test_queue_surfaces_failed_evaluation(tmp_path):
     with pytest.raises(RuntimeError, match="Predecessor evaluation failed"):
         wait_predecessor({"prerequisite": str(tmp_path), "prerequisite_label": "matched",
                          "queue_timeout_seconds": 60})
+
+
+def test_initial_evaluation_does_not_rewrite_read_only_checkpoint_metadata(tmp_path):
+    model = tmp_path / "shared-original"
+    model.mkdir()
+    for name in ("preprocessor_config.json", "processor_config.json"):
+        write_json(model / name, {})
+    receipt = model / "runtime_supplements.json"
+    receipt.write_text('{"original": true}\n')
+    protocol = {"initial_pair": {"actor": str(model)}, "fixed_h2": "h2"}
+    cohort = {"all_task_ids": [1], "strict_goal_disjoint_task_ids": [1],
+              "seed": 42, "temperature": 1., "solver_tokens": 4096}
+    with (
+        patch("sao_bridge.alfworld_strong_select.ensure_model_runtime_metadata") as supplement,
+        patch("sao_bridge.alfworld_w2_recovery.read_json", return_value=cohort),
+        patch("sao_bridge.alfworld_w2_recovery.validate_cohort"),
+        patch("sao_bridge.alfworld_w2_recovery.run_matrix", return_value=({"variants": {}}, tmp_path)),
+    ):
+        evaluate_point(None, tmp_path / "output", "initial", str(model), protocol)
+    supplement.assert_not_called()
+    assert receipt.read_text() == '{"original": true}\n'

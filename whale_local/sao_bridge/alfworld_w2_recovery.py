@@ -11,11 +11,11 @@ from .alfworld_core_extend import subset_report, validate_cohort
 from .alfworld_matched_grpo import EVAL_PROTOCOL
 from .alfworld_solver_validation import no_patch_assignments
 from .alfworld_strong_phase import checked_native_report, checkpoint_pair
-from .alfworld_strong_select import run_matrix
+from .alfworld_strong_select import run_matrix, supplement_runtime
 from .alfworld_train_data import _immutable_json, solver_rows, training_catalogue
 from .alfworld_w_train import assignment_schedule_audit
 from .analysis import paired_difference
-from .common import ROOT, ensure_model_runtime_metadata, file_sha, read_json, write_json
+from .common import ROOT, file_sha, read_json, write_json
 from .joint_health import metric_rows
 from .launch import Launcher
 from .resources import gpu_release_audit, require_research_node
@@ -111,7 +111,7 @@ def wait_predecessor(protocol: dict) -> None:
 
 
 def evaluate_point(launch: Launcher, root: Path, label: str, model: str, protocol: dict) -> dict:
-    ensure_model_runtime_metadata(Path(model), Path(protocol["initial_pair"]["actor"]))
+    supplement_runtime(Path(model), Path(protocol["initial_pair"]["actor"]))
     cohort = read_json(EVAL_PROTOCOL)
     validate_cohort(cohort)
     config = {
