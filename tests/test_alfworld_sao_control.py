@@ -1,5 +1,8 @@
 import sys
 import copy
+import os
+import shutil
+import subprocess
 from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock
@@ -452,6 +455,134 @@ def test_snapshot_rejects_source_symlink_back_to_mutable_main(tmp_path):
     (snapshot / "backend.py").symlink_to(main / "backend.py")
     with pytest.raises(ValueError, match="escapes executed source snapshot"):
         control.source_provenance([snapshot / "backend.py"], snapshot)
+
+
+@pytest.fixture
+def linked_source_snapshot(tmp_path):
+    snapshot = tmp_path / "snapshot"
+    snapshot.mkdir()
+    for name in ("whale_local", "examples"):
+        shutil.copytree(control.ROOT / name, snapshot / name, ignore=shutil.ignore_patterns("__pycache__"))
+    (snapshot / "third_party").mkdir()
+    for dependency in (control.ROOT / "third_party").iterdir():
+        if dependency.is_dir():
+            (snapshot / "third_party" / dependency.name).symlink_to(dependency.resolve(), target_is_directory=True)
+    for name in ("assets", "runs", "WHALE"):
+        (snapshot / name).symlink_to((control.ROOT / name).resolve(), target_is_directory=True)
+    return snapshot
+
+
+def test_linked_upstream_provenance_retains_logical_names_and_commit_bindings(linked_source_snapshot):
+    snapshot = linked_source_snapshot
+    names = [
+        "whale_local/sao_bridge/alfworld_sao_control.py",
+        "third_party/sao/configs/phase2_hard_sao.yaml",
+        "third_party/sao/vendor/AReaL/areal/engine/fsdp_engine.py",
+    ]
+    proof = control.source_provenance([snapshot / name for name in names], snapshot)
+    assert list(proof["source_files"]) == names
+    assert proof["source_upstreams"] == {
+        "third_party/sao": {
+            "root": str((control.ROOT / "third_party/sao").resolve()),
+            "revision": control.SAO_REVISION,
+        },
+        "third_party/sao/vendor/AReaL": {
+            "root": str((control.ROOT / "third_party/sao/vendor/AReaL").resolve()),
+            "revision": control.AREAL_REVISION,
+        },
+    }
+    bridge = snapshot / names[0]
+    bridge.unlink()
+    bridge.symlink_to(control.ROOT / names[0])
+    with pytest.raises(ValueError, match="escapes executed source snapshot"):
+        control.source_provenance([bridge], snapshot)
+
+
+def test_declared_upstream_rejects_wrong_commit_and_relocated_repository(linked_source_snapshot, monkeypatch):
+    snapshot = linked_source_snapshot
+    backend = snapshot / "third_party/sao/vendor/AReaL/areal/engine/fsdp_engine.py"
+    monkeypatch.setattr(control, "SAO_REVISION", "0" * 40)
+    with pytest.raises(ValueError, match="repository/commit changed"):
+        control.source_provenance([backend], snapshot)
+    (snapshot / "third_party/sao").unlink()
+    (snapshot / "third_party/sao").symlink_to(control.ROOT)
+    with pytest.raises(ValueError, match="repository/commit changed"):
+        control.source_provenance([backend], snapshot)
+
+
+def test_upstream_leaf_symlink_cannot_escape_declared_layout(tmp_path, monkeypatch):
+    snapshot, shared, outside = tmp_path / "snapshot", tmp_path / "shared-sao", tmp_path / "outside.py"
+    (snapshot / "third_party").mkdir(parents=True)
+    (shared / "configs").mkdir(parents=True)
+    outside.write_text("not_declared_upstream = True\n")
+    (shared / "configs/phase2_hard_sao.yaml").symlink_to(outside)
+    (snapshot / "third_party/sao").symlink_to(shared, target_is_directory=True)
+    monkeypatch.setattr(control, "declared_upstreams", lambda root: {
+        "third_party/sao": {"root": str(shared), "revision": control.SAO_REVISION},
+    })
+    with pytest.raises(ValueError, match="escapes declared upstream layout"):
+        control.source_provenance([snapshot / "third_party/sao/configs/phase2_hard_sao.yaml"], snapshot)
+
+
+def test_linked_upstream_imports_are_not_misclassified_as_mutable_bridge(linked_source_snapshot, monkeypatch):
+    snapshot = linked_source_snapshot
+    areal = (snapshot / "third_party/sao/vendor/AReaL").resolve()
+    paths, rejected = control.isolated_import_paths([
+        str(snapshot / "whale_local"), str(snapshot / "third_party/sao/vendor/AReaL"),
+        str(control.ROOT / "whale_local"), str(control.ROOT),
+    ], snapshot)
+    assert str(areal) in paths
+    assert areal not in rejected
+    assert control.ROOT / "whale_local" in rejected
+    monkeypatch.setitem(sys.modules, "declared_upstream_example", SimpleNamespace(
+        __file__=str(areal / "areal/engine/fsdp_engine.py"),
+    ))
+    # The parent pytest process intentionally imports its own bridge from main.
+    monkeypatch.setattr(control, "sys", SimpleNamespace(modules={
+        "declared_upstream_example": sys.modules["declared_upstream_example"],
+    }))
+    control.check_import_origins(snapshot, rejected)
+
+
+def test_actual_copied_snapshot_prepares_and_validates_with_shared_upstreams(linked_source_snapshot, tmp_path):
+    snapshot = linked_source_snapshot
+    output = tmp_path / "prepared"
+    env = {
+        **os.environ, "PYTHONDONTWRITEBYTECODE": "1", "CUDA_VISIBLE_DEVICES": "",
+        "PYTHONPATH": ":".join(str(snapshot / name) for name in (
+            "whale_local", "third_party/sao/vendor/AReaL", "third_party/sao",
+        )),
+    }
+    base = [sys.executable, "-B", "-m", "sao_bridge.alfworld_sao_control"]
+    prepared = subprocess.run(
+        [*base, "prepare", "--root", str(output), "--inputs-root", str(control.ROOT),
+         "--w-predecessor", str(control.ROOT / "runs/alfworld_w2_recovery_v1"),
+         "--h-predecessor", str(control.ROOT / "runs/alfworld_whale_baseline_v6/execution")],
+        cwd=snapshot, env=env, capture_output=True, text=True, timeout=600,
+    )
+    assert prepared.returncode == 0, prepared.stdout + prepared.stderr
+    protocol = read_json(output / "protocol.json")
+    assert protocol["source_root"] == str(snapshot)
+    assert protocol["source_upstreams"]["third_party/sao"]["revision"] == control.SAO_REVISION
+    assert protocol["source_upstreams"]["third_party/sao/vendor/AReaL"]["revision"] == control.AREAL_REVISION
+    assert not read_json(output / "PREPARED.json")["backend_blockers"]
+    validated = subprocess.run(
+        [*base, "validate", "--root", str(output), "--validate-only"],
+        cwd=snapshot, env=env, capture_output=True, text=True, timeout=120,
+    )
+    assert validated.returncode == 0, validated.stdout + validated.stderr
+    assert "cpu_validated" in validated.stdout
+    assert not list(output.glob("*/STARTED.json"))
+    assert not (output / "COMPLETE.json").exists()
+    assert not (output / "RELEASED.json").exists()
+    common = snapshot / "whale_local/sao_bridge/common.py"
+    common.write_text(common.read_text() + "\n")
+    rejected = subprocess.run(
+        [*base, "validate", "--root", str(output), "--validate-only"],
+        cwd=snapshot, env=env, capture_output=True, text=True, timeout=120,
+    )
+    assert rejected.returncode != 0
+    assert "Frozen source snapshot changed" in rejected.stderr
 
 
 def test_validate_only_checks_frozen_source_without_gpu_or_waiting(tmp_path, initial, monkeypatch):

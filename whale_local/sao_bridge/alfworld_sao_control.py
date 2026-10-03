@@ -7,6 +7,8 @@ Node4, after WHALE COMPLETE+RELEASED: run-h-pipeline (h1, h2, then finalize).
 Every command requires --root. A partial stage is never resumed or retried.
 Prepare and execute from the same immutable source snapshot. Inputs may reside
 in the shared repository; source hashes never follow its changing Git HEAD.
+The declared third_party/sao dependency may be linked outside the snapshot;
+its SAO/AReaL repository commits, resolved roots and selected files stay pinned.
 Entrypoints prune foreign local-source paths injected by .pth files; supervised
 bridge/vLLM children use the same wrapper without modifying the shared venv.
 
@@ -23,15 +25,18 @@ import fcntl
 import os
 from pathlib import Path
 import runpy
+import subprocess
 import sys
 import time
 
 
 def isolated_import_paths(paths: list[str], source_root: Path) -> tuple[list[str], list[Path]]:
     source_root = source_root.resolve()
-    allowed = [source_root / name for name in (
-        "whale_local", "third_party/sao/vendor/AReaL", "third_party/sao",
-    )]
+    allowed = [
+        source_root / "whale_local",
+        (source_root / "third_party/sao/vendor/AReaL").resolve(),
+        (source_root / "third_party/sao").resolve(),
+    ]
     result, rejected = [str(path) for path in allowed], []
     for entry in paths:
         path = Path(entry or os.getcwd()).resolve()
@@ -47,7 +52,7 @@ def isolated_import_paths(paths: list[str], source_root: Path) -> tuple[list[str
                 "whale_local", "third_party/sao/vendor/AReaL", "third_party/sao",
             ))
         if foreign:
-            rejected.extend(foreign)
+            rejected.extend(path.resolve() for path in foreign if path.resolve() not in allowed[1:])
         elif str(path) not in result:
             result.append(str(path))
     return result, rejected
@@ -84,7 +89,7 @@ from .alfworld_train_data import (
 )
 from .alfworld_w_train import assignment_schedule_audit, training_spec as w_spec
 from .budget import contract_digest, model_digests
-from .common import ROOT, file_sha, read_json, write_json
+from .common import AREAL_REVISION, ROOT, SAO_REVISION, file_sha, read_json, write_json
 from .large_train import configure, consumed_row_ledger, training_capacity_audit, validate_training_rows
 from .launch import Launcher
 from .resources import gpu_release_audit, require_research_node
@@ -112,18 +117,54 @@ def pins(paths) -> dict:
     return {str(path.resolve()): file_sha(path) for path in paths}
 
 
+def declared_upstreams(source_root: Path) -> dict:
+    result = {}
+    for relative, revision in (
+        ("third_party/sao", SAO_REVISION),
+        ("third_party/sao/vendor/AReaL", AREAL_REVISION),
+    ):
+        root = (source_root / relative).resolve()
+        actual_root, actual_revision = subprocess.check_output(
+            ["git", "-c", f"safe.directory={root}", "-C", str(root),
+             "rev-parse", "--show-toplevel", "HEAD"],
+            text=True, timeout=30,
+        ).strip().splitlines()
+        if Path(actual_root).resolve() != root or actual_revision != revision:
+            raise ValueError(f"Declared upstream repository/commit changed: {relative}")
+        if result and not root.is_relative_to(Path(result["third_party/sao"]["root"])):
+            raise ValueError("Declared AReaL dependency escaped its SAO vendor root")
+        result[relative] = {"root": str(root), "revision": revision}
+    return result
+
+
 def source_provenance(paths: list[Path], source_root: Path = ROOT) -> dict:
     source_root = source_root.resolve()
-    files = {}
+    files, upstreams = {}, {}
     for path in paths:
-        resolved = path.resolve()
-        if not resolved.is_relative_to(source_root):
+        logical = Path(os.path.abspath(path))
+        if not logical.is_relative_to(source_root):
             raise ValueError(f"Source pin escapes executed source snapshot: {path}")
-        files[str(resolved.relative_to(source_root))] = file_sha(resolved)
+        relative = logical.relative_to(source_root)
+        resolved = path.resolve()
+        if relative.is_relative_to("third_party/sao"):
+            if not upstreams:
+                upstreams = declared_upstreams(source_root)
+            dependency = (
+                "third_party/sao/vendor/AReaL"
+                if relative.is_relative_to("third_party/sao/vendor/AReaL")
+                else "third_party/sao"
+            )
+            expected = Path(upstreams[dependency]["root"]) / relative.relative_to(dependency)
+            if resolved != expected:
+                raise ValueError(f"Source pin escapes declared upstream layout: {path}")
+        elif not resolved.is_relative_to(source_root):
+            raise ValueError(f"Source pin escapes executed source snapshot: {path}")
+        files[str(relative)] = file_sha(resolved)
     if not files:
         raise ValueError("Source provenance cannot be empty")
     return {"source_root": str(source_root), "source_files": files,
-            "source_sha256": contract_digest(files)}
+            "source_upstreams": upstreams,
+            "source_sha256": contract_digest({"files": files, "upstreams": upstreams})}
 
 
 def verify_source(protocol: dict) -> None:
