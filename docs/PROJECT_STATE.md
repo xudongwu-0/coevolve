@@ -10,6 +10,12 @@
 反向/optimizer显存；原先8GiB缓存释放smoke test不能放行长训练。
 显存收据预定`runs/alfworld_joint_memory_20261003/MEMORY_COMPLETE.json`。
 
+**初始评测已完成：** W0空harness148/200=74%，H0新h0+W0为170/200=85%；
+strict197分别146/197和168/197。8候选7合法，slot01快测40/48，
+选定冻结后测200题。`INITIAL_AUDIT.json`核验原始模型、完整原生报告、
+compact hashes、题/seed/token合同、训练预算0和node4释放。
+这才是新独立MA的组合起点，不能用旧W1+h1=90.5%代替。
+
 `INITIAL_MODEL_IDENTITIES.json`核验原始模型权重：
 H0=`7d16d5ad5734af16b1fd0619caeb04270a024df86ca6e6c6e9bdb60e45f39af7`，
 W0=`9f52da7a3e4166e3af6b6ba8c0722a8abb396a7ac876e1cb4f83d2453c7bc2fb`。

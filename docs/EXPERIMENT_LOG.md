@@ -3326,3 +3326,30 @@ The live W1+h2 incumbent is unchanged. Code837a67e releases unused frozen-refere
 cache and passed41 tests+3 subtests plus a real8GiB CUDA release check, but was not
 hot-applied and has not passed a full long-context PPO rerun. Future work must
 first validate that recovery and preserve honest full-budget accounting.
+
+## 2026-10-03: independent H0/W0 MA preparation and actual initial scores
+
+The user requested independent MA training from the original H0/W0 rather than
+inheriting SAO H1/W1. Frozen preparation415fd64 resets Actor/critic/reference
+paths to the official original models and uses only W0 historical evidence from
+legacy training instances0-239. Existing trained weights, ValueNorm and optimizer
+state are not inherited. H0 is already official RL, not a bare base model.
+The new root is `runs/alfworld_joint_h0w0_8h_v1`; model hashes are frozen in
+`INITIAL_MODEL_IDENTITIES.json`. No common832-sample prefix is charged.
+Matched round64 means1024 H+W consumed trajectories, while round12 and52 retain
+192/832 checkpoints. Five critic-only warmup rounds, K2, LR5e-7/2.5e-6 and KL0.005
+are explicit. The report deadline is08:49:31UTC with the final hour reserved.
+
+The actual pretraining evaluation generated8 H0 proposals using W0-only evidence.
+Seven were valid. Selection24 chose slot01 at40/48; the patch was frozen before
+all200 mean@1. W0 without harness scored148/200=74.00% (strict197146/197=74.11%).
+W0 with that original-H0 patch scored170/200=85.00% (168/197=85.28%).
+The paired gain is11pp[6,16],26 improved/4 regressed questions. This is not the
+historical official counterpart Engineer score, and not a trained H1/W1 score.
+The same reused-development and question-only uncertainty limitations apply.
+
+`INITIAL_AUDIT.json` verifies original model bindings, zero native training
+consumption, frozen proposal identity, native/compact report equality, hashes,
+coverage/seeds/token caps and node4 release. Actual learning remains gated on
+full-context native optimizer memory validation; synthetic engineering steps
+must not be presented as MA research training.
