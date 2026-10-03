@@ -388,7 +388,7 @@ def train(root: Path, role: str) -> dict:
         return result
     except BaseException as exc:
         write_json(root / f"{role}_FAILED.json", {"error": repr(exc), "at_unix": time.time()})
-        if protocol.get("starting_point") == "h0_w0":
+        if protocol.get("starting_point") in ("h0_w0", "ma64_h0"):
             try:
                 spec = read_json(root / f"{role}_spec.json")
                 recovered = recover_failed_role(spec)
@@ -439,7 +439,7 @@ def available_pairs(root: Path) -> tuple[dict, dict]:
     protocol = read_json(root / "protocol.json")
     while not all((root / f"{role}_SHARED.json").is_file() for role in ("editor", "solver")):
         for failed in root.glob("*FAILED.json"):
-            if (protocol.get("starting_point") == "h0_w0"
+            if (protocol.get("starting_point") in ("h0_w0", "ma64_h0")
                     and failed.name in ("editor_FAILED.json", "solver_FAILED.json")):
                 continue
             raise RuntimeError(f"Joint campaign failed before model publication: {read_json(failed)}")

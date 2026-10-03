@@ -404,14 +404,33 @@ def test_failed_training_only_publishes_committed_models_without_hiding_failure(
     assert read_json(tmp_path / "solver_FAILED.json")["error"] == "original OOM"
 
 
-def test_failed_recovery_prevents_indefinite_publication_wait(tmp_path):
+@pytest.mark.parametrize("starting_point", ["h0_w0", "ma64_h0"])
+def test_failed_recovery_prevents_indefinite_publication_wait(tmp_path, starting_point):
     write_json(tmp_path / "protocol.json", {
-        "starting_point": "h0_w0", "report_deadline_unix": time.time() + 30,
+        "starting_point": starting_point, "report_deadline_unix": time.time() + 30,
     })
     write_json(tmp_path / "solver_FAILED.json", {"error": "original OOM"})
     write_json(tmp_path / "solver_RECOVERY_FAILED.json", {"error": "no committed model"})
     with pytest.raises(RuntimeError, match="no committed model"):
         available_pairs(tmp_path)
+
+
+def test_improvement_training_failure_publishes_only_recovered_committed_weights(tmp_path):
+    from sao_bridge.joint_campaign import train
+    write_json(tmp_path / "protocol.json", {"starting_point": "ma64_h0"})
+    write_json(tmp_path / "solver_spec.json", {"run": str(tmp_path / "solver/optimizer")})
+    recovered = {"status": "recovered_committed_checkpoints_after_training_failure",
+                 "checkpoint_history": {"7": {"actor": "actor7", "critic": "critic7"}}}
+    with (
+        patch("sao_bridge.joint_campaign.wait_comparison"),
+        patch("sao_bridge.joint_campaign.run_role", side_effect=RuntimeError("native failed")),
+        patch("sao_bridge.joint_campaign.recover_failed_role", return_value=recovered),
+        patch("sao_bridge.joint_campaign.share_checkpoints"),
+    ):
+        with pytest.raises(RuntimeError, match="native failed"):
+            train(tmp_path, "solver")
+    assert read_json(tmp_path / "solver_SHARED.json")["result"] == recovered
+    assert "native failed" in read_json(tmp_path / "solver_FAILED.json")["error"]
 
 
 def queued_protocol(tmp_path):
