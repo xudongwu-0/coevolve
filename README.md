@@ -33,6 +33,13 @@ selection24按预定规则选proposal01（40/48），然后冻结测200题。
 相对同轮W0空harness高11pp，题级配对95%区间[6,16]pp；仍为已用开发集。
 证据在`runs/alfworld_joint_h0w0_8h_v1/INITIAL_AUDIT.json`。
 
+OOM修复已通过真实长序列优化器验证，不再只有allocator smoke test：
+W0执行32768-token Actor/reference、33792-token critic的两次更新；
+H0以K2、1轮critic预热执行两次Actor/六次critic更新，均通过。
+除了reference，还需释放学习器更新后未用的缓存，避免下一次reference前向OOM。
+五轮生产预热没有在压力测试中完整复现；此限制保留，不保证所有未来输入不会OOM。
+两份显存测试收据位于`runs/alfworld_joint_memory_20261003/`，不计入研究训练样本。
+
 准备入口已有回归测试；实际训练状态以新启动收据为准，不把初始评测/显存测试算训练成果。
 
 结果快照：**2026-10-02 23:07 UTC：GRPO对照与MA恢复点的200题评测完成；MA为90%，未超过W1+h2的92%**。第12轮同预算点未达到，整个训练协议不算完整完成；保留原W1+h2。

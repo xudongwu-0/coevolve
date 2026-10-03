@@ -36,6 +36,15 @@ Actor LR5e-7、critic LR2.5e-6、固定reference KL0.005、真实lag1。
 实际训练源码需在显存验证结束后另行冻结，以TRAINING_LAUNCH收据为准，
 不要热改正在运行的初始评测快照。
 
+01:44UTC显存验证完成：W0完整32768/33792-token、4DP、两次Actor/critic更新通过；
+H0的K2验证为1轮critic-only预热、2次Actor和6次critic更新，**不是5轮预热**。
+两个角色都有真实长序列反传证据，H0/W0文件未被测试改写。
+进一步复现暖Adam状态下reference OOM，修复为joint learner在PPO更新后也释放
+unused cache（reference-only释放不够）。执行源hash必须匹配显存收据才放行。
+具体peak/配置/source/释放证据在`runs/alfworld_joint_memory_20261003/`两份报告。
+集成38测试+3subtests通过；随后将冻结训练源码并启动两角色，尚不能把上述
+synthetic optimizer steps当本轮研究训练。
+
 ## 当前结论：六小时窗口已报告，MA目标未达成
 
 **2026-10-02 23:07:27 UTC：** GRPO同192条训练/评测已完成；

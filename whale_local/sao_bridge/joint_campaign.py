@@ -173,6 +173,10 @@ def wait_comparison(protocol: dict) -> None:
         if (check["status"] != "passed" or check["max_sequence_tokens"] < 32768
                 or check["actor_optimizer_steps"] < 1 or not check["finite_nonzero_actor_gradient"]):
             raise ValueError("H0/W0 requires a passed full-context native Actor optimizer step")
+        if check["source_sha256"]["whale_local/sao_bridge/terminal_actor.py"] != file_sha(
+            Path(__file__).with_name("terminal_actor.py")
+        ):
+            raise ValueError("Full-context memory check does not match the executed learner cache fix")
         if read_json(root / "initial_COMPLETE.json")["status"] != "completed":
             raise ValueError("H0/W0 initial evaluation is incomplete")
         with (root / "TRAINING_PREREQUISITES.lock").open("a") as lock:

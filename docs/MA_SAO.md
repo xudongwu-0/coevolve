@@ -26,6 +26,29 @@ Final reports add paired comparison to this campaign's own H0/W0 baseline.
 This remains a single-seed development experiment, not an algorithm-only
 comparison with the historical backend.
 
+### Full-context memory recovery
+
+The old frozen-reference-only cache fix was insufficient once learner Adam state
+was warm: a native stress run reproduced reference OOM while the colocated
+learner retained unused workspace. Joint learners now also release unused cache
+after their PPO update; live state and the objective are unchanged. The learner
+reserved footprint fell from113.05 to63.89GiB at the measured boundary.
+
+Real original-W0,4DP tests completed two Actor and two critic optimizer updates
+with32768-token Actor/reference inputs,33792-token critic inputs,4096 action
+tokens and singleton microbatches. The reference runs in its own colocated
+process. Reference outputs were bitwise unchanged; gradients were finite and
+nonzero. The measured Actor allocated peak was119.07GiB. A second original-H0
+test used K2, one critic-only warmup round, then two Actor rounds/six total
+critic updates. It also passed. This does **not** claim the five-round production
+warmup was stress-tested or guarantee against every future OOM. Tests are
+synthetic engineering workloads, not research training samples.
+
+Receipts: `runs/alfworld_joint_memory_20261003/MEMORY_COMPLETE.json` and
+`H0_K2_MEMORY_COMPLETE.json`. The training gate verifies the tested runtime
+cache-fix source hash before starting. The original model files remain unchanged;
+stress tests did not save or promote checkpoints. Node3 was released afterwards.
+
 ## Deadline-bound joint asynchronous continuation (2026-10-02)
 
 **Window outcome,23:07:27UTC:** the recovered round4 pair scored180/200=90.00%

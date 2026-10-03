@@ -32,6 +32,14 @@ def zero_terminal_value(trajectory: dict) -> dict:
 
 
 class TerminalFSDPPPOActor(FSDPPPOActor):
+    def clear_batches(self, *args, **kwargs):
+        result = super().clear_batches(*args, **kwargs)
+        if self.config.optimizer is not None and os.environ.get("MA_SAO_JOINT_EPISODES") == "1":
+            # Actor and critic share this allocator; the next reference forward
+            # runs in a separate process after both learner updates finish.
+            current_platform.empty_cache()
+        return result
+
     @torch.no_grad()
     def compute_logp(self, *args, **kwargs):
         result = super().compute_logp(*args, **kwargs)

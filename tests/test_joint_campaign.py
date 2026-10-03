@@ -13,7 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "third_party/sao/ve
 from areal.api.cli_args import PPOConfig, load_expr_config
 from areal.infra.workflow_executor import check_trajectory_format
 from areal.utils.data import allocate_balanced_mbs, batched_call
-from sao_bridge.common import read_json, write_json
+from sao_bridge.common import file_sha, read_json, write_json
 from sao_bridge.joint_campaign import (
     available_pairs, initial_inputs, prepare, recover_failed_role,
     select_pair, share_checkpoints, wait_comparison,
@@ -220,6 +220,11 @@ def test_initial_prerequisites_reject_allocator_only_smoke_test(tmp_path):
     check = {
         "status": "passed", "max_sequence_tokens": 32768,
         "actor_optimizer_steps": 0, "finite_nonzero_actor_gradient": False,
+        "source_sha256": {
+            "whale_local/sao_bridge/terminal_actor.py": file_sha(
+                Path(__file__).resolve().parents[1] / "whale_local/sao_bridge/terminal_actor.py"
+            ),
+        },
     }
     write_json(memory, check)
     with pytest.raises(ValueError, match="native Actor"):
@@ -227,6 +232,12 @@ def test_initial_prerequisites_reject_allocator_only_smoke_test(tmp_path):
     write_json(memory, {**check, "actor_optimizer_steps": 1, "finite_nonzero_actor_gradient": True})
     wait_comparison(protocol)
     assert read_json(tmp_path / "TRAINING_PREREQUISITES.json")["status"] == "passed"
+    write_json(memory, {
+        **check, "actor_optimizer_steps": 1, "finite_nonzero_actor_gradient": True,
+        "source_sha256": {"whale_local/sao_bridge/terminal_actor.py": "different-runtime"},
+    })
+    with pytest.raises(ValueError, match="executed learner"):
+        wait_comparison(protocol)
     write_json(memory, {**check, "max_sequence_tokens": 24075, "actor_optimizer_steps": 1,
                         "finite_nonzero_actor_gradient": True})
     with pytest.raises(ValueError, match="native Actor"):
