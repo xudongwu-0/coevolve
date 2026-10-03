@@ -871,3 +871,16 @@ but the final paths are now:
 
 These are not queue or smoke success receipts. Actual GPU full-context
 validation and all ALFWorld performance results remain pending.
+
+Queue failures, including a failed required GPU smoke, now also publish
+`execution/FAILED.json` unless an existing execution failure is already present.
+For smoke failures it records `status="failed"`, `baseline_started=false`,
+`stage="gpu_smoke"` and `originating_queue_receipt` pointing to the actual
+`queue/FAILED.json`. Existing baseline failure receipts are preserved unchanged.
+No COMPLETE or synthetic release receipt is created by this propagation.
+SAO's existing predecessor failure check therefore stops at its next poll
+instead of waiting for nonexistent baseline completion.
+
+This receipt-only correction requires the parent's new committed snapshot and
+fresh `PRODUCTION_FROZEN.json`; the historical v6 freeze above is preserved.
+The execution/predecessor directory remains `alfworld_whale_baseline_v6/execution`.

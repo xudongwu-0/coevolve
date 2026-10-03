@@ -1120,8 +1120,9 @@ def queued_run(frozen_path: Path, expected_sha: str, assigned_node: str, root: P
     if (root / "STARTED.json").exists():
         raise RuntimeError("GPU phase was already started; automatic research restart is forbidden")
     baseline_started = False
+    stage = "waiting_for_joint"
     write_json(root / "STATUS.json", {
-        "stage": "waiting_for_joint", "baseline_started": False,
+        "stage": stage, "baseline_started": False,
         "gpu_allocation_started": False, "deadline_unix": saved["deadline_unix"],
         "purpose": "queue_wait_not_training",
     })
@@ -1152,8 +1153,9 @@ def queued_run(frozen_path: Path, expected_sha: str, assigned_node: str, root: P
             "ma_status": read_json(complete)["status"],
             "started_at_unix": time.time(),
         })
+        stage = "gpu_smoke"
         write_json(root / "STATUS.json", {
-            "stage": "gpu_smoke", "baseline_started": False, "gpu_allocation_started": True,
+            "stage": stage, "baseline_started": False, "gpu_allocation_started": True,
         })
         smoke = run_gpu_smoke(frozen_path, assigned_node, smoke_output)
         if (smoke["status"] != "passed" or smoke.get("frozen_sha256") != expected_sha
@@ -1161,15 +1163,24 @@ def queued_run(frozen_path: Path, expected_sha: str, assigned_node: str, root: P
             raise RuntimeError("Queued GPU smoke did not pass")
         require_full_context_smoke(smoke)
         baseline_started = True
+        stage = "baseline"
         write_json(root / "STATUS.json", {
-            "stage": "baseline", "baseline_started": True, "gpu_allocation_started": True,
+            "stage": stage, "baseline_started": True, "gpu_allocation_started": True,
         })
         result = run(frozen_path, assigned_node)
         write_json(root / "COMPLETE.json", {"smoke": smoke, "baseline": result})
         write_json(root / "STATUS.json", {"stage": "completed", "baseline_started": True})
         return result
     except BaseException as exc:
-        write_json(root / "FAILED.json", {"error": repr(exc)})
+        queue_failure = root / "FAILED.json"
+        failure = {"status": "failed", "stage": stage,
+                   "baseline_started": baseline_started, "error": repr(exc)}
+        write_json(queue_failure, failure)
+        execution_failure = frozen_path.parent / "execution/FAILED.json"
+        if not execution_failure.exists():
+            write_json(execution_failure, {
+                **failure, "originating_queue_receipt": str(queue_failure),
+            })
         write_json(root / "STATUS.json", {
             "stage": "failed", "baseline_started": baseline_started, "error": repr(exc),
         })

@@ -438,35 +438,53 @@ class WhaleTests(unittest.TestCase):
             self.root / "queue", self.root / "gpu-smoke-queued",
             joint / "best_COMPLETE.json", joint / "best_RELEASED.json", 86400)
 
-    def test_queue_failed_or_short_smoke_cannot_start_baseline(self):
+    def test_queue_smoke_failure_propagates_without_overwriting_baseline_failure(self):
         config_path = self.root / "config.json"
         write_json(config_path, self.config)
         frozen = {"config": self.config, "config_relative_path": str(config_path.relative_to(ROOT)),
                   "config_sha256": whale.file_sha(config_path),
                   "adapter_sha256": whale.file_sha(Path(whale.__file__))}
-        frozen_path = self.root / "FROZEN.json"
-        write_json(frozen_path, frozen)
         complete, released = self.root / "best_COMPLETE.json", self.root / "best_RELEASED.json"
         release = {"foreign_gpu_pids": [], "filler_kind": "adaptive", "filler_unit_active": True}
         write_json(complete, {"status": "unavailable"})
         write_json(released, release)
-        for status in ("failed", "passed"):
-            queue = self.root / ("queue-" + status)
-            with self.subTest(status=status), \
+        for outcome in ("failed", "passed", "exception", "existing_baseline_failure"):
+            case = self.root / outcome
+            frozen_path = case / "FROZEN.json"
+            write_json(frozen_path, frozen)
+            queue = case / "queue"
+            execution_failure = case / "execution/FAILED.json"
+            if outcome == "existing_baseline_failure":
+                write_json(execution_failure, {"error": "original baseline failure", "consumed_episodes": 128})
+                original = execution_failure.read_bytes()
+            with self.subTest(outcome=outcome), \
                     patch.object(whale.os, "uname", return_value=SimpleNamespace(nodename="dev-NDH200-026")), \
                     patch.object(whale.os, "getuid", return_value=1008), \
                     patch.object(whale.os, "getgid", return_value=1008), \
                     patch("sao_bridge.resources.gpu_release_audit", return_value=release), \
                     patch.object(whale, "run_gpu_smoke", return_value={
-                        "status": status, "frozen_sha256": whale.file_sha(frozen_path)}), \
+                        "status": outcome, "frozen_sha256": whale.file_sha(frozen_path)},
+                        side_effect=RuntimeError("GPU smoke failed") if outcome in (
+                            "exception", "existing_baseline_failure") else None), \
                     patch.object(whale, "run") as baseline, \
                     self.assertRaisesRegex((RuntimeError, ValueError), "smoke"):
                 whale.queued_run(frozen_path, whale.file_sha(frozen_path), "dev-NDH200-026",
-                                 queue, self.root / "smoke", complete, released, 86400)
+                                 queue, case / "smoke", complete, released, 86400)
             baseline.assert_not_called()
             state = read_json(queue / "STATUS.json")
             self.assertEqual(state["stage"], "failed")
             self.assertFalse(state["baseline_started"])
+            if outcome == "existing_baseline_failure":
+                self.assertEqual(execution_failure.read_bytes(), original)
+            else:
+                failure = read_json(execution_failure)
+                self.assertEqual(failure["status"], "failed")
+                self.assertFalse(failure["baseline_started"])
+                self.assertEqual(failure["stage"], "gpu_smoke")
+                self.assertEqual(failure["originating_queue_receipt"], str(queue / "FAILED.json"))
+                self.assertEqual(read_json(queue / "FAILED.json")["error"], failure["error"])
+            self.assertFalse((case / "execution/COMPLETE.json").exists())
+            self.assertFalse((case / "execution/RELEASED.json").exists())
 
     def test_full_cost_includes_dev_and_rank_duplication(self):
         for name, count in (("cycle-00-rsft-00", 3), ("mh-00/h0", 2), ("mh-00/h1", 2),
