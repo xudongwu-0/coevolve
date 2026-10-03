@@ -17,6 +17,58 @@ from sao_bridge.common import read_json, write_json
 from sao_bridge.evaluation import stable_id_seed_offset
 
 
+def _fsdp_restore_cpu_worker(rank, root):
+    import torch
+    import torch.distributed as dist
+    from torch.distributed.fsdp import FullyShardedDataParallel as FSDP
+
+    torch.set_num_threads(1)
+    dist.init_process_group("gloo", rank=rank, world_size=2,
+                            init_method=(root / "rendezvous").as_uri())
+    try:
+        def build():
+            inner = FSDP(torch.nn.Linear(8, 8), device_id=torch.device("cpu"), use_orig_params=True)
+            return FSDP(torch.nn.Sequential(inner, torch.nn.Linear(8, 4)),
+                        device_id=torch.device("cpu"), use_orig_params=True)
+
+        torch.manual_seed(42)
+        model = build()
+        optimizer = torch.optim.AdamW(model.parameters(), lr=.001, foreach=False)
+        inputs = torch.arange(16, dtype=torch.float32).reshape(2, 8)
+        for _ in range(2):
+            model(inputs).square().mean().backward()
+            optimizer.step()
+            optimizer.zero_grad()
+        parameters = whale.state_fingerprint(dict(model.named_parameters()))
+        adam = whale.state_fingerprint(optimizer.state_dict())
+        path = root / f"rank-{rank}.pt"
+        torch.save({"actor_state": whale.actor_checkpoint_state(model),
+                    "optimizer": optimizer.state_dict()}, path)
+        restored = build()
+        restored_optimizer = torch.optim.AdamW(restored.parameters(), lr=.001, foreach=False)
+        saved = torch.load(path, map_location="cpu", weights_only=False)
+        restored_optimizer.load_state_dict(saved["optimizer"])
+        whale.restore_actor_checkpoint(restored, saved["actor_state"])
+        assert whale.state_fingerprint(dict(restored.named_parameters())) == parameters
+        assert whale.state_fingerprint(restored_optimizer.state_dict()) == adam
+        assert whale.optimizer_steps(restored_optimizer) == [2]
+        restored(inputs).square().mean().backward()
+        restored_optimizer.step()
+        assert whale.optimizer_steps(restored_optimizer) == [3]
+        bad = {**saved["actor_state"], "state_dict": {
+            **saved["actor_state"]["state_dict"], "unexpected_weight": torch.zeros(1)}}
+        try:
+            whale.restore_actor_checkpoint(restored, bad)
+        except RuntimeError as exc:
+            assert "unexpected_weight" in str(exc)
+        else:
+            raise AssertionError("Sharded restore must reject unexpected keys")
+        write_json(root / f"rank-{rank}.json",
+                   {"exact_parameters": True, "exact_adam": True, "steps": 3, "strict_load": True})
+    finally:
+        dist.destroy_process_group()
+
+
 class WhaleTests(unittest.TestCase):
     def setUp(self):
         self.root = ROOT / "runs" / ("whale-cpu-test-" + uuid.uuid4().hex)
@@ -110,7 +162,7 @@ class WhaleTests(unittest.TestCase):
             for path in ("/absolute/config.json", "../outside.json"):
                 with self.subTest(path=path), self.assertRaises(ValueError):
                     whale.frozen_config_path({"config_relative_path": path})
-        with self.assertRaisesRegex(ValueError, "v6"):
+        with self.assertRaisesRegex(ValueError, "v7"):
             whale.frozen_config_path({"config_path": str(whale.DEFAULT_CONFIG)})
 
     def test_snapshot_run_outputs_use_shared_runs_link(self):
@@ -369,6 +421,16 @@ class WhaleTests(unittest.TestCase):
         self.assertEqual(original, whale.state_fingerprint(copy.deepcopy(state)))
         state["exp_avg"][0] += .1
         self.assertNotEqual(original, whale.state_fingerprint(state))
+
+    def test_fsdp_original_parameter_shards_and_warm_adam_restore_strictly_on_cpu(self):
+        import torch.multiprocessing as mp
+        with patch.dict(whale.os.environ, {"GLOO_SOCKET_IFNAME": "lo"}):
+            mp.spawn(_fsdp_restore_cpu_worker, args=(self.root,), nprocs=2, join=True)
+        for rank in range(2):
+            self.assertEqual(read_json(self.root / f"rank-{rank}.json"), {
+                "exact_parameters": True, "exact_adam": True, "steps": 3, "strict_load": True})
+        with self.assertRaisesRegex(ValueError, "legacy local-state"):
+            whale.restore_actor_checkpoint(None, {"format": "local-state"})
 
     def test_queue_requires_completed_best_and_clean_release(self):
         complete, released = self.root / "best_COMPLETE.json", self.root / "best_RELEASED.json"

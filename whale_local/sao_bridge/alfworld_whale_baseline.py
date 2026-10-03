@@ -40,6 +40,7 @@ MH = NATIVE / "meta_harness"
 PATCH_SCRIPTS = ROOT / "third_party/harness-r1-upstream/code/life-harness/AgentBench/scripts"
 DEFAULT_CONFIG = ROOT / "configs/alfworld_whale_baseline.json"
 GPUS = "0,1,2,3,4,5,6,7"
+ACTOR_CHECKPOINT_FORMAT = "fsdp-sharded-state-dict-v1"
 NODES = {"dev-NDH200-025": (1009, 1008), "dev-NDH200-026": (1008, 1008)}
 
 
@@ -47,7 +48,7 @@ def frozen_config_path(frozen: dict) -> Path:
     relative = Path(frozen.get("config_relative_path", ""))
     if (not frozen.get("config_relative_path") or relative.is_absolute()
             or ".." in relative.parts):
-        raise ValueError("A source-relative freeze is required; current source requires v6")
+        raise ValueError("A source-relative freeze is required; current source requires v7")
     path = ROOT / relative
     if not path.resolve().is_relative_to(ROOT.resolve()):
         raise ValueError("Frozen config escapes the executed source tree")
@@ -408,7 +409,8 @@ def preparation(config_path: Path, *, verify_weights: bool = True) -> dict:
     patch_module().normalize_patch(selected, bench="alfworld")
     return {
         "status": "prepared_cpu_only_gpu_not_validated", "config": config,
-        "freeze_format": "source-relative-v6-ma-population", "config_relative_path": relative_config,
+        "freeze_format": "source-relative-v7-sharded-restore", "config_relative_path": relative_config,
+        "actor_checkpoint_format": ACTOR_CHECKPOINT_FORMAT,
         "joint_data_reference": {
             "path": config["training_rows"], "sha256": file_sha(ROOT / config["training_rows"]),
             "solver_spec_path": config["joint_solver_spec"],
@@ -786,6 +788,28 @@ def optimizer_steps(optimizer) -> list[int]:
     return sorted({int(state["step"].item()) for state in optimizer.state.values() if "step" in state})
 
 
+def actor_checkpoint_state(model) -> dict:
+    from torch.distributed.fsdp import (
+        FullyShardedDataParallel as FSDP, ShardedStateDictConfig, StateDictType,
+    )
+    # LOCAL_STATE_DICT exposes unsupported _flat_param keys with use_orig_params.
+    with FSDP.state_dict_type(model, StateDictType.SHARDED_STATE_DICT,
+                             ShardedStateDictConfig(offload_to_cpu=True)):
+        state = model.state_dict()
+    return {"format": ACTOR_CHECKPOINT_FORMAT, "state_dict": state}
+
+
+def restore_actor_checkpoint(model, checkpoint: dict) -> None:
+    from torch.distributed.fsdp import (
+        FullyShardedDataParallel as FSDP, ShardedStateDictConfig, StateDictType,
+    )
+    if checkpoint.get("format") != ACTOR_CHECKPOINT_FORMAT:
+        raise ValueError("Unsupported actor checkpoint format; legacy local-state restore is forbidden")
+    with FSDP.state_dict_type(model, StateDictType.SHARDED_STATE_DICT,
+                             ShardedStateDictConfig(offload_to_cpu=True)):
+        model.load_state_dict(checkpoint["state_dict"], strict=True)
+
+
 def cost_report(root: Path, config: dict) -> dict:
     reports = {str(path.relative_to(root)): read_json(path) for path in root.glob("**/report.json")}
     proposals = [read_json(path) for path in root.glob("mh-*/proposals/*.json")]
@@ -877,7 +901,6 @@ def train_native(request_path: Path) -> None:
         if smoke:
             calls = smoke_calls(tokenizer)
         restored_exactly = False
-        from torch.distributed.fsdp import FullyShardedDataParallel as FSDP, StateDictType
         if request.get("resume"):
             previous = Path(request["resume"])
             receipt = read_json(previous / "COMMITTED.json")
@@ -888,8 +911,7 @@ def train_native(request_path: Path) -> None:
                 raise ValueError("Native optimizer continuation identity mismatch")
             saved = torch.load(saved_path, map_location="cpu", weights_only=False)
             optimizer.load_state_dict(saved["optimizer"])
-            with FSDP.state_dict_type(model, StateDictType.LOCAL_STATE_DICT):
-                model.load_state_dict(saved["actor_local_state"])
+            restore_actor_checkpoint(model, saved["actor_state"])
             torch.set_rng_state(saved["rng_cpu"])
             torch.cuda.set_rng_state(saved["rng_cuda"], device)
             if smoke:
@@ -961,9 +983,7 @@ def train_native(request_path: Path) -> None:
         checkpoint = output / "actor"
         identity = _export_actor(model, tokenizer, checkpoint, rank)
         _rank_zero(lambda: ensure_model_runtime_metadata(checkpoint, ROOT / config["initial_solver"]), rank)
-        with FSDP.state_dict_type(model, StateDictType.LOCAL_STATE_DICT):
-            local_state = model.state_dict()
-        saved = {"optimizer": optimizer.state_dict(), "actor_local_state": local_state,
+        saved = {"optimizer": optimizer.state_dict(), "actor_state": actor_checkpoint_state(model),
                  "rng_cpu": torch.get_rng_state(), "rng_cuda": torch.cuda.get_rng_state(device)}
         if smoke:
             saved["proof"] = {"parameters": state_fingerprint(dict(model.named_parameters())),
@@ -983,6 +1003,7 @@ def train_native(request_path: Path) -> None:
             "identity": identity, "metrics": metrics, "accepted_calls": 0 if smoke else len(calls),
             "accepted_episodes": 0 if smoke else sum(r["reward"] > 0.5 for r in report["results"]),
             "purpose": "synthetic_gpu_smoke" if smoke else "research_rsft",
+            "actor_checkpoint_format": ACTOR_CHECKPOINT_FORMAT,
             "elapsed_seconds": time.monotonic() - started,
             "synthetic_calls": len(calls) * updates if smoke else 0,
             "smoke_proofs": smoke_proofs if smoke else None,
