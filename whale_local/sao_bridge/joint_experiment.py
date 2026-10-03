@@ -87,7 +87,7 @@ def run_role(spec_path: Path) -> dict:
             "sao_bridge.large_train", ["--spec", spec_path],
             gpus="0,1,2,3,4,5,6,7", name="joint_native",
         )
-        deadline = time.monotonic() + 10800
+        deadline = time.monotonic() + spec.get("phase_timeout_seconds", 10800)
         last_count, last_progress = 0, time.monotonic()
         asynchronous = spec["protocol"] == "joint-ma-sao-async-v1"
         while process.poll() is None:

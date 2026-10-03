@@ -4,10 +4,12 @@ from __future__ import annotations
 import argparse
 import copy
 from pathlib import Path
+import random
 import time
 
 from .alfworld_core_extend import subset_report, validate_cohort
-from .alfworld_matched_grpo import EVAL_PROTOCOL
+from .alfworld_matched_grpo import EVAL_PROTOCOL, SAO_CONFIG
+from .alfworld_reward_service import validate_metadata
 from .alfworld_matched_grpo_eval import BASE_PROTOCOL, INITIAL_STATE
 from .alfworld_strong_phase import checked_native_report
 from .alfworld_strong_select import generate_proposals, matrix_config, matrix_reports, run_matrix
@@ -23,7 +25,51 @@ from .resources import gpu_release_audit
 PROTOCOL = "joint-ma-sao-async-v1"
 
 
-def prepare(root: Path, comparison: Path, deadline: float) -> dict:
+def initial_inputs(root: Path, steps: int, batch: int) -> tuple[list[dict], dict]:
+    from .alfworld_train_data import evaluation_paths
+
+    original = read_json(SAO_CONFIG)
+    packets_path = Path(original["data"]).parent / "packets.json"
+    packets = read_json(packets_path)
+    by_task = {}
+    for packet in packets:
+        metadata = packet["metadata"]
+        validate_metadata(metadata, original["solver_version"])
+        for task in metadata["task_ids"]:
+            if task in by_task or not 0 <= task < 240:
+                raise ValueError("Initial W0 evidence has duplicated or nontraining tasks")
+            by_task[task] = packet
+    if set(by_task) != set(range(240)):
+        raise ValueError("Initial W0 evidence must cover exactly the original train0-239")
+    paths = evaluation_paths()
+    order = list(range(240))
+    random.Random(1000042).shuffle(order)
+    rows = []
+    for i in range(steps * batch):
+        task = order[i % len(order)]
+        messages = copy.deepcopy(by_task[task]["messages"])
+        evidence = "\n".join(m["content"] for m in messages if m["role"] == "user")
+        rows.append({
+            "id": f"h0w0-{i:05d}-task{task}", "joint_version": i // batch,
+            "joint_slot": i % batch, "task_id": task, "task_split": "test_set",
+            "messages": messages, "task_context": paths[task],
+            "critic_evidence": "Historical W0 training evidence, not current outcomes:\n" + evidence[-1200:],
+        })
+    state = {
+        "engineer": original["engineer_model"], "engineer_critic": original["engineer_model"],
+        "solver": original["solver_model"], "solver_critic": original["solver_model"],
+        "solver_version": original["solver_version"], "solver_epoch_version": 0,
+        "engineer_version": 0, "harness": original["harness"],
+        "packets": str(packets_path), "packets_sha256": file_sha(packets_path),
+        "initialization": "Original official H0 and W0; no H1/W1 weights or evidence.",
+        "original_sao_config_sha256": file_sha(SAO_CONFIG),
+    }
+    _immutable_json(root / "INITIAL_STATE.json", state)
+    return rows, state
+
+
+def prepare(root: Path, comparison: Path, deadline: float, *, from_initial: bool = False,
+            memory_check: Path | None = None) -> dict:
     if deadline - time.time() < 3600:
         raise ValueError("Joint campaign needs an explicit final-hour evaluation reserve")
     base = ROOT / "runs/alfworld_joint_ma_pilot_v1_r2"
@@ -40,6 +86,10 @@ def prepare(root: Path, comparison: Path, deadline: float) -> dict:
         if row["task_id"] in cohort["all_task_ids"]:
             raise ValueError("Joint training intersects the frozen 200-question cohort")
         rows.append(row)
+    if from_initial:
+        if memory_check is None:
+            raise ValueError("H0/W0 training requires an explicit full-context memory-check receipt")
+        rows, state = initial_inputs(root, steps, batch)
     data = root / "data.json"
     _immutable_json(data, rows)
     protocol = read_json(BASE_PROTOCOL)
@@ -63,6 +113,21 @@ def prepare(root: Path, comparison: Path, deadline: float) -> dict:
             "report": "Freeze selection before a fresh single sample on the same all200/strict197.",
         },
     )
+    if from_initial:
+        protocol.update(
+            starting_point="h0_w0", initial_state=str(root / "INITIAL_STATE.json"),
+            source_data_sha256=state["packets_sha256"], memory_check=str(memory_check),
+            initialization_scope="Official H0 is already RL-trained; neither model is a bare base model.",
+        )
+        protocol["budget"].update(
+            common_executed_trajectories=0, matched_rounds=64,
+            matched_policy_trajectories=1024,
+            checkpoint_trajectories=[192, 832, 1024],
+        )
+        del protocol["budget"]["matched_successful_h2_rounds"]
+        del protocol["budget"]["matched_h2_plus_rejected_w2_rounds"]
+        protocol["selection"]["matched"] = "Exactly round64: 1024 total H+W trajectories from H0/W0."
+        protocol["selection"]["initial"] = "Unchanged H0/W0: eight W0-evidence proposals, selection24 then all200."
     _immutable_json(root / "protocol.json", protocol)
     for role in ("editor", "solver"):
         spec = read_json(base / f"{role}_spec.json")
@@ -75,15 +140,41 @@ def prepare(root: Path, comparison: Path, deadline: float) -> dict:
             training_deadline_unix=deadline - 3600,
             lr=5e-7, critic_lr=2.5e-6,
         )
+        state_path = Path(protocol["initial_state"])
+        if from_initial:
+            model = state["engineer" if role == "editor" else "solver"]
+            spec.update(
+                model=model, critic_model=model, reference_model=model,
+                critic_warmup_steps=5, phase_timeout_seconds=8 * 3600,
+            )
         spec["pinned_files"] = {
-            str(path): file_sha(path) for path in (data, INITIAL_STATE, EVAL_PROTOCOL)
+            str(path): file_sha(path) for path in (data, state_path, EVAL_PROTOCOL)
         }
+        if from_initial:
+            spec["pinned_files"][state["packets"]] = state["packets_sha256"]
         validate_spec(spec)
         _immutable_json(root / f"{role}_spec.json", spec)
     return protocol
 
 
 def wait_comparison(protocol: dict) -> None:
+    if protocol.get("starting_point") == "h0_w0":
+        root = Path(protocol["run"])
+        memory = Path(protocol["memory_check"])
+        while not (root / "initial_COMPLETE.json").exists() or not memory.exists():
+            for path in (root / "initial_FAILED.json", memory.parent / "MEMORY_FAILED.json"):
+                if path.exists():
+                    raise RuntimeError(f"H0/W0 prerequisite failed: {read_json(path)}")
+            if time.time() >= protocol["training_deadline_unix"]:
+                raise TimeoutError("Initial evaluation or full-context memory validation missed training deadline")
+            time.sleep(10)
+        check = read_json(memory)
+        if (check["status"] != "passed" or check["max_sequence_tokens"] < 32768
+                or check["actor_optimizer_steps"] < 1 or not check["finite_nonzero_actor_gradient"]):
+            raise ValueError("H0/W0 requires a passed full-context native Actor optimizer step")
+        if read_json(root / "initial_COMPLETE.json")["status"] != "completed":
+            raise ValueError("H0/W0 initial evaluation is incomplete")
+        return
     comparison = Path(protocol["comparison"])
     while not all((comparison / name).exists()
                   for name in ("COMPLETE.json", "w0_RELEASED.json", "w1_RELEASED.json")):
@@ -154,22 +245,36 @@ def select_pair(reports: dict) -> tuple[str, str]:
 
 
 def evaluate(root: Path, label: str) -> dict:
-    if label not in ("matched", "best"):
+    if label not in ("initial", "matched", "best"):
         raise ValueError("Unknown joint reporting arm")
     output = root / label
     launch = None
     try:
-        pairs, training = available_pairs(root)
-        steps = ["11"] if label == "matched" else list(pairs)[-3:]
+        protocol = read_json(root / "protocol.json")
+        state = read_json(Path(protocol["initial_state"]))
+        if label == "initial":
+            if protocol.get("starting_point") != "h0_w0":
+                raise ValueError("Initial evaluation is only defined for the H0/W0 campaign")
+            pairs = {"-1": {
+                "editor": {"actor": state["engineer"], "critic": state["engineer_critic"]},
+                "solver": {"actor": state["solver"], "critic": state["solver_critic"]},
+            }}
+            training = {role: {
+                "status": "untrained_initialization", "consumed_policy_trajectories": 0,
+                "generated_policy_trajectories": 0, "sampled_engineer_actions": 0,
+            } for role in ("editor", "solver")}
+        else:
+            pairs, training = available_pairs(root)
+        matched_rounds = protocol["budget"].get("matched_rounds", 12)
+        steps = [str(matched_rounds - 1)] if label == "matched" else list(pairs)[-3:]
         if any(step not in pairs for step in steps):
-            result = {"status": "unavailable", "reason": "Stopped before the matched round12 checkpoint",
+            result = {"status": "unavailable", "reason": f"Stopped before the matched round{matched_rounds} checkpoint",
                       "training": training}
             _immutable_json(root / f"{label}_COMPLETE.json", result)
             return result
         audit = gpu_release_audit()
         if audit["foreign_gpu_pids"] or not audit["filler_unit_active"]:
             raise RuntimeError("Joint evaluation requires released GPUs and active filler")
-        protocol, state = read_json(root / "protocol.json"), read_json(INITIAL_STATE)
         cohort = read_json(EVAL_PROTOCOL)
         validate_cohort(cohort)
         launch = Launcher(output / "supervision")
@@ -198,7 +303,7 @@ def evaluate(root: Path, label: str) -> dict:
                        for s, variants in reports.items()},
             "valid_proposals": {s: sum(p["valid"] for p in proposals[s]) for s in steps},
             "incremental_consumed_h_plus_w": (int(step) + 1) * 16,
-            "cumulative_consumed_h_plus_w": 832 + (int(step) + 1) * 16,
+            "cumulative_consumed_h_plus_w": protocol["budget"]["common_executed_trajectories"] + (int(step) + 1) * 16,
             "actual_campaign_consumed": sum(r["consumed_policy_trajectories"] for r in training.values()),
             "actual_campaign_generated_complete": sum(r["generated_policy_trajectories"] for r in training.values()),
             "sampled_engineer_actions_including_unrewarded": training["editor"]["sampled_engineer_actions"],
@@ -247,6 +352,9 @@ def evaluate(root: Path, label: str) -> dict:
                 "Clipped teammate trajectory correction is an experimental biased extension, not standard MAPPO.",
             ],
         }
+        if protocol.get("starting_point") == "h0_w0" and label != "initial":
+            initial = read_json(root / "initial_joint_harness_report.json")
+            result["versus_initial_h0_w0"] = paired_difference(initial, candidate, seed=9000046)
     except BaseException as exc:
         write_json(root / f"{label}_FAILED.json", {"error": repr(exc), "at_unix": time.time()})
         raise
@@ -279,6 +387,8 @@ def guard(root: Path) -> dict:
         }
     result = {"status": "completed" if all(r["status"] == "completed" for r in results.values())
               else "incomplete", "results": results, "reported_at_unix": time.time()}
+    if any((root / f"{role}_FAILED.json").exists() for role in ("editor", "solver")):
+        result["status"] = "incomplete"
     _immutable_json(root / "DEADLINE_REPORT.json", result)
     return result
 
@@ -287,15 +397,18 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, required=True)
     parser.add_argument("--mode", choices=("prepare", "train", "evaluate", "guard"), required=True)
-    parser.add_argument("--role", choices=("editor", "solver", "matched", "best"))
+    parser.add_argument("--role", choices=("editor", "solver", "initial", "matched", "best"))
     parser.add_argument("--comparison", type=Path)
     parser.add_argument("--deadline", type=float)
+    parser.add_argument("--from-initial", action="store_true")
+    parser.add_argument("--memory-check", type=Path)
     args = parser.parse_args()
     root = args.root.resolve()
     if args.mode == "prepare":
         if args.comparison is None or args.deadline is None:
             parser.error("prepare needs --comparison and --deadline")
-        result = prepare(root, args.comparison.resolve(), args.deadline)
+        result = prepare(root, args.comparison.resolve(), args.deadline,
+                         from_initial=args.from_initial, memory_check=args.memory_check)
     elif args.mode == "train":
         if args.role not in ("editor", "solver"):
             parser.error("train needs an editor/solver role")

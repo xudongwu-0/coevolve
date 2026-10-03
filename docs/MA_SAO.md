@@ -1,5 +1,31 @@
 # Fixed-sample SAO / MA-SAO research protocol
 
+## Independent H0/W0 initialization (2026-10-03)
+
+The new `joint_campaign --from-initial --memory-check ...` mode starts both
+actors, critics and fixed references from the original official H0/W0 paths in
+the SAO configuration. No H1/W1 weights, critic normalization or optimizer
+state are inherited. Prompt packets and privileged historical evidence come
+from W0 on legacy training instances0-239, not W79. Five critic-only warmup
+rounds replace the warm-start run's two; other joint PPO settings remain.
+Official H0 is already RL-trained; "initial" does not mean a raw base model.
+
+Before training, evaluate unchanged H0/W0 with eight new proposals, frozen
+selection24 and all200/strict197, including W0 without a harness. A successful
+full32768-token native Actor optimizer memory check is a separate prerequisite;
+an allocator-only demonstration cannot satisfy it. Research sample accounting
+excludes synthetic engineering tests, which must still be disclosed.
+
+There is no832-sample inherited prefix. At16 H+W trajectories per round,
+round12=192, round52=832 and round64=1024 are saved. The matched reporting arm
+uses round64 against the historical H1+W1+H2 total1024, not warm-start round12.
+The best arm retains the existing frozen development-selection rule. The maximum
+is128 rounds subject to a training deadline; initial evaluation and memory
+verification consume wall time rather than extending that deadline silently.
+Final reports add paired comparison to this campaign's own H0/W0 baseline.
+This remains a single-seed development experiment, not an algorithm-only
+comparison with the historical backend.
+
 ## Deadline-bound joint asynchronous continuation (2026-10-02)
 
 **Window outcome,23:07:27UTC:** the recovered round4 pair scored180/200=90.00%
@@ -22,7 +48,7 @@ The requested result deadline is **23:41:31 UTC**, with a training cutoff at
 the matched GRPO W0/W1 comparison, then launches one persistent role per node.
 Its independent `guard` writes a stop request at the cutoff and a deadline report
 even when no successful evaluation exists. A process launch or CPU test is not
-evidence of a native GPU update; this continuation is not yet GPU-validated.
+evidence of a native GPU update; the actual partial-run validation is recorded above.
 
 Starting policies/critics are E15/C15 and W79/C79, never the rejected W2.
 There are at most128 rounds,8 paired episodes per round,2 critic-only warmup

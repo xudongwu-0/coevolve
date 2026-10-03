@@ -14,7 +14,7 @@ from areal.api.cli_args import PPOConfig, load_expr_config
 from areal.infra.workflow_executor import check_trajectory_format
 from areal.utils.data import allocate_balanced_mbs, batched_call
 from sao_bridge.common import read_json, write_json
-from sao_bridge.joint_campaign import select_pair, share_checkpoints, wait_comparison
+from sao_bridge.joint_campaign import initial_inputs, prepare, select_pair, share_checkpoints, wait_comparison
 from sao_bridge.joint_health import assess, metric_rows, recover_checkpoints, request_stop
 from sao_bridge.large_train import configure
 
@@ -172,3 +172,116 @@ def test_cross_uid_sharing_only_exposes_checkpoints_not_runtime_control_files(tm
     assert private.stat().st_mode & 0o077 == 0
     with pytest.raises(ValueError, match="outside"):
         share_checkpoints(optimizer, {"checkpoint_history": {"3": {"actor": str(tmp_path)}}})
+
+
+def test_initial_inputs_use_only_original_models_and_w0_evidence(tmp_path):
+    original = {
+        "data": str(tmp_path / "old/train.json"), "engineer_model": "official-h0",
+        "solver_model": "official-w0", "solver_version": "w0-version", "harness": "empty",
+    }
+    packets = [{
+        "metadata": {"task_ids": list(range(start, start + 10))},
+        "messages": [{"role": "user", "content": f"W0 evidence batch{start}"}],
+    } for start in range(0, 240, 10)]
+    with (
+        patch("sao_bridge.joint_campaign.read_json", side_effect=[original, packets]),
+        patch("sao_bridge.joint_campaign.file_sha", return_value="frozen-hash"),
+        patch("sao_bridge.joint_campaign.validate_metadata") as validate,
+        patch("sao_bridge.alfworld_train_data.evaluation_paths", return_value=[f"task{i}" for i in range(500)]),
+    ):
+        rows, state = initial_inputs(tmp_path, 128, 8)
+    assert len(rows) == 1024 and len({r["task_id"] for r in rows}) == 240
+    assert validate.call_count == 24
+    assert all(call.args[1] == "w0-version" for call in validate.call_args_list)
+    assert state["engineer"] == state["engineer_critic"] == "official-h0"
+    assert state["solver"] == state["solver_critic"] == "official-w0"
+    assert state["solver_epoch_version"] == 0
+    for start in range(0, len(rows), 8):
+        batch = rows[start:start + 8]
+        assert len({r["task_id"] for r in batch}) == 8
+        assert [r["joint_slot"] for r in batch] == list(range(8))
+        for row in batch:
+            assert row["joint_version"] == start // 8
+            assert row["task_context"] == f"task{row['task_id']}"
+            assert row["messages"][0]["content"].startswith("W0 evidence")
+            assert "W0" in row["critic_evidence"] and "W79" not in row["critic_evidence"]
+
+
+def test_initial_prerequisites_reject_allocator_only_smoke_test(tmp_path):
+    memory = tmp_path / "memory/MEMORY_COMPLETE.json"
+    protocol = {
+        "run": str(tmp_path), "starting_point": "h0_w0",
+        "memory_check": str(memory), "training_deadline_unix": time.time() + 60,
+    }
+    write_json(tmp_path / "initial_COMPLETE.json", {"status": "completed"})
+    check = {
+        "status": "passed", "max_sequence_tokens": 32768,
+        "actor_optimizer_steps": 0, "finite_nonzero_actor_gradient": False,
+    }
+    write_json(memory, check)
+    with pytest.raises(ValueError, match="native Actor"):
+        wait_comparison(protocol)
+    write_json(memory, {**check, "actor_optimizer_steps": 1, "finite_nonzero_actor_gradient": True})
+    wait_comparison(protocol)
+    write_json(memory, {**check, "max_sequence_tokens": 24075, "actor_optimizer_steps": 1,
+                        "finite_nonzero_actor_gradient": True})
+    with pytest.raises(ValueError, match="native Actor"):
+        wait_comparison(protocol)
+
+
+def test_initial_prerequisite_failure_is_not_a_zero_score(tmp_path):
+    protocol = {
+        "run": str(tmp_path), "starting_point": "h0_w0",
+        "memory_check": str(tmp_path / "memory/MEMORY_COMPLETE.json"),
+        "training_deadline_unix": time.time() + 60,
+    }
+    write_json(tmp_path / "initial_FAILED.json", {"error": "environment failure"})
+    with pytest.raises(RuntimeError, match="prerequisite failed"):
+        wait_comparison(protocol)
+
+
+def test_fresh_campaign_resets_models_prefix_and_matched_budget(tmp_path):
+    from sao_bridge import joint_campaign
+
+    state = {
+        "engineer": "h0", "solver": "w0", "packets": str(tmp_path / "packets.json"),
+        "packets_sha256": "unused-by-mocked-validation",
+    }
+    write_json(tmp_path / "INITIAL_STATE.json", state)
+    rows = [{"task_id": i % 240, "joint_version": i // 8, "joint_slot": i % 8}
+            for i in range(1024)]
+    original_read = read_json
+
+    def read(path):
+        path = Path(path)
+        if path == joint_campaign.BASE_PROTOCOL:
+            return {"no_patch": "empty"}
+        if path == joint_campaign.EVAL_PROTOCOL:
+            return {"all_task_ids": [240]}
+        if path.name in ("editor_spec.json", "solver_spec.json"):
+            return {**training_spec(tmp_path), "role": path.name.split("_")[0]}
+        if path.name == "data.json" and "alfworld_joint_ma_pilot_v1" in path.parts:
+            return rows[:8]
+        return original_read(path)
+
+    with (
+        patch("sao_bridge.joint_campaign.read_json", side_effect=read),
+        patch("sao_bridge.joint_campaign.initial_inputs", return_value=(rows, state)),
+        patch("sao_bridge.joint_campaign.validate_cohort"),
+        patch("sao_bridge.joint_campaign.validate_spec"),
+        patch("sao_bridge.joint_campaign.file_sha", return_value="frozen"),
+    ):
+        protocol = prepare(tmp_path, tmp_path / "unused-grpo", time.time() + 8 * 3600,
+                           from_initial=True, memory_check=tmp_path / "memory.json")
+    assert protocol["starting_point"] == "h0_w0"
+    assert protocol["budget"]["common_executed_trajectories"] == 0
+    assert protocol["budget"]["matched_rounds"] == 64
+    assert protocol["budget"]["matched_policy_trajectories"] == 1024
+    assert protocol["budget"]["checkpoint_trajectories"] == [192, 832, 1024]
+    assert "matched_successful_h2_rounds" not in protocol["budget"]
+    for role, model in (("editor", "h0"), ("solver", "w0")):
+        spec = read_json(tmp_path / f"{role}_spec.json")
+        assert spec["model"] == spec["critic_model"] == spec["reference_model"] == model
+        assert spec["critic_warmup_steps"] == 5
+        assert str(tmp_path / "INITIAL_STATE.json") in spec["pinned_files"]
+        assert str(joint_campaign.INITIAL_STATE) not in spec["pinned_files"]
