@@ -31,7 +31,8 @@ PROTOCOL = "joint-ma-sao-async-v1"
 CONTROL_QUEUE_TIMEOUT = 36 * 3600
 
 
-def initial_inputs(root: Path, steps: int, batch: int) -> tuple[list[dict], dict]:
+def initial_inputs(root: Path, steps: int, batch: int,
+                   improve_from: Path | None = None) -> tuple[list[dict], dict]:
     from .alfworld_train_data import evaluation_paths
 
     original = read_json(SAO_CONFIG)
@@ -70,13 +71,30 @@ def initial_inputs(root: Path, steps: int, batch: int) -> tuple[list[dict], dict
         "initialization": "Original official H0 and W0; no H1/W1 weights or evidence.",
         "original_sao_config_sha256": file_sha(SAO_CONFIG),
     }
+    if improve_from is not None:
+        previous = read_json(improve_from / "matched_COMPLETE.json")
+        if previous["status"] != "completed" or previous["selection"]["rounds"] != 64:
+            raise ValueError("Improvement branch requires the committed round64 MA pair")
+        pair = previous["selection"]["pair"]
+        state.update(
+            engineer_critic=pair["editor"]["critic"],
+            solver=pair["solver"]["actor"], solver_critic=pair["solver"]["critic"],
+            harness=read_json(improve_from / "initial_COMPLETE.json")["selection"]["harness"],
+            initialization="Original H0 Actor with MA64 Solver and both MA64 critics; fresh Adam. "
+                           "Historical W0 prompt evidence retained and explicitly labelled.",
+            parent_ma_root=str(improve_from),
+        )
+        for row in rows:
+            row["id"] = row["id"].replace("h0w0-", "ma-improve-", 1)
     _immutable_json(root / "INITIAL_STATE.json", state)
     return rows, state
 
 
 def prepare(root: Path, comparison: Path, deadline: float, *, from_initial: bool = False,
             memory_check: Path | None = None, schedule: str = "simultaneous",
-            wait_for_control: Path | None = None) -> dict:
+            wait_for_control: Path | None = None, improve_from: Path | None = None) -> dict:
+    if improve_from is not None and (not from_initial or schedule != "simultaneous"):
+        raise ValueError("Improvement branch requires joint simultaneous training and explicit initial inputs")
     if schedule not in ("simultaneous", ALTERNATING) or (schedule == ALTERNATING and not from_initial):
         raise ValueError("Alternating scheduling-only control requires --from-initial H0/W0")
     if deadline - time.time() < 3600:
@@ -88,7 +106,7 @@ def prepare(root: Path, comparison: Path, deadline: float, *, from_initial: bool
     old_rows = read_json(source)
     cohort = read_json(EVAL_PROTOCOL)
     validate_cohort(cohort)
-    steps, batch = 128, 8
+    steps, batch = (64 if improve_from is not None else 128), 8
     rows = []
     for i in range(steps * batch):
         row = copy.deepcopy(old_rows[i % len(old_rows)])
@@ -100,7 +118,7 @@ def prepare(root: Path, comparison: Path, deadline: float, *, from_initial: bool
     if from_initial:
         if memory_check is None:
             raise ValueError("H0/W0 training requires an explicit full-context memory-check receipt")
-        rows, state = initial_inputs(root, steps, batch)
+        rows, state = initial_inputs(root, steps, batch, improve_from)
     schedule_source = None
     if schedule == ALTERNATING:
         schedule_source = root / "schedule_source_data.json"
@@ -165,6 +183,44 @@ def prepare(root: Path, comparison: Path, deadline: float, *, from_initial: bool
         )
     if wait_for_control is not None:
         protocol["wait_for_control"] = str(wait_for_control.resolve())
+    if improve_from is not None:
+        parent_audit = read_json(improve_from / "FINAL_AUDIT.json")
+        if parent_audit["status"] != "verified_complete_experiment":
+            raise ValueError("Improvement branch requires audited parent results")
+        manifest = read_json(Path(protocol["evaluation"]["task_manifest"]))
+        extra = [task for task in cohort["strict_goal_disjoint_task_ids"]
+                 if task not in manifest["selection_task_ids"]]
+        random.Random(20261003).shuffle(extra)
+        selection_ids = manifest["selection_task_ids"] + extra[:24]
+        if len(selection_ids) != 48 or len(set(selection_ids)) != 48:
+            raise ValueError("Improvement selection requires exactly48 distinct train-excluded tasks")
+        selection_manifest = root / "selection_manifest.json"
+        _immutable_json(selection_manifest, {
+            "selection_task_ids": selection_ids,
+            "report_task_ids": [task for task in cohort["all_task_ids"] if task not in selection_ids],
+            "scope": "Expanded reused-development selection, not an untouched test split.",
+        })
+        protocol["evaluation"].update(task_manifest=str(selection_manifest), samples=1)
+        protocol.update(
+            starting_point="ma64_h0",
+            incumbent_harness=state["harness"], incumbent_min_gain=2 / 48,
+            improvement={
+                "parent_root": str(improve_from), "parent_consumed_path": 1024,
+                "parent_actual_campaign_consumed": parent_audit["full_run_consumed"],
+                "optimizer_state": "Fresh Adam; MA64 critic weights and ValueNorm retained.",
+                "hypothesis": "Stabilize H near H0 while improving W from MA64; retain a proven patch unless beaten.",
+                "selection_exposure": "48 reused development questions; not a confirmatory improvement test.",
+            },
+        )
+        protocol["budget"].update(common_executed_trajectories=1024, matched_rounds=32,
+                                  matched_policy_trajectories=1536,
+                                  checkpoint_trajectories=list(range(128, 1025, 128)))
+        protocol["selection"].update(
+            matched="Round32 continuation probe:1024 inherited+512 new consumed trajectories, not original matched1024.",
+            best="Up to last three common committed pairs; selection48 mean@1, with a guarded incumbent.",
+            initial="Reuse measured H0 fixed patch with MA64 Solver; post-hoc starting-point choice disclosed.",
+            harness="Retain frozen initial H0 patch unless a new patch gains at least2/48 on selection48 mean@1.",
+        )
     _immutable_json(root / "protocol.json", protocol)
     for role in ("editor", "solver"):
         spec = read_json(base / f"{role}_spec.json")
@@ -184,6 +240,12 @@ def prepare(root: Path, comparison: Path, deadline: float, *, from_initial: bool
                 model=model, critic_model=model, reference_model=model,
                 critic_warmup_steps=5, phase_timeout_seconds=8 * 3600,
             )
+        if improve_from is not None:
+            spec.update(
+                critic_model=state["engineer_critic" if role == "editor" else "solver_critic"],
+                lr=1e-7 if role == "editor" else 1e-6, kl_ctl=0.02,
+                critic_warmup_steps=3, save_interval_steps=8,
+            )
         if schedule == ALTERNATING:
             spec.update(
                 schedule=schedule, schedule_block_size=16, starting_point="h0_w0",
@@ -196,6 +258,10 @@ def prepare(root: Path, comparison: Path, deadline: float, *, from_initial: bool
             spec["pinned_files"][state["packets"]] = state["packets_sha256"]
         if schedule_source is not None:
             spec["pinned_files"][str(schedule_source)] = file_sha(schedule_source)
+        if improve_from is not None:
+            for path in (selection_manifest, Path(state["harness"]),
+                         improve_from / "matched_COMPLETE.json", improve_from / "FINAL_AUDIT.json"):
+                spec["pinned_files"][str(path)] = file_sha(path)
         validate_spec(spec)
         _immutable_json(root / f"{role}_spec.json", spec)
     return protocol
@@ -257,7 +323,7 @@ def wait_control(protocol: dict) -> None:
 def wait_comparison(protocol: dict) -> None:
     if protocol.get("wait_for_control"):
         wait_control(protocol)
-    if protocol.get("starting_point") == "h0_w0":
+    if protocol.get("starting_point") in ("h0_w0", "ma64_h0"):
         root = Path(protocol["run"])
         memory = Path(protocol["memory_check"])
         while not (root / "initial_COMPLETE.json").exists() or not memory.exists():
@@ -390,7 +456,21 @@ def available_pairs(root: Path) -> tuple[dict, dict]:
                    for role in results} for step in steps}, results
 
 
-def select_pair(reports: dict) -> tuple[str, str]:
+def select_pair(reports: dict, *, incumbent_min_gain: float | None = None) -> tuple[str, str]:
+    if incumbent_min_gain is not None:
+        if not 0 <= incumbent_min_gain <= 1:
+            raise ValueError("Incumbent improvement threshold must lie in [0,1]")
+        choices = []
+        for step, variants in reports.items():
+            incumbent = variants["incumbent_harness"]["accuracy"]
+            choices.append((step, "incumbent_harness", incumbent))
+            choices.extend((step, label, report["accuracy"])
+                           for label, report in variants.items() if label.startswith("proposal")
+                           and report["accuracy"] - incumbent >= incumbent_min_gain - 1e-12)
+        if not choices:
+            raise ValueError("No evaluated incumbent or new candidate")
+        step, label, _ = min(choices, key=lambda row: (-row[2], int(row[0]), row[1]))
+        return step, label
     choices = [(step, label, report["accuracy"])
                for step, variants in reports.items() for label, report in variants.items()
                if label.startswith("proposal")]
@@ -409,7 +489,7 @@ def evaluate(root: Path, label: str) -> dict:
         protocol = read_json(root / "protocol.json")
         state = read_json(Path(protocol["initial_state"]))
         if label == "initial":
-            if protocol.get("starting_point") != "h0_w0":
+            if protocol.get("starting_point") not in ("h0_w0", "ma64_h0"):
                 raise ValueError("Initial evaluation is only defined for the H0/W0 campaign")
             pairs = {"-1": {
                 "editor": {"actor": state["engineer"], "critic": state["engineer_critic"]},
@@ -446,12 +526,14 @@ def evaluate(root: Path, label: str) -> dict:
                     path = output / "patches" / f"{step}-{name}.json"
                     _immutable_json(path, proposal["patch"])
                 paths[name] = str(path)
+            if protocol.get("incumbent_harness"):
+                paths["incumbent_harness"] = protocol["incumbent_harness"]
             harnesses[step] = paths
             config = matrix_config(protocol, pairs[step]["solver"]["actor"], f"ma-step{step}",
                                    paths, output / f"selection-{step}")
             matrix, _ = run_matrix(launch, config, output / f"selection-{step}", 1)
             reports[step] = matrix_reports(matrix, protocol)
-        step, patch = select_pair(reports)
+        step, patch = select_pair(reports, incumbent_min_gain=protocol.get("incumbent_min_gain"))
         selection = {
             "global_step": int(step), "rounds": int(step) + 1, "patch_label": patch,
             "harness": harnesses[step][patch], "pair": pairs[step],
@@ -517,6 +599,14 @@ def evaluate(root: Path, label: str) -> dict:
         if protocol.get("starting_point") == "h0_w0" and label != "initial":
             initial = read_json(root / "initial_joint_harness_report.json")
             result["versus_initial_h0_w0"] = paired_difference(initial, candidate, seed=9000046)
+        if protocol.get("starting_point") == "ma64_h0" and label != "initial":
+            result["versus_branch_start"] = paired_difference(
+                read_json(root / "initial_joint_harness_report.json"), candidate, seed=9000046)
+            result["parent_actual_campaign_consumed"] = protocol["improvement"]["parent_actual_campaign_consumed"]
+            result["total_research_training_consumed"] = (
+                result["parent_actual_campaign_consumed"] + selection["actual_campaign_consumed"])
+            result["limitations"].append(
+                "Post-hoc MA64/H0 continuation and expanded selection48; not a from-zero matched1024 comparison.")
     except BaseException as exc:
         write_json(root / f"{label}_FAILED.json", {"error": repr(exc), "at_unix": time.time()})
         raise
@@ -581,6 +671,8 @@ def main():
     parser.add_argument("--schedule", choices=("simultaneous", ALTERNATING), default="simultaneous")
     parser.add_argument("--wait-for-control", type=Path,
                         help="Require predecessor COMPLETE/RELEASED and locally released GPUs; wait at most 36h")
+    parser.add_argument("--improve-from", type=Path,
+                        help="Audited prior MA root: continue from its MA64 Solver with original H0 Actor")
     args = parser.parse_args()
     root = args.root.resolve()
     if args.mode == "prepare":
@@ -588,7 +680,8 @@ def main():
             parser.error("prepare needs --comparison and --deadline")
         result = prepare(root, args.comparison.resolve(), args.deadline,
                          from_initial=args.from_initial, memory_check=args.memory_check,
-                         schedule=args.schedule, wait_for_control=args.wait_for_control)
+                         schedule=args.schedule, wait_for_control=args.wait_for_control,
+                         improve_from=args.improve_from.resolve() if args.improve_from else None)
     elif args.mode == "train":
         if args.role not in ("editor", "solver"):
             parser.error("train needs an editor/solver role")

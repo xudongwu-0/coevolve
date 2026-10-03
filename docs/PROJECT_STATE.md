@@ -1,5 +1,27 @@
 # 项目状态与 Agent 接手指南
 
+## 当前最高优先级：让MA-SAO超过92%，暂停WHALE
+
+用户明确改为优先超越W1+h2=92%，WHALE暂不继续。不要启动WHALE、
+旧修正SAO或调度消融队列。WHALE未完成的DP/续训代码修改保留但不纳入新MA冻结源。
+
+交叉测评已完成并在其owner节点核验：
+`runs/alfworld_ma_crossplay_v1/matched/FINAL_AUDIT.json`。
+同MA64权重下：空77.5%、初始h0 90%、h64 89.5%、晚期h112 78.5%。
+同MA112权重下：空79.5%、初始h0 86.5%、h64 87.5%、h112 83.5%。
+固定MA64权重换h64→h112下降11pp，配对区间[-16,-6]pp，
+比“跨checkpoint比较后直接说W崩了”更直接地支持harness有问题。
+但h0下换成晚期W也未改善，兼容性不能忽略；重测分数不替换原始MA报告。
+
+新MA改进分支使用`joint_campaign --from-initial --improve-from <原MA根>`：
+原H0 Actor＋MA64 Solver，两个critic/ValueNorm继承MA64，新Adam；
+H学习率1e-7、W学习率1e-6，均以各自分支起点为reference、KL0.02，
+K2、三轮critic预热、同轮双方更新/lag1保持不变。
+冻结初始h0作为部署候选，selection48 mean@1上新patch须至少多2题才替换；
+与旧selection24×2预算接近，但增加开发集暴露，必须披露。
+最多64新轮、每8轮保存，round32为中点探针。继承路径1024条，父实验实际
+已消费1840条，不能将该分支冒充从零同1024比较。第一目标先取得>92%的真实结果。
+
 ## 最新：MA正式结果已完成，正在恢复后续研究队列
 
 MA最终报告于2026-10-03 08:12:17UTC完成，早于08:49:31期限：

@@ -309,6 +309,73 @@ def test_fresh_campaign_resets_models_prefix_and_matched_budget(tmp_path, queued
         assert str(joint_campaign.INITIAL_STATE) not in spec["pinned_files"]
 
 
+def test_incumbent_selection_requires_predeclared_gain_and_breaks_ties_early():
+    reports = {
+        "7": {"incumbent_harness": {"accuracy": 40 / 48}, "proposal00": {"accuracy": 41 / 48}},
+        "15": {"incumbent_harness": {"accuracy": 40 / 48}, "proposal00": {"accuracy": 41 / 48}},
+    }
+    assert select_pair(reports, incumbent_min_gain=2 / 48) == ("7", "incumbent_harness")
+    reports["15"]["proposal00"]["accuracy"] = 42 / 48
+    assert select_pair(reports, incumbent_min_gain=2 / 48) == ("15", "proposal00")
+
+
+def test_improvement_profile_keeps_lineage_and_updates_both_roles(tmp_path):
+    from sao_bridge import joint_campaign
+    parent = tmp_path / "parent"
+    write_json(parent / "FINAL_AUDIT.json", {
+        "status": "verified_complete_experiment", "full_run_consumed": 1840,
+    })
+    state = {
+        "engineer": "h0", "solver": "w64", "engineer_critic": "hc64", "solver_critic": "wc64",
+        "packets": str(tmp_path / "packets.json"), "packets_sha256": "frozen",
+        "harness": str(tmp_path / "h0.json"),
+    }
+    write_json(tmp_path / "INITIAL_STATE.json", state)
+    manifest = tmp_path / "old_manifest.json"
+    write_json(manifest, {"selection_task_ids": list(range(240, 264))})
+    rows = [{"task_id": i % 240, "joint_version": i // 8, "joint_slot": i % 8}
+            for i in range(512)]
+    original_read = read_json
+
+    def read(path):
+        path = Path(path)
+        if path == joint_campaign.BASE_PROTOCOL:
+            return {"no_patch": "empty", "evaluation": {"task_manifest": str(manifest)}}
+        if path == joint_campaign.EVAL_PROTOCOL:
+            return {"all_task_ids": list(range(240, 440)),
+                    "strict_goal_disjoint_task_ids": list(range(240, 437))}
+        if path.name in ("editor_spec.json", "solver_spec.json"):
+            return {**training_spec(tmp_path), "role": path.stem.split("_")[0]}
+        if path.name == "data.json" and "alfworld_joint_ma_pilot_v1" in path.parts:
+            return rows[:8]
+        return original_read(path)
+
+    with (
+        patch("sao_bridge.joint_campaign.read_json", side_effect=read),
+        patch("sao_bridge.joint_campaign.initial_inputs", return_value=(rows, state)),
+        patch("sao_bridge.joint_campaign.validate_cohort"),
+        patch("sao_bridge.joint_campaign.validate_spec"),
+        patch("sao_bridge.joint_campaign.file_sha", return_value="frozen"),
+    ):
+        protocol = prepare(tmp_path, parent, time.time() + 6 * 3600, from_initial=True,
+                           memory_check=tmp_path / "memory.json", improve_from=parent)
+    assert protocol["budget"]["common_executed_trajectories"] == 1024
+    assert protocol["budget"]["maximum_rounds"] == 64
+    assert protocol["budget"]["matched_policy_trajectories"] == 1536
+    assert protocol["improvement"]["parent_actual_campaign_consumed"] == 1840
+    assert protocol["evaluation"]["samples"] == 1
+    selected = read_json(Path(protocol["evaluation"]["task_manifest"]))["selection_task_ids"]
+    assert len(selected) == len(set(selected)) == 48
+    assert set(range(240, 264)) <= set(selected) <= set(range(240, 437))
+    for role, actor, critic, lr in (("editor", "h0", "hc64", 1e-7), ("solver", "w64", "wc64", 1e-6)):
+        spec = read_json(tmp_path / f"{role}_spec.json")
+        assert spec["model"] == spec["reference_model"] == actor
+        assert spec["critic_model"] == critic and spec["lr"] == lr
+        assert spec["kl_ctl"] == 0.02 and spec["critic_updates_per_step"] == 2
+        assert spec["critic_warmup_steps"] == 3 and spec["save_interval_steps"] == 8
+        assert spec["value_normalization"] and spec["joint_max_lag"] == 1
+
+
 def test_failed_training_only_publishes_committed_models_without_hiding_failure(tmp_path):
     spec = {
         **training_spec(tmp_path), "role": "solver", "critic_warmup_steps": 2,
