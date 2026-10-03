@@ -58,6 +58,8 @@ def training_spec(config: dict, run: Path, evaluator_url: str) -> dict:
         "critic_updates_per_step": config.get("critic_updates_per_step", 2),
         "critic_mode": config.get("critic_mode", "learned"),
         "terminal_episodes": config.get("terminal_episodes", False),
+        "independent_trajectories": config.get("independent_trajectories", False),
+        "processed_behavior_logprobs": config.get("processed_behavior_logprobs", False),
         "actor_gradient_checkpointing": config.get(
             "actor_gradient_checkpointing", True
         ),

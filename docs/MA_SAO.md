@@ -1,5 +1,46 @@
 # Fixed-sample SAO / MA-SAO research protocol
 
+## Research controls following the initial MA run
+
+The October3 follow-up separates four experiments:
+
+1. Actual rejected W2-step79 with fixed h2: fresh initial measurement, then
+   extra20/40/60/80-step reports. Actor/critic weights continue, Adam restarts;
+   singleton-microbatch repair is explicit. The final80-step paired difference
+   against the fresh starting score is primary. A finite failure to recover is
+   not proof of irreversibility.
+2. Local WHALE-style ALFWorld adaptation: native online RSFT objective plus
+   iterative incumbent/history/feedback harness search. The official repository
+   has no ALFWorld score. Local H0 replaces the official proposer and the harness
+   action space differs; native Meta-Harness selection does not establish full
+   upstream parity. Full-context GPU validation must precede research training.
+3. Matched-training-population repaired ordinary SAO: original H0/W0, H1/H2
+   finalstep31 and W1 finalstep79, consumption192+640+192=1024. H1's fixed final
+   checkpoint differs from historical E15 selection. It retains ordinary SAO
+   LR2e-6/1e-5, K1, five critic warmups, no CTDE/ValueNorm/peer weights/KL.
+   The singleton sequence and processed-behavior fixes are shared with MA.
+4. Scheduling-only MA ablation: keep MA components/hyperparameters, alternate
+   H16/W16 blocks. In128 collection rounds each role has64 active batches,
+   five active critic-only warmups,59 Actor and128 critic updates. This matches
+   simultaneous MA's per-role512 consumed trajectories at64 rounds, while
+   generating2048 rather than1024 total role trajectories. Inactive counterpart
+   work is neither optimizer consumption nor free sampling.
+
+An important confound was found before activation: historical W1 used a separate
+train-only pool, while current MA uses legacy training IDs0-239. New ordinary
+SAO and WHALE Solver training therefore follow the first640 current-MA task
+records/order, retaining repeats and excluding all200 instances. The MA matched
+point uses the first512 Solver records. SAO's H384/W640 versus MA's H512/W512
+allocation remains different; total-trajectory matching is not per-role, token,
+FLOP, environment-episode or hyperparameter matching. The scheduling ablation,
+not the ordinary-method comparison, fixes each role's active training sequence.
+
+All final scores remain exploratory reused-development all200/strict197, with
+paired question intervals rather than training-seed uncertainty. One seed cannot
+establish that MA never collapses. GPU queues wait for predecessor completion
+and release; CPU preparation, synthetic memory tests and queued units must not
+be reported as trained baseline scores.
+
 ## Independent H0/W0 initialization (2026-10-03)
 
 The new `joint_campaign --from-initial --memory-check ...` mode starts both

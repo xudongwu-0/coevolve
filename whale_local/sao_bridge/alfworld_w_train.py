@@ -91,6 +91,7 @@ def training_spec(config: dict, run: Path) -> dict:
         "critic_mode": config.get("critic_mode", "learned"),
         "terminal_episodes": config.get("terminal_episodes", False),
         "independent_trajectories": config.get("independent_trajectories", False),
+        "processed_behavior_logprobs": config.get("processed_behavior_logprobs", False),
         "solver_trajectory_style": config.get(
             "solver_trajectory_style", "individual"
         ),

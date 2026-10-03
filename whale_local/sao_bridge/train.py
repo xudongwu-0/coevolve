@@ -61,7 +61,8 @@ def make_config(model: Path, run: Path, role: str, steps: int, batch_size: int) 
 
 
 @contextmanager
-def upstream_trainer(config, dataset, *, terminal_episodes: bool = False):
+def upstream_trainer(config, dataset, *, terminal_episodes: bool = False,
+                     schedule_spec: dict | None = None):
     from areal import PPOTrainer
 
     with ExitStack() as cleanup:
@@ -116,7 +117,10 @@ def upstream_trainer(config, dataset, *, terminal_episodes: bool = False):
         ) as trainer:
             trainer.saver.freq_ctl = StepFrequency(trainer.saver.freq_ctl)
             warmup = int(os.environ.get("MA_SAO_CRITIC_WARMUP_STEPS", "0"))
-            if warmup:
+            if schedule_spec is not None:
+                from .joint_schedule import install_schedule
+                trainer.joint_schedule_state = install_schedule(trainer, schedule_spec)
+            elif warmup:
                 skip_actor_updates(trainer.actor, warmup)
             yield trainer
 

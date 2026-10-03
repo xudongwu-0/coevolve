@@ -15,7 +15,7 @@ from areal.infra.workflow_executor import check_trajectory_format
 from areal.utils.data import allocate_balanced_mbs, batched_call
 from sao_bridge.common import file_sha, read_json, write_json
 from sao_bridge.joint_campaign import (
-    available_pairs, initial_inputs, prepare, recover_failed_role,
+    CONTROL_QUEUE_TIMEOUT, available_pairs, guard, initial_inputs, main, prepare, recover_failed_role,
     select_pair, share_checkpoints, wait_comparison,
 )
 from sao_bridge.joint_health import assess, metric_rows, recover_checkpoints, request_stop
@@ -255,7 +255,8 @@ def test_initial_prerequisite_failure_is_not_a_zero_score(tmp_path):
         wait_comparison(protocol)
 
 
-def test_fresh_campaign_resets_models_prefix_and_matched_budget(tmp_path):
+@pytest.mark.parametrize("queued", [False, True])
+def test_fresh_campaign_resets_models_prefix_and_matched_budget(tmp_path, queued):
     from sao_bridge import joint_campaign
 
     state = {
@@ -287,7 +288,12 @@ def test_fresh_campaign_resets_models_prefix_and_matched_budget(tmp_path):
         patch("sao_bridge.joint_campaign.file_sha", return_value="frozen"),
     ):
         protocol = prepare(tmp_path, tmp_path / "unused-grpo", time.time() + 8 * 3600,
-                           from_initial=True, memory_check=tmp_path / "memory.json")
+                           from_initial=True, memory_check=tmp_path / "memory.json",
+                           wait_for_control=tmp_path / "predecessor" if queued else None)
+    if queued:
+        assert protocol["wait_for_control"] == str(tmp_path / "predecessor")
+    else:
+        assert "wait_for_control" not in protocol
     assert protocol["starting_point"] == "h0_w0"
     assert protocol["budget"]["common_executed_trajectories"] == 0
     assert protocol["budget"]["matched_rounds"] == 64
@@ -298,6 +304,7 @@ def test_fresh_campaign_resets_models_prefix_and_matched_budget(tmp_path):
         spec = read_json(tmp_path / f"{role}_spec.json")
         assert spec["model"] == spec["critic_model"] == spec["reference_model"] == model
         assert spec["critic_warmup_steps"] == 5
+        assert spec["phase_timeout_seconds"] == 8 * 3600
         assert str(tmp_path / "INITIAL_STATE.json") in spec["pinned_files"]
         assert str(joint_campaign.INITIAL_STATE) not in spec["pinned_files"]
 
@@ -338,3 +345,229 @@ def test_failed_recovery_prevents_indefinite_publication_wait(tmp_path):
     write_json(tmp_path / "solver_RECOVERY_FAILED.json", {"error": "no committed model"})
     with pytest.raises(RuntimeError, match="no committed model"):
         available_pairs(tmp_path)
+
+
+def queued_protocol(tmp_path):
+    root = tmp_path / "joint-control"
+    memory = tmp_path / "memory/MEMORY_COMPLETE.json"
+    write_json(root / "initial_COMPLETE.json", {"status": "completed"})
+    write_json(memory, {
+        "status": "passed", "max_sequence_tokens": 32768, "actor_optimizer_steps": 1,
+        "finite_nonzero_actor_gradient": True,
+        "source_sha256": {"whale_local/sao_bridge/terminal_actor.py": file_sha(
+            Path(__file__).resolve().parents[1] / "whale_local/sao_bridge/terminal_actor.py"
+        )},
+    })
+    return {
+        "run": str(root), "starting_point": "h0_w0", "memory_check": str(memory),
+        "training_deadline_unix": time.time() + 47 * 3600,
+        "report_deadline_unix": time.time() + 48 * 3600,
+        "wait_for_control": str(tmp_path / "corrected-sao"),
+    }
+
+
+def released_gpus():
+    return {
+        "remaining_gpu_pids": [12], "verified_filler_pids": [12],
+        "foreign_gpu_pids": [], "filler_unit_active": True,
+    }
+
+
+def predecessor_receipts(protocol):
+    target = Path(protocol["wait_for_control"])
+    write_json(target / "COMPLETE.json", {"status": "completed"})
+    write_json(target / "RELEASED.json", released_gpus())
+    return target
+
+
+@pytest.mark.parametrize("busy_kind", ["foreign", "unverified", "filler"])
+def test_control_queue_requires_valid_receipts_and_live_local_release(tmp_path, busy_kind):
+    protocol = queued_protocol(tmp_path)
+    target = predecessor_receipts(protocol)
+    busy = released_gpus()
+    if busy_kind == "foreign":
+        busy.update(foreign_gpu_pids=[99], remaining_gpu_pids=[12, 99])
+    elif busy_kind == "unverified":
+        busy["remaining_gpu_pids"].append(99)
+    else:
+        busy["filler_unit_active"] = False
+    with (
+        patch("sao_bridge.joint_campaign.gpu_release_audit", side_effect=[busy, released_gpus()]) as audit,
+        patch("sao_bridge.joint_campaign.time.sleep") as sleep,
+    ):
+        wait_comparison(protocol)
+    assert audit.call_count == 2
+    sleep.assert_called_once_with(10)
+    queue = Path(protocol["run"]) / "control_queue"
+    waiting = read_json(queue / "WAITING.json")
+    assert waiting["deadline_unix"] - waiting["started_at_unix"] == CONTROL_QUEUE_TIMEOUT
+    assert read_json(queue / "SATISFIED.json") == {
+        "target": str(target), "complete_sha256": file_sha(target / "COMPLETE.json"),
+        "released_sha256": file_sha(target / "RELEASED.json"),
+    }
+    assert read_json(Path(protocol["run"]) / "TRAINING_PREREQUISITES.json")["status"] == "passed"
+
+
+def test_control_queue_rechecks_live_release_and_rejects_predecessor_change(tmp_path):
+    protocol = queued_protocol(tmp_path)
+    predecessor_receipts(protocol)
+    with patch("sao_bridge.joint_campaign.gpu_release_audit", return_value=released_gpus()) as audit:
+        wait_comparison(protocol)
+        waiting = read_json(Path(protocol["run"]) / "control_queue/WAITING.json")
+        wait_comparison(protocol)
+    assert audit.call_count == 2
+    assert read_json(Path(protocol["run"]) / "control_queue/WAITING.json") == waiting
+    with pytest.raises(ValueError, match="predecessor changed"):
+        wait_comparison({**protocol, "wait_for_control": str(tmp_path / "other-sao")})
+
+
+def test_control_queue_failure_wins_over_old_completion_and_release(tmp_path):
+    protocol = queued_protocol(tmp_path)
+    target = predecessor_receipts(protocol)
+    write_json(target / "FAILED.json", {"error": "final report failed"})
+    with (
+        patch("sao_bridge.joint_campaign.gpu_release_audit") as audit,
+        patch("sao_bridge.joint_campaign.time.sleep") as sleep,
+        pytest.raises(RuntimeError, match="control predecessor failed"),
+    ):
+        wait_comparison(protocol)
+    audit.assert_not_called()
+    sleep.assert_not_called()
+
+
+@pytest.mark.parametrize("invalid", ["completion", "foreign", "unverified", "filler"])
+def test_control_queue_rejects_invalid_predecessor_receipts(tmp_path, invalid):
+    protocol = queued_protocol(tmp_path)
+    target = predecessor_receipts(protocol)
+    if invalid == "completion":
+        write_json(target / "COMPLETE.json", {"status": "failed"})
+    else:
+        release = released_gpus()
+        if invalid == "foreign":
+            release["foreign_gpu_pids"] = [99]
+        elif invalid == "unverified":
+            release["remaining_gpu_pids"].append(99)
+        else:
+            release["filler_unit_active"] = False
+        write_json(target / "RELEASED.json", release)
+    with (
+        patch("sao_bridge.joint_campaign.gpu_release_audit") as audit,
+        patch("sao_bridge.joint_campaign.time.sleep") as sleep,
+        pytest.raises((ValueError, RuntimeError)),
+    ):
+        wait_comparison(protocol)
+    audit.assert_not_called()
+    sleep.assert_not_called()
+
+
+@pytest.mark.parametrize("missing", ["COMPLETE.json", "RELEASED.json"])
+def test_control_queue_waits_for_both_receipts_and_persists_36h_limit(tmp_path, missing):
+    protocol = queued_protocol(tmp_path)
+    target = predecessor_receipts(protocol)
+    (target / missing).unlink()
+    clock = [0.]
+
+    def sleep(_):
+        clock[0] += CONTROL_QUEUE_TIMEOUT
+
+    with (
+        patch("sao_bridge.joint_campaign.time.time", side_effect=lambda: clock[0]),
+        patch("sao_bridge.joint_campaign.time.sleep", side_effect=sleep) as pause,
+        patch("sao_bridge.joint_campaign.gpu_release_audit") as audit,
+    ):
+        with pytest.raises(TimeoutError, match="at most 36h"):
+            wait_comparison(protocol)
+        waiting = read_json(Path(protocol["run"]) / "control_queue/WAITING.json")
+        assert waiting["deadline_unix"] == CONTROL_QUEUE_TIMEOUT
+        with pytest.raises(TimeoutError, match="at most 36h"):
+            wait_comparison(protocol)
+        assert read_json(Path(protocol["run"]) / "control_queue/WAITING.json") == waiting
+    pause.assert_called_once_with(10)
+    audit.assert_not_called()
+
+
+def test_control_queue_live_busy_state_is_also_bounded(tmp_path):
+    protocol = queued_protocol(tmp_path)
+    predecessor_receipts(protocol)
+    with (
+        patch("sao_bridge.joint_campaign.time.time", side_effect=[0., 0., CONTROL_QUEUE_TIMEOUT]),
+        patch("sao_bridge.joint_campaign.time.sleep"),
+        patch("sao_bridge.joint_campaign.gpu_release_audit",
+              return_value={**released_gpus(), "filler_unit_active": False}) as audit,
+        pytest.raises(TimeoutError, match="at most 36h"),
+    ):
+        wait_comparison(protocol)
+    audit.assert_called_once()
+
+
+def test_control_queue_does_not_extend_training_deadline_or_ignore_stop(tmp_path):
+    protocol = {**queued_protocol(tmp_path), "training_deadline_unix": 60.}
+    with (
+        patch("sao_bridge.joint_campaign.time.time", side_effect=[0., 60.]),
+        pytest.raises(TimeoutError),
+    ):
+        wait_comparison(protocol)
+    queue = Path(protocol["run"]) / "control_queue"
+    assert read_json(queue / "WAITING.json")["deadline_unix"] == 60.
+    write_json(Path(protocol["run"]) / "joint/STOP.json", {"reason": "report failure"})
+    with pytest.raises(RuntimeError, match="queue was stopped"):
+        wait_comparison(protocol)
+
+
+def test_prepare_cli_forwards_control_predecessor_without_launching(monkeypatch, tmp_path):
+    target = tmp_path / "corrected-sao"
+    monkeypatch.setattr(sys, "argv", [
+        "joint_campaign", "--mode", "prepare", "--root", str(tmp_path / "run"),
+        "--comparison", str(tmp_path / "comparison"), "--deadline", "2000000000",
+        "--from-initial", "--memory-check", str(tmp_path / "memory.json"),
+        "--schedule", "alternating_blocks", "--wait-for-control", str(target),
+    ])
+    with patch("sao_bridge.joint_campaign.prepare", return_value={}) as prepare_call:
+        main()
+    assert prepare_call.call_args.kwargs["wait_for_control"] == target
+    assert prepare_call.call_args.kwargs["schedule"] == "alternating_blocks"
+    with pytest.raises(ValueError, match="own completion"):
+        prepare(tmp_path, tmp_path, time.time() + 48 * 3600, wait_for_control=tmp_path)
+
+
+@pytest.mark.parametrize("terminal", [
+    {"matched": "COMPLETE", "best": "COMPLETE"},
+    {"matched": "COMPLETE", "best": "FAILED"},
+    {"matched": "FAILED", "best": "FAILED"},
+])
+def test_guard_exits_immediately_when_both_reports_terminal(tmp_path, terminal):
+    write_json(tmp_path / "protocol.json", {
+        "training_deadline_unix": time.time() + 47 * 3600,
+        "report_deadline_unix": time.time() + 48 * 3600,
+    })
+    for label, state in terminal.items():
+        write_json(tmp_path / f"{label}_{state}.json", {
+            "status": "completed" if state == "COMPLETE" else "failed", "detail": "fixture",
+        })
+    with patch("sao_bridge.joint_campaign.time.sleep") as sleep:
+        result = guard(tmp_path)
+    sleep.assert_not_called()
+    assert result["status"] == ("completed" if set(terminal.values()) == {"COMPLETE"} else "incomplete")
+    for label, state in terminal.items():
+        assert result["results"][label]["status"] == ("completed" if state == "COMPLETE" else "failed")
+    assert read_json(tmp_path / "DEADLINE_REPORT.json") == result
+    assert read_json(tmp_path / "joint/STOP.json")["reason"] == (
+        "terminal_report_failure" if "FAILED" in terminal.values() else "persistent_final_hour_reserve"
+    )
+
+
+def test_guard_waits_for_second_report_then_preserves_failure_over_stale_success(tmp_path):
+    write_json(tmp_path / "protocol.json", {
+        "training_deadline_unix": time.time() + 47 * 3600,
+        "report_deadline_unix": time.time() + 48 * 3600,
+    })
+    write_json(tmp_path / "matched_COMPLETE.json", {"status": "completed"})
+    write_json(tmp_path / "matched_FAILED.json", {"error": "invalid matched report"})
+    with patch(
+        "sao_bridge.joint_campaign.time.sleep",
+        side_effect=lambda _: write_json(tmp_path / "best_FAILED.json", {"error": "selection failed"}),
+    ) as sleep:
+        result = guard(tmp_path)
+    sleep.assert_called_once_with(5)
+    assert result["status"] == "incomplete"
+    assert all(row["status"] == "failed" for row in result["results"].values())

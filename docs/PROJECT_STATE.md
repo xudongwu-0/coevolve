@@ -1,5 +1,33 @@
 # 项目状态与 Agent 接手指南
 
+## 新研究任务：恢复、WHALE基线、稳定性对照
+
+02:14UTC用户要求持续监督，并按研究问题组织实验：
+1. 继续真实退化W2+固定h2，看有限预算内是否回升。
+2. 给出WHALE的ALFWorld基线，不把Harness-R1/SAO改名成WHALE。
+3. 比较MA与SAO，并检验交替更新是否与崩塌有关。
+
+当前H0/W0 MA保持运行；02:44左右双方19轮均健康，已经越过12轮/192条，
+`ROUND12_REACHED.json`只是消费里程碑，不是性能结果。
+node3后续**已持久排队**`coevolve-w2-recovery-v1`，root
+`runs/alfworld_w2_recovery_v1`，冻结源码`e527e19`，
+快照`runs/source-snapshots/alfworld-w2-recovery-v1`。
+它等待当前MA的matched完成/释放再做liveGPU审计，不抢占正在训练的MA。
+从真实W2-step79及critic起步，固定原h2；新Adam（不是精确优化器续跑），
+保留原LR/K，启用修正后的独立轨迹microbatch。640个未用train-only实例
+1280–1919；先重测起点，再报告额外20/40/60/80步完整200题曲线。
+24项针对性回归通过。不能用有限80步没恢复来证明“永远不能恢复”。
+
+WHALE适配在CPU准备中，官方没有可引用的ALFWorld分数；需真实GPU验证后
+在node4当前MA best评测释放之后运行。其RSFT/Meta-Harness与本地H0 proposer
+替换要明确披露，不能称为官方原样复现。
+另准备真正的修正后端普通SAO H1/W1/H2对照（192+640+192=1024），
+以及保持MA其它组件不变的H16/W16阶段调度消融。后者不是普通SAO。
+预计队列：node3 W2恢复、node4 WHALE之后，再做修正SAO，然后调度消融；
+最终实际绑定以各run的QUEUE_LAUNCH/LAUNCH为准，CPU准备不等于GPU实验完成。
+禁止热改当前MA冻结源码。所有控制必须记录额外生成、环境评奖和选择成本，
+单seed结果不能推出MA“永不崩塌”；还需后续多seed验证。
+
 ## 当前请求：H0/W0独立MA，先验证长序列OOM修复
 
 **02:05UTC正式训练已核验，当前仍在继续：** root为

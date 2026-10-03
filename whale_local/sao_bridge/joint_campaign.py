@@ -12,18 +12,23 @@ from .alfworld_core_extend import subset_report, validate_cohort
 from .alfworld_matched_grpo import EVAL_PROTOCOL, SAO_CONFIG
 from .alfworld_reward_service import validate_metadata
 from .alfworld_matched_grpo_eval import BASE_PROTOCOL, INITIAL_STATE
-from .alfworld_strong_phase import checked_native_report
+from .alfworld_strong_phase import checked_native_report, checked_release
 from .alfworld_strong_select import generate_proposals, matrix_config, matrix_reports, run_matrix
 from .alfworld_train_data import _immutable_json
 from .analysis import paired_difference
 from .common import ROOT, file_sha, read_json, write_json
 from .joint_experiment import run_role, validate_spec
 from .joint_health import metric_rows, recover_checkpoints, request_stop
+from .joint_schedule import (
+    ALTERNATING, accounting, consumed_row_ledger, scheduled_rows, total_consumed, update_counts,
+    validate_metric_row,
+)
 from .launch import Launcher
 from .resources import gpu_release_audit
 
 
 PROTOCOL = "joint-ma-sao-async-v1"
+CONTROL_QUEUE_TIMEOUT = 36 * 3600
 
 
 def initial_inputs(root: Path, steps: int, batch: int) -> tuple[list[dict], dict]:
@@ -70,9 +75,14 @@ def initial_inputs(root: Path, steps: int, batch: int) -> tuple[list[dict], dict
 
 
 def prepare(root: Path, comparison: Path, deadline: float, *, from_initial: bool = False,
-            memory_check: Path | None = None) -> dict:
+            memory_check: Path | None = None, schedule: str = "simultaneous",
+            wait_for_control: Path | None = None) -> dict:
+    if schedule not in ("simultaneous", ALTERNATING) or (schedule == ALTERNATING and not from_initial):
+        raise ValueError("Alternating scheduling-only control requires --from-initial H0/W0")
     if deadline - time.time() < 3600:
         raise ValueError("Joint campaign needs an explicit final-hour evaluation reserve")
+    if wait_for_control is not None and wait_for_control.resolve() == root.resolve():
+        raise ValueError("Joint control cannot wait for its own completion")
     base = ROOT / "runs/alfworld_joint_ma_pilot_v1_r2"
     source = ROOT / "runs/alfworld_joint_ma_pilot_v1/data.json"
     old_rows = read_json(source)
@@ -91,6 +101,13 @@ def prepare(root: Path, comparison: Path, deadline: float, *, from_initial: bool
         if memory_check is None:
             raise ValueError("H0/W0 training requires an explicit full-context memory-check receipt")
         rows, state = initial_inputs(root, steps, batch)
+    schedule_source = None
+    if schedule == ALTERNATING:
+        schedule_source = root / "schedule_source_data.json"
+        _immutable_json(schedule_source, rows[:512])
+        rows = scheduled_rows(rows, {
+            "schedule": schedule, "schedule_block_size": 16, "steps": steps, "batch_size": batch,
+        })
     data = root / "data.json"
     _immutable_json(data, rows)
     protocol = read_json(BASE_PROTOCOL)
@@ -129,6 +146,25 @@ def prepare(root: Path, comparison: Path, deadline: float, *, from_initial: bool
         del protocol["budget"]["matched_h2_plus_rejected_w2_rounds"]
         protocol["selection"]["matched"] = "Exactly round64: 1024 total H+W trajectories from H0/W0."
         protocol["selection"]["initial"] = "Unchanged H0/W0: eight W0-evidence proposals, selection24 then all200."
+    if schedule == ALTERNATING:
+        protocol.update(
+            schedule=schedule, schedule_block_size=16,
+            schedule_source_data=str(schedule_source),
+            schedule_source_data_sha256=file_sha(schedule_source),
+            control="Scheduling-only alternating-role MA-SAO ablation, not independent SAO.",
+        )
+        protocol["budget"].update(
+            matched_rounds=128, simultaneous_comparison_rounds=64,
+            maximum_consumed_h_plus_w=1024, maximum_generated_h_plus_w=2048,
+            inactive_counterpart_trajectories=1024,
+            active_rounds_per_role=64, actor_updates_per_role=59, critic_updates_per_role=128,
+        )
+        protocol["selection"]["matched"] = (
+            "Exactly round128: 1024 consumed H+W trajectories (2048 generated), "
+            "versus simultaneous round64; no checkpoint choice."
+        )
+    if wait_for_control is not None:
+        protocol["wait_for_control"] = str(wait_for_control.resolve())
     _immutable_json(root / "protocol.json", protocol)
     for role in ("editor", "solver"):
         spec = read_json(base / f"{role}_spec.json")
@@ -148,17 +184,79 @@ def prepare(root: Path, comparison: Path, deadline: float, *, from_initial: bool
                 model=model, critic_model=model, reference_model=model,
                 critic_warmup_steps=5, phase_timeout_seconds=8 * 3600,
             )
+        if schedule == ALTERNATING:
+            spec.update(
+                schedule=schedule, schedule_block_size=16, starting_point="h0_w0",
+                schedule_source_data=str(schedule_source),
+            )
         spec["pinned_files"] = {
             str(path): file_sha(path) for path in (data, state_path, EVAL_PROTOCOL)
         }
         if from_initial:
             spec["pinned_files"][state["packets"]] = state["packets_sha256"]
+        if schedule_source is not None:
+            spec["pinned_files"][str(schedule_source)] = file_sha(schedule_source)
         validate_spec(spec)
         _immutable_json(root / f"{role}_spec.json", spec)
     return protocol
 
 
+def wait_control(protocol: dict) -> None:
+    target = Path(protocol["wait_for_control"]).resolve()
+    root = Path(protocol["run"])
+    if target == root.resolve():
+        raise ValueError("Joint control cannot wait for its own completion")
+    queue = root / "control_queue"
+    queue.mkdir(parents=True, exist_ok=True)
+    with (queue / "WAITING.lock").open("a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        marker = queue / "WAITING.json"
+        if not marker.exists():
+            started = time.time()
+            _immutable_json(marker, {
+                "target": str(target), "started_at_unix": started,
+                "deadline_unix": min(
+                    started + CONTROL_QUEUE_TIMEOUT, protocol["training_deadline_unix"],
+                ),
+            })
+        waiting = read_json(marker)
+        if waiting["target"] != str(target):
+            raise ValueError("Persistent control queue predecessor changed")
+    deadline = min(
+        waiting["deadline_unix"], waiting["started_at_unix"] + CONTROL_QUEUE_TIMEOUT,
+        protocol["training_deadline_unix"],
+    )
+    while True:
+        if (target / "FAILED.json").exists():
+            raise RuntimeError(f"Required control predecessor failed: {read_json(target / 'FAILED.json')}")
+        if (root / "joint/STOP.json").exists():
+            raise RuntimeError("Joint control queue was stopped before training")
+        if time.time() >= deadline:
+            raise TimeoutError(f"Persistent control queue expired (at most 36h): {target}")
+        complete, released = target / "COMPLETE.json", target / "RELEASED.json"
+        if complete.is_file() and released.is_file():
+            if read_json(complete)["status"] not in ("complete", "completed"):
+                raise ValueError("Required control predecessor did not complete successfully")
+            checked_release(target)
+            live = gpu_release_audit()
+            if (
+                not live["foreign_gpu_pids"] and live["filler_unit_active"]
+                and set(live["remaining_gpu_pids"]) <= set(live["verified_filler_pids"])
+            ):
+                with (queue / "SATISFIED.lock").open("a") as lock:
+                    fcntl.flock(lock, fcntl.LOCK_EX)
+                    _immutable_json(queue / "SATISFIED.json", {
+                        "target": str(target),
+                        "complete_sha256": file_sha(complete),
+                        "released_sha256": file_sha(released),
+                    })
+                return
+        time.sleep(10)
+
+
 def wait_comparison(protocol: dict) -> None:
+    if protocol.get("wait_for_control"):
+        wait_control(protocol)
     if protocol.get("starting_point") == "h0_w0":
         root = Path(protocol["run"])
         memory = Path(protocol["memory_check"])
@@ -241,20 +339,34 @@ def recover_failed_role(spec: dict) -> dict:
     optimizer, joint = Path(spec["run"]), Path(spec["joint_root"])
     rows = metric_rows(optimizer / "metrics.jsonl")
     history = recover_checkpoints(spec, rows)
-    return {
+    result = {
         "status": "recovered_committed_checkpoints_after_training_failure",
         "role": spec["role"], "steps": len(rows),
-        "actor_updates": max(0, len(rows) - spec["critic_warmup_steps"]),
-        "critic_updates": len(rows) * spec["critic_updates_per_step"],
+        "actor_updates": update_counts(spec, len(rows))["actor_steps"],
+        "critic_updates": update_counts(spec, len(rows))["critic_steps"],
         "checkpoint_history": history,
         "checkpoints": history[max(history, key=int)],
         "metrics_sha256": file_sha(optimizer / "metrics.jsonl"),
-        "consumed_policy_trajectories": len(rows) * spec["batch_size"],
+        **accounting(spec, len(rows)),
         "generated_policy_trajectories": sum(1 for _ in joint.glob(f"round-*/{spec['role']}-receipt-*.json")),
         "sampled_engineer_actions": sum(1 for _ in joint.glob("round-*/proposal-*.json")),
         "optimizer_resets_between_rounds": False,
         "failed_training_not_relabelled_completed": True,
     }
+    if spec.get("schedule"):
+        for index, row in enumerate(rows):
+            if row["global_step"] != index:
+                raise ValueError("Recovered metrics are not a complete ordered prefix")
+            validate_metric_row(spec, row)
+        write_json(optimizer / "consumed_rows.json", consumed_row_ledger(
+            spec, read_json(Path(spec["data"])), len(rows),
+        ))
+        result.update(
+            schedule=spec["schedule"],
+            checkpoint_update_counts={step: update_counts(spec, int(step) + 1) for step in history},
+            **accounting(spec, len(rows), generated=result["generated_policy_trajectories"]),
+        )
+    return result
 
 
 def available_pairs(root: Path) -> tuple[dict, dict]:
@@ -346,8 +458,14 @@ def evaluate(root: Path, label: str) -> dict:
             "scores": {s: {name: r["accuracy"] for name, r in variants.items()}
                        for s, variants in reports.items()},
             "valid_proposals": {s: sum(p["valid"] for p in proposals[s]) for s in steps},
-            "incremental_consumed_h_plus_w": (int(step) + 1) * 16,
-            "cumulative_consumed_h_plus_w": protocol["budget"]["common_executed_trajectories"] + (int(step) + 1) * 16,
+            "incremental_consumed_h_plus_w": total_consumed({
+                **protocol, "steps": protocol["budget"]["maximum_rounds"],
+                "batch_size": protocol["budget"]["batch_per_role"],
+            }, int(step) + 1),
+            "cumulative_consumed_h_plus_w": protocol["budget"]["common_executed_trajectories"] + total_consumed({
+                **protocol, "steps": protocol["budget"]["maximum_rounds"],
+                "batch_size": protocol["budget"]["batch_per_role"],
+            }, int(step) + 1),
             "actual_campaign_consumed": sum(r["consumed_policy_trajectories"] for r in training.values()),
             "actual_campaign_generated_complete": sum(r["generated_policy_trajectories"] for r in training.values()),
             "sampled_engineer_actions_including_unrewarded": training["editor"]["sampled_engineer_actions"],
@@ -412,23 +530,37 @@ def evaluate(root: Path, label: str) -> dict:
 
 def guard(root: Path) -> dict:
     protocol = read_json(root / "protocol.json")
+
+    def reports_terminal():
+        return all(
+            any((root / f"{label}_{state}.json").exists() for state in ("COMPLETE", "FAILED"))
+            for label in ("matched", "best")
+        )
+
     while time.time() < protocol["training_deadline_unix"]:
-        if all((root / f"{label}_COMPLETE.json").exists() for label in ("matched", "best")):
+        if reports_terminal():
             break
         time.sleep(5)
-    request_stop(root / "joint", {"reason": "persistent_final_hour_reserve"})
+    terminal_failure = reports_terminal() and any(
+        (root / f"{label}_FAILED.json").exists() for label in ("matched", "best")
+    )
+    request_stop(root / "joint", {
+        "reason": "terminal_report_failure" if terminal_failure else "persistent_final_hour_reserve",
+    })
     while time.time() < protocol["report_deadline_unix"]:
-        if all((root / f"{label}_COMPLETE.json").exists() for label in ("matched", "best")):
+        if reports_terminal():
             break
         time.sleep(5)
     results = {}
     for label in ("matched", "best"):
         path = root / f"{label}_COMPLETE.json"
         failed = root / f"{label}_FAILED.json"
-        results[label] = read_json(path) if path.exists() else {
-            "status": "failed" if failed.exists() else "incomplete_at_deadline",
-            "detail": read_json(failed) if failed.exists() else "No complete 200-question result.",
-        }
+        if failed.exists():
+            results[label] = {"status": "failed", "detail": read_json(failed)}
+        else:
+            results[label] = read_json(path) if path.exists() else {
+                "status": "incomplete_at_deadline", "detail": "No complete 200-question result.",
+            }
     result = {"status": "completed" if all(r["status"] == "completed" for r in results.values())
               else "incomplete", "results": results, "reported_at_unix": time.time()}
     if any((root / f"{role}_FAILED.json").exists() for role in ("editor", "solver")):
@@ -446,13 +578,17 @@ def main():
     parser.add_argument("--deadline", type=float)
     parser.add_argument("--from-initial", action="store_true")
     parser.add_argument("--memory-check", type=Path)
+    parser.add_argument("--schedule", choices=("simultaneous", ALTERNATING), default="simultaneous")
+    parser.add_argument("--wait-for-control", type=Path,
+                        help="Require predecessor COMPLETE/RELEASED and locally released GPUs; wait at most 36h")
     args = parser.parse_args()
     root = args.root.resolve()
     if args.mode == "prepare":
         if args.comparison is None or args.deadline is None:
             parser.error("prepare needs --comparison and --deadline")
         result = prepare(root, args.comparison.resolve(), args.deadline,
-                         from_initial=args.from_initial, memory_check=args.memory_check)
+                         from_initial=args.from_initial, memory_check=args.memory_check,
+                         schedule=args.schedule, wait_for_control=args.wait_for_control)
     elif args.mode == "train":
         if args.role not in ("editor", "solver"):
             parser.error("train needs an editor/solver role")

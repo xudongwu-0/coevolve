@@ -9,6 +9,10 @@ import time
 
 from .common import ensure_model_runtime_metadata, read_json, write_json
 from .joint_round import round_path
+from .joint_schedule import (
+    ALTERNATING, actor_updates, checkpoint_eligible, role_active, round_metadata,
+    schedule_name, update_counts, validate_checkpoint_metadata, validate_metric_row,
+)
 
 
 def metric_value(metrics: dict, suffix: str) -> float:
@@ -28,7 +32,12 @@ def assess(rows: list[dict], spec: dict) -> dict:
     nonfinite = [key for key, value in metrics.items()
                  if isinstance(value, (int, float)) and not math.isfinite(value)]
     hard = [f"nonfinite metric: {key}" for key in nonfinite]
-    if latest["global_step"] >= spec["critic_warmup_steps"]:
+    if schedule_name(spec) == ALTERNATING:
+        try:
+            validate_metric_row(spec, latest)
+        except ValueError as exc:
+            hard.append(str(exc))
+    elif actor_updates(spec, latest["global_step"]):
         grad = metric_value(metrics, "ppo_actor/update/grad_norm")
         if grad <= 0:
             hard.append("actor has no nonzero gradient")
@@ -37,8 +46,10 @@ def assess(rows: list[dict], spec: dict) -> dict:
         ("joint_policy/fixed_reference_kl", 0.10),
         ("joint_value_norm/raw_value_mse", 4.0),
     ):
-        if len(rows) >= 3 and all(
-            metric_value(row["metrics"], suffix) > threshold for row in rows[-3:]
+        eligible_rows = [row for row in rows if role_active(spec, row["global_step"])] \
+            if suffix.startswith("joint_value_norm/") else rows
+        if len(eligible_rows) >= 3 and all(
+            metric_value(row["metrics"], suffix) > threshold for row in eligible_rows[-3:]
         ):
             stop_reasons.append(f"three consecutive {suffix} > {threshold}")
     if len(rows) >= 3 and all(
@@ -68,7 +79,9 @@ def assess(rows: list[dict], spec: dict) -> dict:
             for row in receipts
         ) / len(receipts),
         "fixed_reference_kl": metric_value(metrics, "joint_policy/fixed_reference_kl"),
-        "value_mse": metric_value(metrics, "joint_value_norm/raw_value_mse"),
+        "value_mse": metric_value(metrics, "joint_value_norm/raw_value_mse")
+        if role_active(spec, latest["global_step"]) else None,
+        "schedule": round_metadata(spec, latest["global_step"]),
         "interpretation": "Training diagnostics only; loss is not a held-out performance guarantee.",
     }
 
@@ -99,12 +112,18 @@ def recover_checkpoints(spec: dict, rows: list[dict]) -> dict:
         found = {}
         for path in root.glob(f"*/{spec['experiment']}/{spec['phase']}/{role}/epoch*globalstep*"):
             step = int(path.name.split("globalstep")[-1])
-            if step >= len(rows) or step < spec["critic_warmup_steps"]:
+            if step >= len(rows) or not checkpoint_eligible(spec, step + 1):
                 continue
             if not (path / "config.json").is_file() or not list(path.glob("*.safetensors")):
                 continue
             if role == "critic" and not (path / "joint_value_norm.json").is_file():
                 raise ValueError("Committed normalized critic omitted its running statistics")
+            validate_checkpoint_metadata(path, spec, step + 1)
+            if role == "critic" and schedule_name(spec) == ALTERNATING:
+                if read_json(path / "joint_value_norm.json").get("updates") != (
+                    update_counts(spec, step + 1)["critic_steps"]
+                ):
+                    raise ValueError("Scheduled critic ValueNorm count differs from native updates")
             if step in found:
                 raise ValueError("Ambiguous native checkpoint owner")
             found[step] = path

@@ -11,6 +11,7 @@ import secrets
 import time
 
 from .common import read_json, verify_upstreams, write_json
+from .joint_schedule import ALTERNATING, accounting, validate_schedule
 from .train import make_config, upstream_trainer
 
 
@@ -155,6 +156,7 @@ def configure(spec: dict, run: Path) -> dict:
         "actor_gradient_checkpointing", "critic_gradient_checkpointing",
         "terminal_episodes",
         "independent_trajectories",
+        "processed_behavior_logprobs",
     ):
         if key in spec and type(spec[key]) is not bool:
             raise ValueError(f"{key} must be boolean")
@@ -275,6 +277,8 @@ def main():
     parser.add_argument("--spec", type=Path, required=True)
     args = parser.parse_args()
     spec = read_json(args.spec)
+    validate_schedule(spec)
+    scheduled = spec.get("schedule") == ALTERNATING
     run = Path(spec["run"]).resolve()
     run.mkdir(parents=True, exist_ok=True)
     provenance = verify_upstreams()
@@ -325,7 +329,7 @@ def main():
     cfg_path = run / "trainer.yaml"
     cfg_path.write_text(yaml.safe_dump(configure(spec, run), sort_keys=False))
     config, _ = load_expr_config(["--config", str(cfg_path)], PPOConfig)
-    if spec.get("joint_root"):
+    if spec.get("joint_root") or spec.get("processed_behavior_logprobs", False):
         from .joint_workflow import JointVLLMConfig
         config.vllm = JointVLLMConfig(**asdict(config.vllm))
         write_json(run / "rollout_probability_contract.json", {
@@ -341,6 +345,7 @@ def main():
     with upstream_trainer(
         config, Dataset.from_list(rows),
         terminal_episodes=spec.get("terminal_episodes", False),
+        schedule_spec=spec if scheduled else None,
     ) as trainer:
         trainer.stats_logger = MetricsRecorder(trainer.stats_logger, run / "metrics.jsonl")
         active_started_at = time.time()
@@ -438,6 +443,7 @@ def main():
         "central_critic": bool(spec.get("central_context") or spec.get("joint_root")),
         "joint_root": spec.get("joint_root"),
         "stage_optimizer_reset": True, "checkpoint_history": checkpoint_history,
+        **(accounting(spec, spec["steps"]) if scheduled else {}),
     })
 
 

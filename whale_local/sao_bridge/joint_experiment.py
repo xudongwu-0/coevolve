@@ -14,12 +14,16 @@ from .common import ensure_model_runtime_metadata, file_sha, read_json, write_js
 from .gpu_telemetry import monitor, summarize
 from .joint_round import check_failures, record_failure
 from .joint_health import assess, metric_rows, recover_checkpoints, request_stop
+from .joint_schedule import (
+    accounting, consumed_row_ledger, update_counts, validate_metric_row, validate_schedule,
+)
 from .launch import Launcher
 from .resources import gpu_release_audit, require_research_node
 
 
 def validate_spec(spec: dict) -> None:
     rows = read_json(Path(spec["data"]))
+    validate_schedule(spec, rows)
     asynchronous = spec["protocol"] == "joint-ma-sao-async-v1"
     lag = 1 if asynchronous else 0
     if (
@@ -124,21 +128,21 @@ def run_role(spec_path: Path) -> dict:
             history = recover_checkpoints(spec, rows)
             last = max(map(int, history))
             trained = {
-                "actor_steps": max(0, len(rows) - spec["critic_warmup_steps"]),
-                "critic_steps": len(rows) * spec["critic_updates_per_step"],
+                **update_counts(spec, len(rows)),
                 "checkpoints": history[str(last)],
             }
         else:
             trained = read_json(root / "trained.json")
-        warmup = spec["critic_warmup_steps"]
-        if not stopped and (len(rows) != spec["steps"] or trained["actor_steps"] != spec["steps"] - warmup):
+        if not stopped and (
+            len(rows) != spec["steps"]
+            or any(trained[key] != update_counts(spec, spec["steps"])[key]
+                   for key in ("actor_steps", "critic_steps"))
+        ):
             raise ValueError("Joint native learner did not complete its declared update budget")
         for index, row in enumerate(rows):
-            gradient = row["metrics"].get("ppo_actor/update/grad_norm")
-            if row["global_step"] != index or (index < warmup and gradient is not None):
+            if row["global_step"] != index:
                 raise ValueError("Joint actor warmup or update ordering changed")
-            if index >= warmup and (gradient is None or not gradient > 0):
-                raise ValueError("Joint Actor omitted a nonzero update")
+            validate_metric_row(spec, row)
         ensure_model_runtime_metadata(Path(trained["checkpoints"]["actor"]), Path(spec["model"]))
         result = {
             "status": "stopped_with_checkpoints" if stopped else "completed",
@@ -150,23 +154,26 @@ def run_role(spec_path: Path) -> dict:
             "finished_at_unix": time.time(),
         }
         if asynchronous:
-            count = len(rows) * spec["batch_size"]
-            consumed = read_json(Path(spec["data"]))[:count]
-            write_json(root / "consumed_rows.json", {
-                "rows": count, "ids": [row["id"] for row in consumed],
-                "fresh_ids": [row["id"] for row in consumed], "replay_ids": [],
-                "sample_indices": list(range(count)),
-                "metrics_committed_prefix_only": True,
-            })
+            write_json(root / "consumed_rows.json", consumed_row_ledger(
+                spec, read_json(Path(spec["data"])), len(rows),
+            ))
             result.update(
                 checkpoint_history=history,
                 stop=read_json(joint / "STOP.json") if stopped else None,
-                consumed_policy_trajectories=len(rows) * spec["batch_size"],
+                **accounting(spec, len(rows)),
                 generated_policy_trajectories=sum(
                     1 for _ in joint.glob(f"round-*/{spec['role']}-receipt-*.json")
                 ),
                 sampled_engineer_actions=sum(1 for _ in joint.glob("round-*/proposal-*.json")),
             )
+            if spec.get("schedule"):
+                result.update(
+                    schedule=spec["schedule"],
+                    checkpoint_update_counts={
+                        step: update_counts(spec, int(step) + 1) for step in history
+                    },
+                    **accounting(spec, len(rows), generated=result["generated_policy_trajectories"]),
+                )
     except BaseException as exc:
         failure = {"error": repr(exc), "role": spec["role"], "failed_at_unix": time.time()}
         write_json(root.parent / "FAILED.json", failure)
