@@ -3453,3 +3453,43 @@ The original07:49:31 latest bound remains; round64 is already saved. This change
 uses execution-time estimates, not post-training development scores. All original
 models and incumbent W1+h2 remain unchanged; subsequent baseline/control queues
 have their own bounded lifetimes and do not all fit the initial MA report window.
+
+## 2026-10-03 08:12 UTC: independent MA completed, late system declined
+
+The actual1024-trajectory round64 pair scored175/200=87.5% (strict197172/197),
+against original H0/W0 at170/200=85%. The paired difference is+2.5pp[-2,+7].
+Its Solver without a harness scored157/200=78.5%.
+Later selection24 chose round112/proposal04, scoring165/200=82.5%
+(strict197163/197), while the same Solver without a harness scored161/200=80.5%.
+The late selected system is-5pp[-10,0] versus round64, and-9.5pp[-15.5,-3.5]
+versus historical W1+h2. It did not beat the incumbent.
+
+Importantly, the late empty-harness Solver is+6.5pp[1.5,11.5] versus original W0.
+The harness addition is9pp[4,14.5] at round64 but only2pp[-3,7] late.
+Thus system degradation should not automatically be attributed to collapsing
+Solver weights or alternating updates: this run was joint, and its Solver
+point estimates improved. Harness quality/selection/compatibility are concrete
+next diagnostic questions, with no seed-robust causal claim yet.
+
+The late candidate means on selection24 were75.78125%,73.69792%,60.15625% for
+rounds104/108/112. The max-candidate rule nevertheless chose round112 because
+one proposal had the highest score. This suggests a selection risk but is not
+an Engineer-only comparison: Solver weights also differ. No200-score candidate
+replacement occurred. The report preserves all selected system scores and
+paired intervals; development selection and repeated-question limitations remain.
+
+Training sourceb481fb0 completed115 committed rounds per role, each with110 Actor
+and230 critic updates;1840 total consumed and1872 complete generated role
+trajectories. The selected late path consumed1792, not the whole run cost.
+No OOM occurred; training stopped by the planned reserve. Both reports and model/
+patch/seed/token/sample contracts are verified in `FINAL_AUDIT.json`.
+The deadline report is completed, but algorithmic superiority was not achieved.
+
+W2 recoveryv1 then failed before any episode because the evaluator tried to
+rewrite metadata in a shared read-only original checkpoint. Repair2ed6700
+uses existing `supplement_runtime`, with a regression and real node3 UID check;
+v2 preserves the original failed attempt and now proceeds from the true W2.
+WHALEv6 failed during the second full-context synthetic GPU smoke process,
+before baseline training. Its failure correctly blocked downstream SAO.
+Dependent unstarted queues were paused for explicit recovery; no failed
+infrastructure episode was scored as a model failure or silently retried.

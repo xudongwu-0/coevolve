@@ -1,5 +1,33 @@
 # 项目状态与 Agent 接手指南
 
+## 最新：MA正式结果已完成，正在恢复后续研究队列
+
+MA最终报告于2026-10-03 08:12:17UTC完成，早于08:49:31期限：
+`runs/alfworld_joint_h0w0_8h_v1/FINAL_AUDIT.json`已核验完整结果。
+原始W0空74%、H0+h0/W0组合85%；第64轮（1024条）空78.5%、组合87.5%；
+后期选中第112轮（1792条）空80.5%、组合82.5%。历史W1+h2=92%仍保留。
+匹配点相对起点+2.5pp[-2,7]；后期相对匹配点-5pp[-10,0]。
+后期空harness Solver相对W0+6.5pp[1.5,11.5]，所以不是简单的W权重崩塌证据：
+harness加成从匹配点9pp降为后期2pp，应优先研究harness与选择流程。
+三个后期checkpoint候选均值75.78/73.70/60.16%，max选择却选中了第三个；
+需要同Solver交叉harness诊断，不能凭跨模型均值直接归因Engineer。
+训练实际115轮/各110次Actor、230次critic，消费1840，完整生成1872；
+无OOM，按计划停止。此结果没有证明MA超过SAO或永不退化。
+
+**后续当前状态：**
+- W2恢复v1在初始评测开始前因重写只读`runtime_supplements.json`失败，0采样/更新。
+  修复`2ed6700`复用`supplement_runtime`，5测试和node3实际只读路径验证通过。
+  活跃恢复为`runs/alfworld_w2_recovery_v2`、node3 `coevolve-w2-recovery-v2`，
+  源码快照`runs/source-snapshots/alfworld-research-controls-v4`；已完成初始评测并启动训练。
+- WHALEv6在完整32K烟测`smoke-1`阶段失败，未进入baseline研究训练；
+  `queue/FAILED.json`和`execution/FAILED.json`正确传播。具体根因正在node4单独排查，
+  不得未经日志证实就称为OOM。失败v6及冻结源不改写。
+- 修正SAO v4/v5和调度消融v2/v3都没有开始GPU训练，前置失败后已暂停。
+  不要恢复旧队列；Whale修复后需新冻结/新明确依赖。
+  v5 SAO协议绑定W2v2与旧Whalev6，不应在Whale失败状态下重启。
+
+以下为此前准备/排队历史，不代表当前所有旧队列仍在运行。
+
 ## 新研究任务：恢复、WHALE基线、稳定性对照
 
 **06:02UTC当前接手状态：** 原始H0/W0 MA双方91轮均健康、无新OOM。
