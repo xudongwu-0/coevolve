@@ -3380,3 +3380,38 @@ preserve this evidence. No post-training evaluation exists at this point;
 healthy initial updates are not evidence that the85% initial system improved.
 The original W1+h2 incumbent remains untouched. Independent matched/best services
 and the deadline guard continue without the agent; filler remains enabled.
+
+## 2026-10-03 02:14 UTC: research-driven follow-up requests
+
+Three questions are now separated: recovery of rejected W2, a WHALE ALFWorld
+baseline, and stability of joint versus alternating updates. Current independent
+H0/W0 MA is not interrupted. Historical W2+h2=63.5% is a recovery starting point,
+not a successful model to substitute for W1+h2.
+
+The fixed-h2 recovery protocol starts at actual W2 globalstep79 and its critic.
+It uses640 previously unused train-only instances1280-1919, preserving LR2e-6,
+critic LR1e-5, K1, five critic warmup steps and no KL. Original optimizer moments
+were not retained, so this is weight continuation with fresh Adam, not exact
+optimizer-state resumption. A singleton-microbatch repair prevents the known
+Qwen3.5 recurrent-state leakage; this backend change is an explicit confound.
+Remeasure the original W2 with/without h2, then report every prespecified extra
+20/40/60/80-step checkpoint on all200/strict197. The final80-step difference
+versus the fresh initial score is the primary endpoint; intermediate comparisons
+are exploratory, not a search for a favorable reporting checkpoint. No automatic
+promotion occurs. No recovery in this finite budget cannot establish irreversibility.
+
+Official WHALE documentation lists SearchQA, AIME and chess, not ALFWorld.
+The official method is online RSFT alternated with Meta-Harness search, not
+Harness-R1 or SAO under a different label. A local ALFWorld adaptation must disclose
+proposer and harness action-space changes, all sampling/selection costs, and
+separate CPU preparation from GPU validation and measured performance.
+
+A scheduling-only control is being prepared within MA: H16-round blocks alternate
+with W16-round blocks while holding critic/reward/normalization/KL/update settings
+fixed. This is an alternating-MA ablation, not ordinary SAO. At128 collection rounds
+it performs the same per-role64 active batches/512 training trajectories as
+simultaneous MA at64 rounds, but inactive counterpart generation adds real cost.
+Repeated sampling, different policy trajectories and additional environment work
+must be reported rather than called perfectly matched compute. A full corrected-
+backend SAO comparison is distinct from this ablation and from historical SAO scores.
+No finite single-seed experiment can establish that MA never collapses.

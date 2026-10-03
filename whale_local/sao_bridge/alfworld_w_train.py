@@ -90,6 +90,7 @@ def training_spec(config: dict, run: Path) -> dict:
         "critic_updates_per_step": config.get("critic_updates_per_step", 2),
         "critic_mode": config.get("critic_mode", "learned"),
         "terminal_episodes": config.get("terminal_episodes", False),
+        "independent_trajectories": config.get("independent_trajectories", False),
         "solver_trajectory_style": config.get(
             "solver_trajectory_style", "individual"
         ),

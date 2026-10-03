@@ -154,6 +154,7 @@ def configure(spec: dict, run: Path) -> dict:
     for key in (
         "actor_gradient_checkpointing", "critic_gradient_checkpointing",
         "terminal_episodes",
+        "independent_trajectories",
     ):
         if key in spec and type(spec[key]) is not bool:
             raise ValueError(f"{key} must be boolean")
@@ -221,7 +222,7 @@ def configure(spec: dict, run: Path) -> dict:
     cfg["actor"]["mb_spec"]["max_tokens_per_mb"] = microbatch_tokens
     if cfg["critic"] is not None:
         cfg["critic"]["mb_spec"]["max_tokens_per_mb"] = microbatch_tokens + 2048
-    if spec.get("joint_root"):
+    if spec.get("joint_root") or spec.get("independent_trajectories", False):
         # Qwen3.5's HF recurrent layers do not reset at packed sequence boundaries.
         for name in ("actor", "critic", "ref"):
             if cfg.get(name) is not None:
