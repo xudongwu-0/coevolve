@@ -3415,3 +3415,41 @@ Repeated sampling, different policy trajectories and additional environment work
 must be reported rather than called perfectly matched compute. A full corrected-
 backend SAO comparison is distinct from this ablation and from historical SAO scores.
 No finite single-seed experiment can establish that MA never collapses.
+
+## 2026-10-03 06:02 UTC: full matched point saved and research queues activated
+
+Original H0/W0 MA reached91 native rounds per role without a new OOM. The complete
+round64 Actor/critic pair is persisted and verified in `MATCHED_POINT_AUDIT.json`:
+512 consumed trajectories,59 Actor and128 critic updates per role. This is the
+1024-total matching point with no inherited SAO prefix; no post-training score
+has yet been claimed.
+
+W2 recovery is queued on node3 after current MA matched evaluation. WHALE v6 is
+queued on node4 after current MA best evaluation, then requires a full32768-token,
+4096-action warm-Adam/export/restore smoke before its research run. Its production
+freeze is source-bound tobe92302 and actually validated from controls-v2 snapshot.
+Smoke/queue failure explicitly publishes a pre-execution failure for downstream
+consumers, never a fake baseline completion.
+
+Matched-population ordinary SAO v4 is queued behind W2 on node3 and full WHALE
+execution on node4. H1 and H2 use fixed finalstep31; W1 uses79. Its first640 W task
+records exactly match current MA order, with0-239 legacy training population;
+this is not exact historical-curriculum or E15-selection reproduction.
+After full repaired SAO, the two-node scheduling-only MA v2 ablation is queued.
+Both controls use frozen sourcea05800e and were validated on the real node UIDs.
+The ablation reuses the exact physical H0/W0 initial evaluation with an explicit
+reuse receipt and zero added training cost, not a fabricated fresh measurement.
+
+Integrated controls passed172 tests+38subtests. Later queue-failure and upstream-
+link fixes passed focused76 and82-test selections. A production SAO CPU preparation
+initially rejected its intentional hash/commit-pinned AReaL symlink; no GPU or
+sampling occurred. The failure is retained, not confused with policy collapse.
+Strict local-source checks still reject mutable-main escapes. Presence of the
+venv's main-path fallback alone did not demonstrate leakage in the active MA.
+
+Because best-arm reporting may select among three checkpoint pairs, an additional
+persistent07:10UTC stop request reserves approximately100minutes before08:49:31.
+The original07:49:31 latest bound remains; round64 is already saved. This change
+uses execution-time estimates, not post-training development scores. All original
+models and incumbent W1+h2 remain unchanged; subsequent baseline/control queues
+have their own bounded lifetimes and do not all fit the initial MA report window.

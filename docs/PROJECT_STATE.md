@@ -2,6 +2,35 @@
 
 ## 新研究任务：恢复、WHALE基线、稳定性对照
 
+**06:02UTC当前接手状态：** 原始H0/W0 MA双方91轮均健康、无新OOM。
+`MATCHED_POINT_AUDIT.json`已核验共同global_step63/round64的完整Actor/critic，
+H/W各512、合计1024条消费，各59次Actor和128次critic更新；继续训练中。
+所有后续研究队列均已持久激活，当前仍只有原始MA实际占用研究GPU。
+
+| 实验 | 活跃根目录 | 固定源码 | 持久服务/前置 |
+|---|---|---|---|
+| W2恢复 | `runs/alfworld_w2_recovery_v1` | `e527e19` | node3 `coevolve-w2-recovery-v1`，等待原MA matched |
+| WHALE适配 | `runs/alfworld_whale_baseline_v6` | `be92302` / controls-v2快照 | node4 `coevolve-alfworld-whale-v6`，等待原MA best，再32K smoke，再完整baseline |
+| 修正普通SAO | `runs/alfworld_sao_corrected_v4` | `a05800e` / controls-v3快照 | node3 `coevolve-sao-control-v4-w`等W2；node4 `coevolve-sao-control-v4-h`等WHALE完整execution |
+| MA调度消融 | `runs/alfworld_ma_alternating_blocks_v2` | `a05800e` / controls-v3快照 | 两节点`coevolve-ma-schedule-v2-*`，等待修正SAO完整报告/释放 |
+
+WHALE生产冻结是`PRODUCTION_FROZEN.json`，SHA
+`dd165caffb22b85340e5047daf9cb320d71e74022d930d74300ce9dea9301933`；
+已从实际冻结快照核验57个本地源文件和原始模型权重，无GPU动作。
+标准`.pth`附加main路径是潜在fallback，**没有证据表明原MA实际导入了main**；
+新控制严格做模块来源隔离，不因此改写旧实验有效性。
+修正SAO生产协议SHA`ab78c4c9e453b6af50e3b53b5bc60586bded8cb29abefde9920c8643b7e15d42`，
+已在两个实际UID下CPU验证。原v3只在准备时误拒合法AReaL依赖链接，
+0训练/0GPU，保留`PREPARE_FAILED.json`；由v4替代。调度消融旧v1也未启动，由v2替代。
+
+**时间安排调整：** node4新增`coevolve-h0w0-evaluation-reserve.timer`，
+07:10UTC通过原冻结代码发布STOP，给最多3对候选选择+200题留约100分钟。
+原报告截止08:49:31UTC不变，第64轮已保存；不是依据200题结果挑停训时刻。
+原07:49:31仍保留为训练协议兜底。后续队列有独立超时，不能保证同日同一报告窗口
+全部完成；其CPU准备、排队和smoke都不是研究性能结论。
+
+下面为本轮研究任务的准备历史：
+
 02:14UTC用户要求持续监督，并按研究问题组织实验：
 1. 继续真实退化W2+固定h2，看有限预算内是否回升。
 2. 给出WHALE的ALFWorld基线，不把Harness-R1/SAO改名成WHALE。
