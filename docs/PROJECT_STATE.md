@@ -1,5 +1,35 @@
 # 项目状态与 Agent 接手指南
 
+## 当前请求：H0/W0独立MA，先验证长序列OOM修复
+
+2026-10-03 00:49UTC用户要求从原始H0/W0训练，不继承H1/W1。
+新目录`runs/alfworld_joint_h0w0_8h_v1`，初始评测源码冻结`415fd64`，
+快照`runs/source-snapshots/alfworld-joint-h0w0-v1`。node4持久服务
+`coevolve-joint-h0w0-v1-initial`和`coevolve-joint-h0w0-v1-guard`已启动。
+**此时只是初始评测，不是训练启动。** node3独立验证完整32768-token原生PPO
+反向/optimizer显存；原先8GiB缓存释放smoke test不能放行长训练。
+显存收据预定`runs/alfworld_joint_memory_20261003/MEMORY_COMPLETE.json`。
+
+`INITIAL_MODEL_IDENTITIES.json`核验原始模型权重：
+H0=`7d16d5ad5734af16b1fd0619caeb04270a024df86ca6e6c6e9bdb60e45f39af7`，
+W0=`9f52da7a3e4166e3af6b6ba8c0722a8abb396a7ac876e1cb4f83d2453c7bc2fb`。
+H/W Actor、critic、reference都从原始对应模型开始；数据和critic历史证据
+均来自原W0的train0-239，不再用W79历史。H0本身仍是官方已RL的Engineer。
+
+预算从0计：batch8配对episode/轮，H+W16条；5轮critic-only预热，K2，
+Actor LR5e-7、critic LR2.5e-6、固定reference KL0.005、真实lag1。
+每4轮保存，round12/52/64分别192/832/1024条；正式matched改为round64，
+与历史H1+W1+H2的1024条比较。128轮为最高预算，不保证截止前完成。
+预定训练截止07:49:31UTC，报告截止08:49:31UTC；两个前置检查也占用此窗口。
+先测H0生成并选定的新h0与W0的200题（以及W0空harness），再开始联合训练。
+不能把历史官方对口Engineer或旧h1的分数冒充本轮H0/W0起点。
+
+后续训练入口还增加显式失败后的已提交checkpoint发布：保留原FAILED并以
+`recovered_committed_checkpoints_after_training_failure`供独立评测，绝不把训练
+异常算成reward0或改写为训练完成。无完整checkpoint则明确RECOVERY_FAILED。
+实际训练源码需在显存验证结束后另行冻结，以TRAINING_LAUNCH收据为准，
+不要热改正在运行的初始评测快照。
+
 ## 当前结论：六小时窗口已报告，MA目标未达成
 
 **2026-10-02 23:07:27 UTC：** GRPO同192条训练/评测已完成；

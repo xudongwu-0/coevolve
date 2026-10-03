@@ -14,7 +14,10 @@ from areal.api.cli_args import PPOConfig, load_expr_config
 from areal.infra.workflow_executor import check_trajectory_format
 from areal.utils.data import allocate_balanced_mbs, batched_call
 from sao_bridge.common import read_json, write_json
-from sao_bridge.joint_campaign import initial_inputs, prepare, select_pair, share_checkpoints, wait_comparison
+from sao_bridge.joint_campaign import (
+    available_pairs, initial_inputs, prepare, recover_failed_role,
+    select_pair, share_checkpoints, wait_comparison,
+)
 from sao_bridge.joint_health import assess, metric_rows, recover_checkpoints, request_stop
 from sao_bridge.large_train import configure
 
@@ -223,6 +226,7 @@ def test_initial_prerequisites_reject_allocator_only_smoke_test(tmp_path):
         wait_comparison(protocol)
     write_json(memory, {**check, "actor_optimizer_steps": 1, "finite_nonzero_actor_gradient": True})
     wait_comparison(protocol)
+    assert read_json(tmp_path / "TRAINING_PREREQUISITES.json")["status"] == "passed"
     write_json(memory, {**check, "max_sequence_tokens": 24075, "actor_optimizer_steps": 1,
                         "finite_nonzero_actor_gradient": True})
     with pytest.raises(ValueError, match="native Actor"):
@@ -285,3 +289,41 @@ def test_fresh_campaign_resets_models_prefix_and_matched_budget(tmp_path):
         assert spec["critic_warmup_steps"] == 5
         assert str(tmp_path / "INITIAL_STATE.json") in spec["pinned_files"]
         assert str(joint_campaign.INITIAL_STATE) not in spec["pinned_files"]
+
+
+def test_failed_training_only_publishes_committed_models_without_hiding_failure(tmp_path):
+    spec = {
+        **training_spec(tmp_path), "role": "solver", "critic_warmup_steps": 2,
+        "critic_updates_per_step": 2,
+    }
+    checkpoint = {"3": {"actor": "actor3", "critic": "critic3"}}
+    with (
+        patch("sao_bridge.joint_campaign.metric_rows", return_value=[metrics(i) for i in range(6)]),
+        patch("sao_bridge.joint_campaign.recover_checkpoints", return_value=checkpoint),
+        patch("sao_bridge.joint_campaign.file_sha", return_value="metrics-hash"),
+    ):
+        result = recover_failed_role(spec)
+    assert result["status"] == "recovered_committed_checkpoints_after_training_failure"
+    assert result["consumed_policy_trajectories"] == 48
+    assert result["checkpoint_history"] == checkpoint
+    assert result["actor_updates"] == 4
+    assert result["failed_training_not_relabelled_completed"]
+    write_json(tmp_path / "protocol.json", {
+        "starting_point": "h0_w0", "report_deadline_unix": time.time() + 30,
+    })
+    write_json(tmp_path / "solver_FAILED.json", {"error": "original OOM"})
+    for role in ("editor", "solver"):
+        write_json(tmp_path / f"{role}_SHARED.json", {"ready": True, "result": result})
+    pairs, _ = available_pairs(tmp_path)
+    assert list(pairs) == ["3"]
+    assert read_json(tmp_path / "solver_FAILED.json")["error"] == "original OOM"
+
+
+def test_failed_recovery_prevents_indefinite_publication_wait(tmp_path):
+    write_json(tmp_path / "protocol.json", {
+        "starting_point": "h0_w0", "report_deadline_unix": time.time() + 30,
+    })
+    write_json(tmp_path / "solver_FAILED.json", {"error": "original OOM"})
+    write_json(tmp_path / "solver_RECOVERY_FAILED.json", {"error": "no committed model"})
+    with pytest.raises(RuntimeError, match="no committed model"):
+        available_pairs(tmp_path)

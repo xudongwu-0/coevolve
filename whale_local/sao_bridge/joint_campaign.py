@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import copy
+import fcntl
 from pathlib import Path
 import random
 import time
@@ -17,7 +18,7 @@ from .alfworld_train_data import _immutable_json
 from .analysis import paired_difference
 from .common import ROOT, file_sha, read_json, write_json
 from .joint_experiment import run_role, validate_spec
-from .joint_health import request_stop
+from .joint_health import metric_rows, recover_checkpoints, request_stop
 from .launch import Launcher
 from .resources import gpu_release_audit
 
@@ -174,6 +175,12 @@ def wait_comparison(protocol: dict) -> None:
             raise ValueError("H0/W0 requires a passed full-context native Actor optimizer step")
         if read_json(root / "initial_COMPLETE.json")["status"] != "completed":
             raise ValueError("H0/W0 initial evaluation is incomplete")
+        with (root / "TRAINING_PREREQUISITES.lock").open("a") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            _immutable_json(root / "TRAINING_PREREQUISITES.json", {
+                "status": "passed", "initial_evaluation_sha256": file_sha(root / "initial_COMPLETE.json"),
+                "memory_check": str(memory), "memory_check_sha256": file_sha(memory),
+            })
         return
     comparison = Path(protocol["comparison"])
     while not all((comparison / name).exists()
@@ -213,13 +220,46 @@ def train(root: Path, role: str) -> dict:
         return result
     except BaseException as exc:
         write_json(root / f"{role}_FAILED.json", {"error": repr(exc), "at_unix": time.time()})
+        if protocol.get("starting_point") == "h0_w0":
+            try:
+                spec = read_json(root / f"{role}_spec.json")
+                recovered = recover_failed_role(spec)
+                share_checkpoints(Path(spec["run"]), recovered)
+                _immutable_json(root / f"{role}_SHARED.json", {"ready": True, "result": recovered})
+            except (OSError, ValueError, RuntimeError) as recovery_error:
+                write_json(root / f"{role}_RECOVERY_FAILED.json", {
+                    "error": repr(recovery_error), "training_error": repr(exc),
+                })
         raise
+
+
+def recover_failed_role(spec: dict) -> dict:
+    optimizer, joint = Path(spec["run"]), Path(spec["joint_root"])
+    rows = metric_rows(optimizer / "metrics.jsonl")
+    history = recover_checkpoints(spec, rows)
+    return {
+        "status": "recovered_committed_checkpoints_after_training_failure",
+        "role": spec["role"], "steps": len(rows),
+        "actor_updates": max(0, len(rows) - spec["critic_warmup_steps"]),
+        "critic_updates": len(rows) * spec["critic_updates_per_step"],
+        "checkpoint_history": history,
+        "checkpoints": history[max(history, key=int)],
+        "metrics_sha256": file_sha(optimizer / "metrics.jsonl"),
+        "consumed_policy_trajectories": len(rows) * spec["batch_size"],
+        "generated_policy_trajectories": sum(1 for _ in joint.glob(f"round-*/{spec['role']}-receipt-*.json")),
+        "sampled_engineer_actions": sum(1 for _ in joint.glob("round-*/proposal-*.json")),
+        "optimizer_resets_between_rounds": False,
+        "failed_training_not_relabelled_completed": True,
+    }
 
 
 def available_pairs(root: Path) -> tuple[dict, dict]:
     protocol = read_json(root / "protocol.json")
     while not all((root / f"{role}_SHARED.json").is_file() for role in ("editor", "solver")):
         for failed in root.glob("*FAILED.json"):
+            if (protocol.get("starting_point") == "h0_w0"
+                    and failed.name in ("editor_FAILED.json", "solver_FAILED.json")):
+                continue
             raise RuntimeError(f"Joint campaign failed before model publication: {read_json(failed)}")
         if time.time() >= protocol["report_deadline_unix"]:
             raise TimeoutError("Joint models were not published before the reporting deadline")
