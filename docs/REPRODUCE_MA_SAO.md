@@ -124,65 +124,80 @@ git -C third_party/sao/vendor/AReaL apply \
 - 原协议含绝对路径、固定host/UID/GID、systemd及GPU映射。完整GPU重放前须恢复
   对应依赖和模型，并单独准备合法的新执行配置，**不能改写已冻结的科学记录**。
 
-本轮没有重装训练环境、没有新开推理服务、没有重训。远端模型/归档未提供前，
-新机器可以复算证据，但不能声称已经具备完整GPU续训材料。
+本轮没有重装训练环境、没有新开推理服务、没有重训。历史Actor权重不包含Critic、
+Adam、RNG等原生训练状态；取得它们也不代表已经具备完整GPU续训材料。
 
-## 5. Hugging Face checkpoint上传计划：仅计划，尚未执行
+## 5. Hugging Face：只保存历史97%的Actor checkpoint
 
-凭据只读验证到个人命名空间`wxd02`；细粒度token在该命名空间声明了repo.write等权限。
-`wxd02/coevolve`的dataset查询返回404，**没有创建仓库**。W&B身份只读验证为
-`2373025856w`，没有创建run或上传artifact。
+2026-10-12 15:34北京时间，用户将范围限定为历史97%对应的checkpoint，
+并明确**不上传Harness、不下载回验**。此前Full96/144、native72/144和初始化模型
+的批量上传计划全部取消。[旧模型清单](../reproducibility/ma_sao_20261012/MODEL_ARTIFACTS.json)
+仅保留为当时的本地库存，不能按其中的旧priority继续上传。
 
-建议使用私有dataset仓库`wxd02/coevolve`，因为需要同时容纳HF Actor、
-原生DCP/Adam/RNG和数据归档，而不是一个可直接from_pretrained的单模型repo。
-最终远端repo ID、类型、不可变revision和每组上传回执必须另行登记；
-Git里的[模型清单](../reproducibility/ma_sao_20261012/MODEL_ARTIFACTS.json)
-现在是本地库存，不是远端可下载承诺。
+已于15:44:40北京时间完成上传，唯一目标为私有dataset
+[wxd02/coevolve](https://huggingface.co/datasets/wxd02/coevolve)，不可变revision为
+`d0e84414e8ef9e2b6a84585e1365189faf501051`。
+[精确文件清单](../reproducibility/historical97_20261012/CHECKPOINT_UPLOAD_MANIFEST.json)
+记录本地SHA256，[远端回执](../reproducibility/historical97_20261012/HF_REMOTE_VERIFIED.json)
+记录相同revision下的文件、大小及服务器对象摘要核对结果。
+**没有执行下载回验。** W&B仍只读，没有创建run或上传artifact。
 
-| 优先级 | 对象 | 约体积 | 作用 |
-|---|---|---:|---|
-| 1 | Full144 Solver Actor | **17.55GiB** | 配合Git里的选定Harness及固定协议重跑93%系统 |
-| 2 | Full144 Engineer Actor | **17.55GiB** | 保存主算法最终两方策略；前两项合计35.09GiB |
-| 3 | without_peer完整native72 | **384.36GiB** | 保住未完成消融的最近可靠恢复位置；不是76轮 |
-| 4 | Full144完整native | **384.36GiB** | 保留主方法全部训练状态，供未来另行授权续训 |
-| 必需依赖 | H0、W1、两个原始Critic、历史packet W0 | **83.94GiB** | 原初始化/参考模型及完整恢复依赖，按manifest去重 |
-| 可选后置 | Full96、额外HF Critic、历史97%参考 | 依清单 | 诊断/历史对照，不优先重复上传所有大对象 |
+### 精确模型身份与范围
 
-两份native约768.71GiB；上述主要Actor、native和五组依赖合计约887.75GiB，
-还未计数据/轨迹归档。完整19组为1051.84GiB，约1.129TB（十进制）。
-**先核对私有存储可用额度，不因额度不足将研究数据改为公开。**
+历史路线为`alfworld_ma_convergence_v1r4/block-01/round0096`，
+两个Actor目录均为`epoch0epochstep95globalstep95`；这是该路线累计144轮的峰值，
+**不是**共同初始化研究Full144的93%模型。
 
-上传执行须另获许可，并按以下顺序验收：
+| 内容 | HF相对目录 | 大小 |
+|---|---|---:|
+| 历史97% Solver Actor及原配置/tokenizer | `best97/solver/` | 18839727095字节，约17.55GiB |
+| 同时点Engineer Actor及原配置/tokenizer | `best97/engineer/` | 18839727101字节，约17.55GiB |
 
-1. 先冻结清单，确认源文件不变；小元数据和大张量分别记录校验范围。
-2. 第一组17.55GiB Actor做端到端试传，记录真实吞吐后再估计总时间。
-3. 使用可续传的大文件上传；训练checkpoint不得原地压缩、改写或删掉。
-4. 为每个待传大文件生成/验证完整SHA-256。已有尺寸检查、Adam采样指纹、
-   或历史全文件摘要不能冒充本次传输全字节校验。
-5. 每组完成后固定HF commit SHA，用只读下载抽检/完整校验确认大小和摘要，
-   验证tokenizer/config及模型角色没有串组，再登记远端回执。
-6. 一组上传完成并不代表另一组完成；暂停/失败保留可恢复上传状态，
-   本地原checkpoint在远端验证完毕前不得删除。
-7. 同时上传固定输入、任务数据和必要轨迹归档；保留原目录映射及取消记录。
-   Git中的元数据不能替代384GiB原生状态。
+共20份checkpoint文件、37679454196字节，约35.09GiB。
+**没有Harness、Critic、Adam/native状态、其他checkpoint或评测数据。**
+checkpoint目录里的原`joint_schedule.json`和`runtime_supplements.json`是小型配置元数据，
+不包含优化器状态，也不是可续训原生快照。HF自动维护的`.gitattributes`不计入模型文件数。
 
-建议相对布局：
+原始报告为选定Harness与Solver合计194/200（97%），同一Solver无Harness为185/200
+（92.5%）。97%是复用开发集选出的历史峰值，不是独立泛化测试，不能称为纯权重成绩。
+原选定Harness仍在[既有Git证据](../reproducibility/ma_sao_20261012/payload/runs/alfworld_ma_convergence_v1r4/block-01/round0096/patches/95-proposal07.json)
+中；按用户要求不复制到HF。
 
-```text
-releases/20261012/
-  checkpoints/full-144-solver-actor/
-  checkpoints/full-144-editor-actor/
-  checkpoints/without_peer-native-0072/
-  checkpoints/full-native-0144/
-  checkpoints/initial-*/
-  archives/
-  MODEL_ARTIFACTS.json
-  TRANSFER_VERIFIED.json
+### 发布与访问约定
+
+- 每份待传文件均已由上传SDK计算完整SHA256，并核对原模型身份、大小及已有摘要。
+- 上传完成后已核对远端revision、精确文件清单、大小及服务器对象摘要；**没有下载模型回验**。
+- 本地原checkpoint保留不动，文件权限/所有权不改写，不因为容量或权限将仓库改为公开。
+- 访问需要有该私有仓库权限的HF token，并显式指定`repo_type="dataset"`和实际不可变revision。
+- 只需Solver时选择`best97/solver/*`；需要Engineer时选择`best97/engineer/*`。
+  不能把这个双角色dataset当成一个根目录可直接`from_pretrained`的单模型repo。
+- 不使用虚构revision或默认`main`冒充已锁定的模型版本。
+
+以下仅供未来按需访问，本次没有执行这些下载代码。安装有`huggingface_hub`的环境中，
+将`HF_TOKEN_FILE`设置为仓库之外的HF凭据文件路径，再从Git仓库根目录运行：
+
+```python
+import json
+import os
+from pathlib import Path
+from huggingface_hub import snapshot_download
+
+release = json.loads(Path(
+    "reproducibility/historical97_20261012/HF_REMOTE_VERIFIED.json"
+).read_text())
+model_root = snapshot_download(
+    repo_id=release["repo_id"],
+    repo_type=release["repo_type"],
+    revision=release["revision"],
+    token=Path(os.environ["HF_TOKEN_FILE"]).read_text().strip(),
+    allow_patterns=["best97/solver/*"],
+    local_dir="runs/hf_best97_download",
+)
+print(Path(model_root) / "best97/solver")
 ```
 
-只有远端回执存在后才使用实际`HF_REPO_ID`和不可变`HF_REVISION`按需下载；
-不要使用虚构revision或默认main。W&B后续更适合保存指标、版本索引和验证回执，
-本次不重复上传两份384GiB状态，也不创建任何run。
+访问Engineer时将allow_patterns改为`["best97/engineer/*"]`；需要两者时显式列出
+两个模式。得到本地Actor目录不代表获准启动推理、评测或训练。
 
 ## 6. 凭据与Git发布
 
@@ -192,4 +207,5 @@ API key/私钥不进入Git、命令参数、URL、配置快照或日志；不读
 仓库额外忽略api_keys及相应文件名，打包器也拒绝凭据路径和已知令牌/私钥内容。
 
 GitHub仅发布代码、固定数据切分/输入、原始核心结果和元数据；
-大模型放HF的动作尚未授权执行。私有Git仓库本身也不能替代模型备份。
+HF仅授权上述历史97% Actor对，W&B不写入。私有Git仓库本身也不能替代模型备份，
+历史上传计划不能覆盖用户最新限定的范围。

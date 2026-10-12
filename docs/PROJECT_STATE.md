@@ -1,8 +1,28 @@
 # 项目状态与 Agent 接手指南
 
-### 2026-10-12：代码发布与无GPU复现交接
+### 2026-10-12 15:34 北京时间：只上传历史97%的checkpoint
 
-最新工作仅为代码/数据交接和平台凭据验证，实验保持暂停。
+用户取消此前多checkpoint方案，只保存达到194/200的历史时点：
+`alfworld_ma_convergence_v1r4/block-01/round0096`，
+两角色Actor均为`epoch0epochstep95globalstep95`，对应该路线累计144轮。
+不是共同初始化Full144的93%版本，也不是未完成消融native72。
+实际范围是Engineer/Solver两个Actor各10份文件，共37679454196字节，
+约35.09GiB；模型路径、原评测身份及已有摘要已核对。
+
+15:44:40已完成这20份checkpoint文件的私有HF dataset上传，仓库为
+[wxd02/coevolve](https://huggingface.co/datasets/wxd02/coevolve)，不可变revision为
+`d0e84414e8ef9e2b6a84585e1365189faf501051`。
+远端清单、大小及服务器对象摘要全部匹配本地文件，见
+[发布回执](../reproducibility/historical97_20261012/HF_REMOTE_VERIFIED.json)。
+用户明确不上传Harness、不下载回验；Critic/Adam/native、其他模型和评测归档也不上传。
+97%是Solver与原选定Harness组成的系统成绩，该Solver单独是185/200（92.5%）；
+原Harness留在既有Git证据中，不包含在本次HF上传。
+完成状态、不可变revision和访问方法见[复现说明](REPRODUCE_MA_SAO.md)。
+W&B不写入，所有训练和Full144延长仍暂停。
+
+### 2026-10-12 15:14 北京时间：代码发布与无GPU复现交接
+
+当时工作仅为代码/数据交接和平台凭据验证，实验保持暂停。
 入口为[复现说明](REPRODUCE_MA_SAO.md)、
 [Git证据manifest](../reproducibility/ma_sao_20261012/MANIFEST.json)和
 [模型库存](../reproducibility/ma_sao_20261012/MODEL_ARTIFACTS.json)。
@@ -15,8 +35,8 @@ strict197排除goal-related的291、414、467。这个93%不是独立未触碰�
 所有原协议与结果未修改，额外152题统计只作为事后描述，不替换原主终点。
 
 GitHub用户提供的凭据实际是SSH私钥，已验证xudongwu-0身份及目标仓库读取；
-HF身份wxd02、W&B身份2373025856w验证通过。HF/W&B当前只允许只读认证，
-未创建远端仓库/run、未上传模型。checkpoint上传计划见复现说明；本地模型清单
+HF身份wxd02、W&B身份2373025856w验证通过。当时HF/W&B只允许只读认证，
+尚未创建远端仓库/run或上传模型。最新上传范围见上节；本地模型清单
 不等于远端备份。
 
 15:14:47北京时间，主交接提交

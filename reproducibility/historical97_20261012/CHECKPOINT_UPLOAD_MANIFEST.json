@@ -1,0 +1,163 @@
+{
+  "schema": "ma-sao-best97-checkpoint-upload-v1",
+  "repo_id": "wxd02/coevolve",
+  "repo_type": "dataset",
+  "required_private": true,
+  "historical_endpoint": "runs/alfworld_ma_convergence_v1r4/block-01/round0096_COMPLETE.json",
+  "historical_endpoint_sha256": "bd8c6f322967d9e68db141d9c868854660c1760687fe3d957a0c460b77cdd610",
+  "local_rounds": 96,
+  "global_step": 95,
+  "historical_cumulative_rounds": 144,
+  "system_successes": 194,
+  "system_questions": 200,
+  "solver_without_harness_successes": 185,
+  "files": [
+    {
+      "path": "best97/solver/chat_template.jinja",
+      "source": "runs/alfworld_ma_convergence_v1r4/block-01/solver/optimizer/engine/checkpoints/chengboliu/alfworld_ma_convergence_v1_b01/solver/actor/epoch0epochstep95globalstep95/chat_template.jinja",
+      "bytes": 7756,
+      "sha256": "a4aee8afcf2e0711942cf848899be66016f8d14a889ff9ede07bca099c28f715",
+      "role": "solver"
+    },
+    {
+      "path": "best97/solver/config.json",
+      "source": "runs/alfworld_ma_convergence_v1r4/block-01/solver/optimizer/engine/checkpoints/chengboliu/alfworld_ma_convergence_v1_b01/solver/actor/epoch0epochstep95globalstep95/config.json",
+      "bytes": 2907,
+      "sha256": "61b28512ab514a5b9910eb79b1a6f534ad9c7a90a74167b22323d933a4d6a028",
+      "role": "solver"
+    },
+    {
+      "path": "best97/solver/generation_config.json",
+      "source": "runs/alfworld_ma_convergence_v1r4/block-01/solver/optimizer/engine/checkpoints/chengboliu/alfworld_ma_convergence_v1_b01/solver/actor/epoch0epochstep95globalstep95/generation_config.json",
+      "bytes": 163,
+      "sha256": "8b56df7a575716b6768e6d28c74763a1f93e06c90b219e5a6b3d3c6aeae8c29b",
+      "role": "solver"
+    },
+    {
+      "path": "best97/solver/joint_schedule.json",
+      "source": "runs/alfworld_ma_convergence_v1r4/block-01/solver/optimizer/engine/checkpoints/chengboliu/alfworld_ma_convergence_v1_b01/solver/actor/epoch0epochstep95globalstep95/joint_schedule.json",
+      "bytes": 809,
+      "sha256": "da404de32db5c9a930a370c8b939907da9b03e515428562c460a589d97d8fb0f",
+      "role": "solver"
+    },
+    {
+      "path": "best97/solver/model.safetensors",
+      "source": "runs/alfworld_ma_convergence_v1r4/block-01/solver/optimizer/engine/checkpoints/chengboliu/alfworld_ma_convergence_v1_b01/solver/actor/epoch0epochstep95globalstep95/model.safetensors",
+      "bytes": 18819722392,
+      "sha256": "10de650d2514deaff760156e4025472e6292f3b01772eac71b466b47c1ef08a1",
+      "role": "solver"
+    },
+    {
+      "path": "best97/solver/preprocessor_config.json",
+      "source": "runs/alfworld_ma_convergence_v1r4/block-01/solver/optimizer/engine/checkpoints/chengboliu/alfworld_ma_convergence_v1_b01/solver/actor/epoch0epochstep95globalstep95/preprocessor_config.json",
+      "bytes": 482,
+      "sha256": "957eb01d1ea45341a92d543daec95857a7cbeff5803834bc0603b27ba7b41b3f",
+      "role": "solver"
+    },
+    {
+      "path": "best97/solver/processor_config.json",
+      "source": "runs/alfworld_ma_convergence_v1r4/block-01/solver/optimizer/engine/checkpoints/chengboliu/alfworld_ma_convergence_v1_b01/solver/actor/epoch0epochstep95globalstep95/processor_config.json",
+      "bytes": 1296,
+      "sha256": "01562eddd6f9e9ec4bc31656a3b7055284cafbf889acc6c4348dca431ae31f68",
+      "role": "solver"
+    },
+    {
+      "path": "best97/solver/runtime_supplements.json",
+      "source": "runs/alfworld_ma_convergence_v1r4/block-01/solver/optimizer/engine/checkpoints/chengboliu/alfworld_ma_convergence_v1_b01/solver/actor/epoch0epochstep95globalstep95/runtime_supplements.json",
+      "bytes": 774,
+      "sha256": "b21b3f68df7553b1b3868587a63d6e73a91d8ef72937ec968b2ffba33e16f24a",
+      "role": "solver"
+    },
+    {
+      "path": "best97/solver/tokenizer.json",
+      "source": "runs/alfworld_ma_convergence_v1r4/block-01/solver/optimizer/engine/checkpoints/chengboliu/alfworld_ma_convergence_v1_b01/solver/actor/epoch0epochstep95globalstep95/tokenizer.json",
+      "bytes": 19989325,
+      "sha256": "06b9509352d2af50381ab2247e083b80d32d5c0aba91c272ca9ff729b6a0e523",
+      "role": "solver"
+    },
+    {
+      "path": "best97/solver/tokenizer_config.json",
+      "source": "runs/alfworld_ma_convergence_v1r4/block-01/solver/optimizer/engine/checkpoints/chengboliu/alfworld_ma_convergence_v1_b01/solver/actor/epoch0epochstep95globalstep95/tokenizer_config.json",
+      "bytes": 1191,
+      "sha256": "1ec445f87ae14b966ca02c851bfc81a05979f05533ce5441be27915d49bb9cd9",
+      "role": "solver"
+    },
+    {
+      "path": "best97/engineer/chat_template.jinja",
+      "source": "runs/alfworld_ma_convergence_v1r4/block-01/editor/optimizer/engine/checkpoints/chengboliu/alfworld_ma_convergence_v1_b01/editor/actor/epoch0epochstep95globalstep95/chat_template.jinja",
+      "bytes": 7756,
+      "sha256": "a4aee8afcf2e0711942cf848899be66016f8d14a889ff9ede07bca099c28f715",
+      "role": "engineer"
+    },
+    {
+      "path": "best97/engineer/config.json",
+      "source": "runs/alfworld_ma_convergence_v1r4/block-01/editor/optimizer/engine/checkpoints/chengboliu/alfworld_ma_convergence_v1_b01/editor/actor/epoch0epochstep95globalstep95/config.json",
+      "bytes": 2907,
+      "sha256": "61b28512ab514a5b9910eb79b1a6f534ad9c7a90a74167b22323d933a4d6a028",
+      "role": "engineer"
+    },
+    {
+      "path": "best97/engineer/generation_config.json",
+      "source": "runs/alfworld_ma_convergence_v1r4/block-01/editor/optimizer/engine/checkpoints/chengboliu/alfworld_ma_convergence_v1_b01/editor/actor/epoch0epochstep95globalstep95/generation_config.json",
+      "bytes": 163,
+      "sha256": "8b56df7a575716b6768e6d28c74763a1f93e06c90b219e5a6b3d3c6aeae8c29b",
+      "role": "engineer"
+    },
+    {
+      "path": "best97/engineer/joint_schedule.json",
+      "source": "runs/alfworld_ma_convergence_v1r4/block-01/editor/optimizer/engine/checkpoints/chengboliu/alfworld_ma_convergence_v1_b01/editor/actor/epoch0epochstep95globalstep95/joint_schedule.json",
+      "bytes": 812,
+      "sha256": "5fc337cb5c52a3ac49cd5b6e00588b1fb51550ee0bab15ac45cddbec8911f56d",
+      "role": "engineer"
+    },
+    {
+      "path": "best97/engineer/model.safetensors",
+      "source": "runs/alfworld_ma_convergence_v1r4/block-01/editor/optimizer/engine/checkpoints/chengboliu/alfworld_ma_convergence_v1_b01/editor/actor/epoch0epochstep95globalstep95/model.safetensors",
+      "bytes": 18819722392,
+      "sha256": "259d9288e3297b66a44b31baf87fff30d5b57c78f6e1ff78de8a2abfce09dc66",
+      "role": "engineer"
+    },
+    {
+      "path": "best97/engineer/preprocessor_config.json",
+      "source": "runs/alfworld_ma_convergence_v1r4/block-01/editor/optimizer/engine/checkpoints/chengboliu/alfworld_ma_convergence_v1_b01/editor/actor/epoch0epochstep95globalstep95/preprocessor_config.json",
+      "bytes": 482,
+      "sha256": "957eb01d1ea45341a92d543daec95857a7cbeff5803834bc0603b27ba7b41b3f",
+      "role": "engineer"
+    },
+    {
+      "path": "best97/engineer/processor_config.json",
+      "source": "runs/alfworld_ma_convergence_v1r4/block-01/editor/optimizer/engine/checkpoints/chengboliu/alfworld_ma_convergence_v1_b01/editor/actor/epoch0epochstep95globalstep95/processor_config.json",
+      "bytes": 1296,
+      "sha256": "01562eddd6f9e9ec4bc31656a3b7055284cafbf889acc6c4348dca431ae31f68",
+      "role": "engineer"
+    },
+    {
+      "path": "best97/engineer/runtime_supplements.json",
+      "source": "runs/alfworld_ma_convergence_v1r4/block-01/editor/optimizer/engine/checkpoints/chengboliu/alfworld_ma_convergence_v1_b01/editor/actor/epoch0epochstep95globalstep95/runtime_supplements.json",
+      "bytes": 774,
+      "sha256": "6a60dc6382ae76f6a211862483176f17d0428b260be17d2278beb3fe0a2bdf89",
+      "role": "engineer"
+    },
+    {
+      "path": "best97/engineer/tokenizer.json",
+      "source": "runs/alfworld_ma_convergence_v1r4/block-01/editor/optimizer/engine/checkpoints/chengboliu/alfworld_ma_convergence_v1_b01/editor/actor/epoch0epochstep95globalstep95/tokenizer.json",
+      "bytes": 19989325,
+      "sha256": "06b9509352d2af50381ab2247e083b80d32d5c0aba91c272ca9ff729b6a0e523",
+      "role": "engineer"
+    },
+    {
+      "path": "best97/engineer/tokenizer_config.json",
+      "source": "runs/alfworld_ma_convergence_v1r4/block-01/editor/optimizer/engine/checkpoints/chengboliu/alfworld_ma_convergence_v1_b01/editor/actor/epoch0epochstep95globalstep95/tokenizer_config.json",
+      "bytes": 1194,
+      "sha256": "1b9c2a5c7ccb91fe9cb0d6f34ff7f8ca64fd2557e106c7f67d7ea8240ec9f3f0",
+      "role": "engineer"
+    }
+  ],
+  "total_bytes": 37679454196,
+  "contains_harness": false,
+  "contains_critic_or_optimizer": false,
+  "contains_other_checkpoint_groups": false,
+  "download_back_verification_authorized": false,
+  "training_allowed": false,
+  "wandb_upload_allowed": false
+}

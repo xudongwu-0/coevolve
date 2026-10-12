@@ -1,0 +1,176 @@
+{
+  "status": "uploaded_remote_metadata_verified",
+  "repo_id": "wxd02/coevolve",
+  "repo_type": "dataset",
+  "revision": "d0e84414e8ef9e2b6a84585e1365189faf501051",
+  "private": true,
+  "files": [
+    {
+      "path": "best97/solver/chat_template.jinja",
+      "bytes": 7756,
+      "local_sha256": "a4aee8afcf2e0711942cf848899be66016f8d14a889ff9ede07bca099c28f715",
+      "remote_hash_kind": "server_git_blob_sha1",
+      "remote_hash": "a585dec894e63da457d9440ec6aa7caa16d20860",
+      "verified": true
+    },
+    {
+      "path": "best97/solver/config.json",
+      "bytes": 2907,
+      "local_sha256": "61b28512ab514a5b9910eb79b1a6f534ad9c7a90a74167b22323d933a4d6a028",
+      "remote_hash_kind": "server_git_blob_sha1",
+      "remote_hash": "b51d599dd1024a00076ce259b8d514d66c0ac6d3",
+      "verified": true
+    },
+    {
+      "path": "best97/solver/generation_config.json",
+      "bytes": 163,
+      "local_sha256": "8b56df7a575716b6768e6d28c74763a1f93e06c90b219e5a6b3d3c6aeae8c29b",
+      "remote_hash_kind": "server_git_blob_sha1",
+      "remote_hash": "4e2cc2be5955b54873923f146fea9ef481d057b4",
+      "verified": true
+    },
+    {
+      "path": "best97/solver/joint_schedule.json",
+      "bytes": 809,
+      "local_sha256": "da404de32db5c9a930a370c8b939907da9b03e515428562c460a589d97d8fb0f",
+      "remote_hash_kind": "server_git_blob_sha1",
+      "remote_hash": "4ca58f77a087c7406e125e5f4e8ca2dc40ae20af",
+      "verified": true
+    },
+    {
+      "path": "best97/solver/model.safetensors",
+      "bytes": 18819722392,
+      "local_sha256": "10de650d2514deaff760156e4025472e6292f3b01772eac71b466b47c1ef08a1",
+      "remote_hash_kind": "server_lfs_sha256",
+      "remote_hash": "10de650d2514deaff760156e4025472e6292f3b01772eac71b466b47c1ef08a1",
+      "verified": true
+    },
+    {
+      "path": "best97/solver/preprocessor_config.json",
+      "bytes": 482,
+      "local_sha256": "957eb01d1ea45341a92d543daec95857a7cbeff5803834bc0603b27ba7b41b3f",
+      "remote_hash_kind": "server_git_blob_sha1",
+      "remote_hash": "be0d97d66db8dcf3e2af39c4eea4fb204b79efa5",
+      "verified": true
+    },
+    {
+      "path": "best97/solver/processor_config.json",
+      "bytes": 1296,
+      "local_sha256": "01562eddd6f9e9ec4bc31656a3b7055284cafbf889acc6c4348dca431ae31f68",
+      "remote_hash_kind": "server_git_blob_sha1",
+      "remote_hash": "8af8110fe33fb48d1a0aefafb83005347beda96a",
+      "verified": true
+    },
+    {
+      "path": "best97/solver/runtime_supplements.json",
+      "bytes": 774,
+      "local_sha256": "b21b3f68df7553b1b3868587a63d6e73a91d8ef72937ec968b2ffba33e16f24a",
+      "remote_hash_kind": "server_git_blob_sha1",
+      "remote_hash": "b8da0ccf704b5317150ebae743f8f17f0fcfb682",
+      "verified": true
+    },
+    {
+      "path": "best97/solver/tokenizer.json",
+      "bytes": 19989325,
+      "local_sha256": "06b9509352d2af50381ab2247e083b80d32d5c0aba91c272ca9ff729b6a0e523",
+      "remote_hash_kind": "server_lfs_sha256",
+      "remote_hash": "06b9509352d2af50381ab2247e083b80d32d5c0aba91c272ca9ff729b6a0e523",
+      "verified": true
+    },
+    {
+      "path": "best97/solver/tokenizer_config.json",
+      "bytes": 1191,
+      "local_sha256": "1ec445f87ae14b966ca02c851bfc81a05979f05533ce5441be27915d49bb9cd9",
+      "remote_hash_kind": "server_git_blob_sha1",
+      "remote_hash": "0159c28157c6e74a102cd89744114b797e7ce8c1",
+      "verified": true
+    },
+    {
+      "path": "best97/engineer/chat_template.jinja",
+      "bytes": 7756,
+      "local_sha256": "a4aee8afcf2e0711942cf848899be66016f8d14a889ff9ede07bca099c28f715",
+      "remote_hash_kind": "server_git_blob_sha1",
+      "remote_hash": "a585dec894e63da457d9440ec6aa7caa16d20860",
+      "verified": true
+    },
+    {
+      "path": "best97/engineer/config.json",
+      "bytes": 2907,
+      "local_sha256": "61b28512ab514a5b9910eb79b1a6f534ad9c7a90a74167b22323d933a4d6a028",
+      "remote_hash_kind": "server_git_blob_sha1",
+      "remote_hash": "b51d599dd1024a00076ce259b8d514d66c0ac6d3",
+      "verified": true
+    },
+    {
+      "path": "best97/engineer/generation_config.json",
+      "bytes": 163,
+      "local_sha256": "8b56df7a575716b6768e6d28c74763a1f93e06c90b219e5a6b3d3c6aeae8c29b",
+      "remote_hash_kind": "server_git_blob_sha1",
+      "remote_hash": "4e2cc2be5955b54873923f146fea9ef481d057b4",
+      "verified": true
+    },
+    {
+      "path": "best97/engineer/joint_schedule.json",
+      "bytes": 812,
+      "local_sha256": "5fc337cb5c52a3ac49cd5b6e00588b1fb51550ee0bab15ac45cddbec8911f56d",
+      "remote_hash_kind": "server_git_blob_sha1",
+      "remote_hash": "23470b269da2937ec65d47c7941acc3ec1576e17",
+      "verified": true
+    },
+    {
+      "path": "best97/engineer/model.safetensors",
+      "bytes": 18819722392,
+      "local_sha256": "259d9288e3297b66a44b31baf87fff30d5b57c78f6e1ff78de8a2abfce09dc66",
+      "remote_hash_kind": "server_lfs_sha256",
+      "remote_hash": "259d9288e3297b66a44b31baf87fff30d5b57c78f6e1ff78de8a2abfce09dc66",
+      "verified": true
+    },
+    {
+      "path": "best97/engineer/preprocessor_config.json",
+      "bytes": 482,
+      "local_sha256": "957eb01d1ea45341a92d543daec95857a7cbeff5803834bc0603b27ba7b41b3f",
+      "remote_hash_kind": "server_git_blob_sha1",
+      "remote_hash": "be0d97d66db8dcf3e2af39c4eea4fb204b79efa5",
+      "verified": true
+    },
+    {
+      "path": "best97/engineer/processor_config.json",
+      "bytes": 1296,
+      "local_sha256": "01562eddd6f9e9ec4bc31656a3b7055284cafbf889acc6c4348dca431ae31f68",
+      "remote_hash_kind": "server_git_blob_sha1",
+      "remote_hash": "8af8110fe33fb48d1a0aefafb83005347beda96a",
+      "verified": true
+    },
+    {
+      "path": "best97/engineer/runtime_supplements.json",
+      "bytes": 774,
+      "local_sha256": "6a60dc6382ae76f6a211862483176f17d0428b260be17d2278beb3fe0a2bdf89",
+      "remote_hash_kind": "server_git_blob_sha1",
+      "remote_hash": "6f188303ede6d1e0b6a4f738abc89c6c8937a735",
+      "verified": true
+    },
+    {
+      "path": "best97/engineer/tokenizer.json",
+      "bytes": 19989325,
+      "local_sha256": "06b9509352d2af50381ab2247e083b80d32d5c0aba91c272ca9ff729b6a0e523",
+      "remote_hash_kind": "server_lfs_sha256",
+      "remote_hash": "06b9509352d2af50381ab2247e083b80d32d5c0aba91c272ca9ff729b6a0e523",
+      "verified": true
+    },
+    {
+      "path": "best97/engineer/tokenizer_config.json",
+      "bytes": 1194,
+      "local_sha256": "1b9c2a5c7ccb91fe9cb0d6f34ff7f8ca64fd2557e106c7f67d7ea8240ec9f3f0",
+      "remote_hash_kind": "server_git_blob_sha1",
+      "remote_hash": "6a772fdbe3b062b5fbc4b7270a7d0cded29d64d3",
+      "verified": true
+    }
+  ],
+  "checkpoint_file_count": 20,
+  "checkpoint_bytes": 37679454196,
+  "harness_uploaded": false,
+  "downloaded_back": false,
+  "verification_scope": "Upload succeeded; immutable remote inventory, sizes, and server hashes match local files. No checkpoint download was performed.",
+  "completed_at_beijing": "2026-10-12T15:44:40.013758+08:00",
+  "elapsed_seconds": 277.5
+}

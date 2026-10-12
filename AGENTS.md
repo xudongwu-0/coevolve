@@ -29,7 +29,13 @@
   metadata and seven executing-source snapshots. Do not rewrite frozen files.
 - The Git bundle contains no model tensors. Consult
   [MODEL_ARTIFACTS.json](reproducibility/ma_sao_20261012/MODEL_ARTIFACTS.json);
-  a proposed HF path is not an uploaded artifact.
+  this is the earlier local inventory, not the current upload authorization.
+  The multi-checkpoint upload plan has been cancelled in favor of the single
+  historical97 checkpoint described in [the reproduction guide](docs/REPRODUCE_MA_SAO.md).
+  Its two Actor checkpoints have been published; use the actual private HF
+  revision in [the remote receipt](reproducibility/historical97_20261012/HF_REMOTE_VERIFIED.json).
+  No Harness or native continuation state was uploaded, and no download-back
+  verification was performed.
 - Native recovery needs both Actors, both Critics, Adam, ValueNorm, RNG,
   schedule/data cursors and matching initial/reference models. HF Actor
   weights alone are not a continuation checkpoint.
@@ -48,8 +54,13 @@ with directory mode0700 and file mode0600. Never print, stage, archive, place
 in command arguments, or copy their contents into configuration or reports.
 Read them only for a platform action explicitly authorized by the user.
 The GitHub credential currently uses SSH-key authentication despite its file
-name. Hugging Face and W&B were authorized for read-only verification only;
-the model-upload plan is not permission to execute uploads.
+name. The latest2026-10-12 15:34 Beijing instruction authorizes uploading only
+the historical97 Engineer/Solver Actor checkpoint pair to a private HF
+dataset. Do not upload its Harness, Critics, optimizer/native state, other
+checkpoints, or evaluation artifacts. Do not download the checkpoint back
+for verification; use upload completion and remote revision/file metadata.
+W&B remains read-only. This permission does not authorize training or model
+evaluation, and a historical model inventory is not an upload queue.
 
 For packaging changes, run:
 

@@ -8,10 +8,15 @@
 
 ### 2026-10-12：可离线复算的代码与数据交接
 
-新agent先读[接手入口](AGENTS.md)及[复现与checkpoint上传计划](docs/REPRODUCE_MA_SAO.md)，
+新agent先读[接手入口](AGENTS.md)及[复现与checkpoint访问说明](docs/REPRODUCE_MA_SAO.md)，
 执行`python3 -B scripts/reproduce_ma_progress.py`即可在无GPU、无API key的情况下
 验证4225份证据文件、重建固定训练输入、重算Full96/144，并确认without_peer为
-76轮metrics、72轮完整恢复元数据。大权重不在Git里，HF/W&B目前只做凭据验证。
+76轮metrics、72轮完整恢复元数据。大权重不在Git里。
+15:34北京时间最新范围为：HF只保存历史97%时点的Engineer/Solver两个Actor，
+共20份checkpoint文件、约35.09GiB；不上传Harness、Critic、Adam、原生恢复状态
+或其他checkpoint，也不下载回验。此前多模型上传计划已取消，W&B仍不写入。
+15:44:40已完成私有HF上传，实际revision与访问方式见复现说明中的
+[远端回执](reproducibility/historical97_20261012/HF_REMOTE_VERIFIED.json)。
 **selection48全部包含在main200内，93%是复用开发集成绩，不是独立测试成绩。**
 实验仍暂停；离线核验和代码发布不授予训练/推理启动权限。
 

@@ -5786,3 +5786,27 @@ HF的wxd02/coevolve dataset查询404，没有创建仓库；W&B没有创建run�
 最大普通文件31298663字节，没有模型张量。冻结证据的原始空白逐字保留，
 避免格式化破坏SHA256；当前代码的Git空白检查通过。
 三份历史训练取消门控仍有效；没有创建HF仓库、W&B run或上传模型。
+
+### 2026-10-12 15:44:40 北京时间：只上传历史97%的Actor checkpoint
+
+用户15:21撤销此前多checkpoint上传计划，仅保留历史194/200的最高点；
+15:34进一步要求只上传checkpoint、不上传Harness、不下载回验。
+已按该范围完成私有HF dataset
+[wxd02/coevolve](https://huggingface.co/datasets/wxd02/coevolve)发布，
+不可变revision为`d0e84414e8ef9e2b6a84585e1365189faf501051`。
+
+上传内容仅为历史`alfworld_ma_convergence_v1r4/block-01/round0096`的Engineer/Solver
+Actor，两者均对应`epoch0epochstep95globalstep95`。这属于历史路线累计144轮，
+不是共同初始化Full144的93%版本。原200题记录与冻结选择逐项核对，
+带选定Harness为194/200、同一Solver无Harness为185/200。
+
+两个Actor共20份checkpoint文件、37679454196字节，约35.09GiB；
+包含原权重、配置和tokenizer，不包含Harness、Critic、Adam/native状态、
+其他checkpoint或评测数据。所有文件均在上传前计算完整SHA256并核对已有摘要，
+上传后仅用远端清单、大小及服务器LFS/Git对象摘要验收，**没有下载模型回验**。
+具体身份与回执见[精确清单](../reproducibility/historical97_20261012/CHECKPOINT_UPLOAD_MANIFEST.json)
+及[远端核验](../reproducibility/historical97_20261012/HF_REMOTE_VERIFIED.json)。
+
+首次临时硬链接准备受Engineer源文件权限约束而停止，尚未产生远端模型写入；
+随后改为SDK直接只读上传原文件，未修改其所有权或权限，临时链接已清理。
+本地原checkpoint全部保留。W&B没有创建run或上传内容，训练与Full144延长继续暂停。
