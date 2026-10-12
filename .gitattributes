@@ -1,2 +1,4 @@
 # Matplotlib SVG path formatting contains intentional trailing whitespace.
 docs/figures/*.svg -whitespace
+# Frozen evidence must preserve checksummed bytes, including original whitespace.
+reproducibility/** -text -whitespace

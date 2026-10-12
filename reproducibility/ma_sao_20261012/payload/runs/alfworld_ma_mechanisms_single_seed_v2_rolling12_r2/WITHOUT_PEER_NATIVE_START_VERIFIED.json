@@ -1,0 +1,45 @@
+{
+  "status": "native_start_verified",
+  "arm": "without_peer",
+  "controller_pid": 4062818,
+  "local_solver_processes": [
+    {
+      "pid": 4063504,
+      "args": [
+        "/dev/shm/sao-venv-ppo/bin/python",
+        "-B",
+        "-m",
+        "sao_bridge.alfworld_ma_mechanism_study",
+        "train-role",
+        "--root",
+        "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/without_peer/attempts/attempt-0001",
+        "--arm",
+        "without_peer",
+        "--role",
+        "solver"
+      ]
+    }
+  ],
+  "remote_unit": "alfworld-mechanism-without_peer-editor-single-seed-v2-rolling12-without_peer-0001",
+  "remote_state": {
+    "MainPID": "1731201",
+    "Result": "success",
+    "LoadState": "loaded",
+    "ActiveState": "active",
+    "SubState": "running"
+  },
+  "monitor": {
+    "status": "training",
+    "arm": "without_peer",
+    "attempt": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/without_peer/attempts/attempt-0001",
+    "progress": {
+      "editor": 0,
+      "solver": 0
+    },
+    "resume_round": 0,
+    "at_unix": 1791613087.5788345
+  },
+  "baseline_release_sha256": "531a21769ef60d77fc2a4cbb7e85672c858d0c8b64fa37c05f089a834aaf765a",
+  "training_source_unchanged": true,
+  "at_unix": 1791613087.7045248
+}

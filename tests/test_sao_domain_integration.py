@@ -205,6 +205,12 @@ class DomainIntegrationTests(unittest.TestCase):
                 "PYTORCH_ALLOC_CONF"], "expandable_segments:True")
             self.assertTrue(config["actor"]["use_decoupled_loss"])
             self.assertEqual(config["gconfig"]["n_samples"], 1)
+            self.assertNotIn("setup_timeout", config["rollout"])
+            cold_start = configure({**spec, "rollout_setup_timeout": 1800}, Path(temporary))
+            self.assertEqual(cold_start["rollout"]["setup_timeout"], 1800)
+            for invalid in (0, -1, True, 1.5, "1800"):
+                with self.assertRaisesRegex(ValueError, "positive integer"):
+                    configure({**spec, "rollout_setup_timeout": invalid}, Path(temporary))
             optimized = configure({
                 **spec,
                 "critic_updates_per_step": 1,

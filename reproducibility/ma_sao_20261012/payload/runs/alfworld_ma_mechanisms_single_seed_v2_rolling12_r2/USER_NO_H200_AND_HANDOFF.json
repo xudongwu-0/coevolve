@@ -1,0 +1,16 @@
+{
+  "status": "paused_for_artifact_handoff",
+  "user_requested_at_utc": "2026-10-10T08:16:28.028+00:00",
+  "supersedes_prior_automatic_restart_authority": true,
+  "automatic_training_or_evaluation_submission_allowed": false,
+  "h200_training_allowed": false,
+  "expires_at": null,
+  "allowed_work": [
+    "Read-only process and resource verification",
+    "CPU-only code and artifact validation",
+    "Local preservation of code, key results, checkpoint inventories and provenance",
+    "Prepare a documented migration and storage handoff"
+  ],
+  "requires_new_explicit_user_authorization_for_compute": true,
+  "do_not_remove_existing_checkpoints_or_failed_attempts": true
+}

@@ -1,0 +1,57 @@
+{
+  "status": "completed",
+  "arm": "full",
+  "rounds": 144,
+  "selection": {
+    "harness": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0144/patches/candidate-proposal01.json",
+    "label": "candidate-proposal01",
+    "new_harness_selected": true,
+    "valid_proposals": 7,
+    "selection_scores": {
+      "no_patch": 0.9166666666666666,
+      "incumbent_harness": 0.9166666666666666,
+      "candidate-proposal00": 0.8958333333333334,
+      "candidate-proposal01": 0.9583333333333334,
+      "candidate-proposal02": 0.8958333333333334,
+      "candidate-proposal03": 0.9166666666666666,
+      "candidate-proposal04": 0.875,
+      "candidate-proposal05": 0.8958333333333334,
+      "candidate-proposal06": 0.9375,
+      "candidate-proposal07": 0.9583333333333334
+    },
+    "selection_matrix": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0144/selection/attempt-02",
+    "pair": {
+      "editor": {
+        "actor": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/attempts/attempt-0001/full/editor/optimizer/engine/checkpoints/chengboliu/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2-full/editor/actor/epoch0epochstep143globalstep143",
+        "critic": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/attempts/attempt-0001/full/editor/optimizer/engine/checkpoints/chengboliu/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2-full/editor/critic/epoch0epochstep143globalstep143"
+      },
+      "solver": {
+        "actor": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/attempts/attempt-0001/full/solver/optimizer/engine/checkpoints/chengboliu/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2-full/solver/actor/epoch0epochstep143globalstep143",
+        "critic": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/attempts/attempt-0001/full/solver/optimizer/engine/checkpoints/chengboliu/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2-full/solver/critic/epoch0epochstep143globalstep143"
+      }
+    },
+    "at_unix": 1791610838.3344116,
+    "main200_used_to_select": false
+  },
+  "scores": {
+    "no_patch": {
+      "successes": 179,
+      "accuracy": 0.895,
+      "questions": 200,
+      "report": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0144/evaluation200/attempt-01/reports/53a56c2f9537da0d78e856bb36436af24573acff4b627a60c758d87618c2d794.json",
+      "sha256": "015c55e2affd6fde4e1cf789ca4583d458de2e1da7bebec096da331c3b797787"
+    },
+    "selected": {
+      "successes": 186,
+      "accuracy": 0.93,
+      "questions": 200,
+      "report": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0144/evaluation200/attempt-01/reports/0c872538137d647b0af3df3e9c2c306cf4392758925e8d44d31fecf867092169.json",
+      "sha256": "60cea4733fabbd36c1c666b0e65a73c91a41202e34c8db353b55f519cffbb048"
+    }
+  },
+  "main_matrix": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0144/evaluation200/attempt-01",
+  "main_started_at_unix": 1791610839.8189309,
+  "physical_main_episodes": 400,
+  "primary_endpoint": true,
+  "at_unix": 1791611743.962913
+}

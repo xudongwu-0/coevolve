@@ -1,0 +1,47 @@
+{
+  "status": "passed",
+  "original_gate": "/mnt/3fs/xudong/coevolve/runs/source-snapshots/alfworld-ma-mechanisms-single-seed-v2/runs/alfworld_ma_mechanisms_single_seed_v1/NATIVE_GATE.json",
+  "original_gate_sha256": "d3a16969d4246b9e824c4f925b27c6e12abd4f0294805367154299e98ef1c2f9",
+  "cases": {
+    "full/h0": {
+      "result": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v1/native-gates/full/h0/result.json",
+      "sha256": "a1333a86e86944504145f02b7474de4922831471e943ec038c0fff3b5ed9f4d0",
+      "audit_sha256": "3ad54d916a0da1f562fc5e59074d789c7bf2b7568761326e824d298ddc0966b2"
+    },
+    "full/w0": {
+      "result": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v1/native-gates/full/w0/result.json",
+      "sha256": "18c1069eb53656c3142c097ea3596017a918f87f43639ff058cd0977ab9305c3",
+      "audit_sha256": "73cb0e3f2d3661c252073f3c2ad1897390256e238934145b9ba7a2a6e8a776e7"
+    },
+    "without_context/h0": {
+      "result": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v1/native-gates-traced/without-context-h0-v2/result.json",
+      "sha256": "a1333a86e86944504145f02b7474de4922831471e943ec038c0fff3b5ed9f4d0",
+      "audit_sha256": "23e684b0dfa51be412d50e1bc95ef90d635bb3775b4de10baa3be315a860068e"
+    },
+    "without_context/w0": {
+      "result": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v1/native-gates-traced/without-context-w0-v2/result.json",
+      "sha256": "18c1069eb53656c3142c097ea3596017a918f87f43639ff058cd0977ab9305c3",
+      "audit_sha256": "bff4c5b1378d282db699679c37be3e75c8a6c9928db09028106f7bf959d546f6"
+    },
+    "without_value_norm/h0": {
+      "result": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v1/native-gates-traced/without-norm-h0/result.json",
+      "sha256": "a1333a86e86944504145f02b7474de4922831471e943ec038c0fff3b5ed9f4d0",
+      "audit_sha256": "b348b748f6f5c5ff2180a27a395163f2e0ed94c5dbe0716c1cc35672190e943b"
+    },
+    "without_value_norm/w0": {
+      "result": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v1/native-gates-traced/without-norm-w0/result.json",
+      "sha256": "18c1069eb53656c3142c097ea3596017a918f87f43639ff058cd0977ab9305c3",
+      "audit_sha256": "eac1a448ae09e39f91297eecf66c0d2bb43b84143ececc13c5e8929e38573dee"
+    }
+  },
+  "unchanged_runtime_modules": [
+    "joint_memory_check.py",
+    "joint_critic.py",
+    "joint_context.py",
+    "terminal_actor.py",
+    "training_acceleration.py",
+    "joint_updates.py"
+  ],
+  "native_cases_reexecuted": 0,
+  "schedule_native_validation_still_required": true
+}

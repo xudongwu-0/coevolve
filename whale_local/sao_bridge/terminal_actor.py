@@ -8,6 +8,7 @@ import torch
 from areal.engine.fsdp_engine import FSDPPPOActor
 from areal.infra.platforms import current_platform
 from areal.utils.data import batched_call
+from .joint_continuation import ContinuationStateMixin
 
 
 def zero_terminal_value(trajectory: dict) -> dict:
@@ -31,7 +32,7 @@ def zero_terminal_value(trajectory: dict) -> dict:
     return {**trajectory, "values": values}
 
 
-class TerminalFSDPPPOActor(FSDPPPOActor):
+class TerminalFSDPPPOActor(ContinuationStateMixin, FSDPPPOActor):
     def clear_batches(self, *args, **kwargs):
         result = super().clear_batches(*args, **kwargs)
         if self.config.optimizer is not None and os.environ.get("MA_SAO_JOINT_EPISODES") == "1":
@@ -58,8 +59,14 @@ class TerminalFSDPPPOActor(FSDPPPOActor):
         if joint_root:
             from .joint_updates import prepare_joint_update
             from areal.utils import stats_tracker
+            weight_mode = os.environ.get("MA_SAO_PEER_WEIGHT_MODE", "bounded")
+            if os.environ.get("MA_SAO_ANCHOR_SCHEDULE") == "1":
+                from .joint_anchor import is_anchor_round
+                if is_anchor_round(self.get_version()):
+                    weight_mode = "unit"
             weights, stats = prepare_joint_update(
                 data, Path(joint_root), os.environ["MA_SAO_JOINT_ROLE"], self.get_version(),
+                weight_mode=weight_mode,
             )
             with stats_tracker.scope("joint_policy"):
                 stats_tracker.scalar(**stats)

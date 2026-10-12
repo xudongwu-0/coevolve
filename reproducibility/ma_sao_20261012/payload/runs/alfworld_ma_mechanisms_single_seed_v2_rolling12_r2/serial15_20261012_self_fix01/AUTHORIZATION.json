@@ -1,0 +1,69 @@
+{
+  "schema": "ma-sao-serial15-resume-v1",
+  "run_root": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2",
+  "authorized_at_unix": 1791780293.248,
+  "user_requested_at_utc": "2026-10-12T04:44:53.248000+00:00",
+  "h200_training_allowed": true,
+  "automatic_submission_allowed": true,
+  "supersedes_prior_pause": true,
+  "poll_interval_seconds": 600,
+  "minimum_idle_seconds": 0,
+  "minimum_samples": 1,
+  "nodes": {
+    "node3": "dev-NDH200-025",
+    "node4": "dev-NDH200-026"
+  },
+  "arms": [
+    "without_peer",
+    "without_context",
+    "without_value_norm",
+    "always_joint"
+  ],
+  "expires_at_unix": null,
+  "superseded_cancellations": {
+    "USER_NO_H200_AND_HANDOFF.json": "45081279da38c640fe37341797919f478b61929d25596f905fa91852a46243e7",
+    "TWO_HOUR_RESUME_CANCELLED.json": "449c9dc1004df506dd4eca44b09cbda5c7d78981ffd4009ffa4561cc54d4e703",
+    "without_peer/commit_recovery01/CANCELLED.json": "67da32349eb4734f900a4e433918fb62b24b48dd1af07c9df2578b3802f3e65b",
+    "idle2h_20261012/CANCELLED.json": "e25bfbc5d436fafe641c2be246f1c924b21b567e46ea2d64d87dd43616971821"
+  },
+  "original_protocol_sha256": "2b4831f0329c713323775c46c9fb55ec1738a86732de7951ef8adeacf2f0c735",
+  "original_deadline_unix": 1791627044.3798063,
+  "gpu_indices": {
+    "node3": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "node4": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ]
+  },
+  "launch_mode": "immediate_serial",
+  "learner_ranks_per_role": 4,
+  "retry_after_interruption": false,
+  "retention_policy": "original_latest_native_and_hf96_hf144",
+  "self_failure_recovery": "diagnose_fix_then_native_resume",
+  "external_kill_recovery": "stop_no_restart",
+  "evaluation_host": "dev-NDH200-025",
+  "evaluation_replicas": 8,
+  "initial_resume_arm": "without_peer",
+  "initial_committed_rounds": 24,
+  "full144_replayed": false,
+  "preserved_foreign_pid_at_authorization": 1138383,
+  "physical_gpu0_on_node4_reserved_for_foreign_work": true,
+  "scope": "Complete the remaining four original144-round arms sequentially and audit96/144 endpoints. No extra seeds, score-based retries, old cancellation removal, uploads, or changes to scientific budgets. External kill stops without restart; diagnosed self-training faults may be fixed before exact native continuation.",
+  "sampling_caveat": "Four-to-three Solver serving replicas may change sampled trajectories. No bitwise rollout equivalence or pure hardware-independent comparison is claimed.",
+  "self_failure_recovery_receipt": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/serial15_20261012_self_fix01/SELF_FAILURE_RECOVERY.json",
+  "self_failure_recovery_receipt_sha256": "7c1ec4c649d91ae5df7a0774b61453883407c67f68ae941968b9cb0be2754850"
+}

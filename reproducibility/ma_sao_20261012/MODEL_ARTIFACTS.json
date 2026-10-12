@@ -1,0 +1,2114 @@
+{
+  "schema": "ma-sao-model-artifacts-v1",
+  "remote_uploaded": false,
+  "hf_repo_id": null,
+  "hf_repo_type": "dataset",
+  "hf_revision": null,
+  "proposed_repo_name": "coevolve",
+  "required_visibility": "private",
+  "wandb_entity": null,
+  "wandb_project": "coevolve",
+  "priority": [
+    "full-144-solver-actor",
+    "full-144-editor-actor",
+    "without_peer-native-0072",
+    "full-native-0144"
+  ],
+  "resume_also_requires_initial_models": true,
+  "checkpoints": [
+    {
+      "id": "full-native-0144",
+      "source": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/recovery/round-0144-attempt-0001",
+      "purpose": "Full native continuation: both Actor/Critic DCP, Adam, RNG, ValueNorm and committed cursor.",
+      "priority": "optional_completed_control_resume",
+      "roles": "editor_and_solver",
+      "rounds": 144,
+      "files": [
+        {
+          "path": "COMMITTED.json",
+          "bytes": 876,
+          "sha256": "ffed7ac7704636aad0fd95ca6608f9fe6e0be438ed8e2752ff2288598ed2c14b",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "OWNER.json",
+          "bytes": 222,
+          "sha256": "ec42aadfc4fc420ea28fc55b6d93c22eefd4f04958cadb1e8117a4a32d14bfc3",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "editor/actor/.metadata",
+          "bytes": 729731,
+          "sha256": "d3830245ce9d335308b8a92fb473382237f629e4b753531d5a51719b2dc8377d",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "editor/actor/__0_0.distcp",
+          "bytes": 9411010296,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "editor/actor/__1_0.distcp",
+          "bytes": 9411010296,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "editor/actor/__2_0.distcp",
+          "bytes": 9411010296,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "editor/actor/__3_0.distcp",
+          "bytes": 9411010296,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "editor/actor/adam-rank0.json",
+          "bytes": 288,
+          "sha256": "69b222f5e5b6d64270522004c3717d6b51bb4bbe794c1b06fe6f4c3b26d6c7ce",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "editor/actor/adam-rank1.json",
+          "bytes": 288,
+          "sha256": "0b2888d8c1fc6a25254de095626a70c2b6d20031b59eaec4993c8daee1b43b81",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "editor/actor/adam-rank2.json",
+          "bytes": 288,
+          "sha256": "7ede808f514bb31c2c232c32bd2a2a5091a6d40548cd2c3dd42b6db53bef17b2",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "editor/actor/adam-rank3.json",
+          "bytes": 288,
+          "sha256": "d47da8ac9d726efb0a4aa0b661a6773c4c2034de13ae6e091bc522c78887b6ec",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "editor/actor/joint_schedule.json",
+          "bytes": 817,
+          "sha256": "e131a9c76da31a0329f8ca2528e0b039bf06e39b869e5fb0f10a8fd4e06705a5",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "editor/actor/optim_world_size_4_rank_0.pt",
+          "bytes": 17908105065,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "editor/actor/optim_world_size_4_rank_1.pt",
+          "bytes": 17908105065,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "editor/actor/optim_world_size_4_rank_2.pt",
+          "bytes": 17908105065,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "editor/actor/optim_world_size_4_rank_3.pt",
+          "bytes": 17908105065,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "editor/actor/training-rank0.pt",
+          "bytes": 14941,
+          "sha256": "f9987e9a2e13bea65cceb50e8fe238fdf3f5646373b2b2942fc35180d0fad807",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "editor/actor/training-rank1.pt",
+          "bytes": 14877,
+          "sha256": "69570d377f22f86bac8bf8c80be7d2cdb9a9bf2b38bd5e601d5c62ad137a1f6e",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "editor/actor/training-rank2.pt",
+          "bytes": 14877,
+          "sha256": "c4ee94972894794fc665d2aa5d6e69904742fc3e93b7dc3ec7ee63ccdfdde1db",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "editor/actor/training-rank3.pt",
+          "bytes": 14941,
+          "sha256": "74798324c8aaadc7f888d5ba3742a6d5c441f0a1963eec555b3905468b7d2e16",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "editor/controller.json",
+          "bytes": 2038,
+          "sha256": "c05e9d547d8227868efdc2185677ef2fdf56e141b0f4b4eed539b07a6c4d92fe",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "editor/critic/.metadata",
+          "bytes": 729387,
+          "sha256": "6744d67521d58457dba0f9e00419d390953ce685764420fd7ecb243aced228db",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "editor/critic/__0_0.distcp",
+          "bytes": 8393907960,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "editor/critic/__1_0.distcp",
+          "bytes": 8393889999,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "editor/critic/__2_0.distcp",
+          "bytes": 8393891512,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "editor/critic/__3_0.distcp",
+          "bytes": 8393889999,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "editor/critic/adam-rank0.json",
+          "bytes": 290,
+          "sha256": "0e4eb4e4cd10e55fa3b2566a399649537f1da52d05fd964b48a482e57d992971",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "editor/critic/adam-rank1.json",
+          "bytes": 290,
+          "sha256": "0086a375f42f179350b83c30d34745f922eaebe1bb5f29ef2eafa5656b82f563",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "editor/critic/adam-rank2.json",
+          "bytes": 290,
+          "sha256": "dc78d9746e06bad322d6c314a018715d6e2c39e4ab6d69e03e805192ba75a609",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "editor/critic/adam-rank3.json",
+          "bytes": 290,
+          "sha256": "6f7455527adde83b07a3c6c42ad66a0c99de8f8dded82d752af33b92c6aba843",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "editor/critic/joint_critic_settings.json",
+          "bytes": 65,
+          "sha256": "27592213c8121eb2aaabb96331e6ed3b5144c763a0b52193a74936fa394cf3f1",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "editor/critic/joint_schedule.json",
+          "bytes": 817,
+          "sha256": "e131a9c76da31a0329f8ca2528e0b039bf06e39b869e5fb0f10a8fd4e06705a5",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "editor/critic/joint_value_norm.json",
+          "bytes": 279,
+          "sha256": "dcdf6567ebf3e02884e2a2e4e0cf46ba7cd2f8beb6be13a455b9df5c06aaa64e",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "editor/critic/optim_world_size_4_rank_0.pt",
+          "bytes": 15873901382,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "editor/critic/optim_world_size_4_rank_1.pt",
+          "bytes": 15873868614,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "editor/critic/optim_world_size_4_rank_2.pt",
+          "bytes": 15873868614,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "editor/critic/optim_world_size_4_rank_3.pt",
+          "bytes": 15873868614,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "editor/critic/training-rank0.pt",
+          "bytes": 14941,
+          "sha256": "5c1206987811107f9e12888dd5b97c5c2b306d14516da5869fc7b039f32db23e",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "editor/critic/training-rank1.pt",
+          "bytes": 14877,
+          "sha256": "2283f76fcb9c86be86d7229b39379f71ae8b592dca49b2e8c7664520c595a7aa",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "editor/critic/training-rank2.pt",
+          "bytes": 14877,
+          "sha256": "fd4c432895e2d441bfaedea298289894988fb4fa7de56b411448ff023b1d8f56",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "editor/critic/training-rank3.pt",
+          "bytes": 14941,
+          "sha256": "f7b76c0c793f11cd6f55f87cc7147b6dbed041003d3d33be69ffb29470d66409",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "editor/metrics.jsonl",
+          "bytes": 1212365,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "editor/spec.json",
+          "bytes": 7291,
+          "sha256": "01e91819080baf3e0a0ddbe2c729a9ff4b0c94213b6efb743885428a1190707f",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "editor.json",
+          "bytes": 5887,
+          "sha256": "684b235ea3d348ef4002d4f6ec8f38db750156922e87abf0afd7418e665beba0",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "solver/actor/.metadata",
+          "bytes": 729731,
+          "sha256": "6eef625cd6e59860a202d7813b09596af0e4022c1a318618bd4263444fc0c64b",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "solver/actor/__0_0.distcp",
+          "bytes": 9411010296,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "solver/actor/__1_0.distcp",
+          "bytes": 9411010296,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "solver/actor/__2_0.distcp",
+          "bytes": 9411010296,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "solver/actor/__3_0.distcp",
+          "bytes": 9411010296,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "solver/actor/adam-rank0.json",
+          "bytes": 290,
+          "sha256": "c7b6a31ab759fb2cc4817aafb4f0f83e77ae56950d88267792063c4928c0864e",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "solver/actor/adam-rank1.json",
+          "bytes": 290,
+          "sha256": "47f798d637474ec9077dee06a6827824da1c800750d8de55d8e3c77f489ee2e4",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "solver/actor/adam-rank2.json",
+          "bytes": 290,
+          "sha256": "fd7fdba2c79c7f45db8a1d4662c3fc6a5526c343771faad66e65b87a4dac3cff",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "solver/actor/adam-rank3.json",
+          "bytes": 290,
+          "sha256": "f3edd8876d38aac3cc8db8d4a96b273078edf52afe94d371ec65df85799b14d7",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "solver/actor/joint_schedule.json",
+          "bytes": 818,
+          "sha256": "41c7d55d65d3da5e68b5f0645edb8d4ab46442034e65ac3fa5da95796f7d06ac",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "solver/actor/optim_world_size_4_rank_0.pt",
+          "bytes": 17908105065,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "solver/actor/optim_world_size_4_rank_1.pt",
+          "bytes": 17908105065,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "solver/actor/optim_world_size_4_rank_2.pt",
+          "bytes": 17908105065,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "solver/actor/optim_world_size_4_rank_3.pt",
+          "bytes": 17908105065,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "solver/actor/training-rank0.pt",
+          "bytes": 14941,
+          "sha256": "14769435d6b91d731af5990c6d0e441b7550224b4084e54086728d6b052e8103",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "solver/actor/training-rank1.pt",
+          "bytes": 14877,
+          "sha256": "510183246b9cbec90fc66cf90b0616d495cf54ed9303b25de3e62550335f3ca0",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "solver/actor/training-rank2.pt",
+          "bytes": 14877,
+          "sha256": "a4b3df7eec47441cfe6be482bd581122c4ecd00d7c7a7e109c332109f230f2c5",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "solver/actor/training-rank3.pt",
+          "bytes": 14941,
+          "sha256": "867b8244b30c7f776bed58b8740de193c3cff724f6827640f542e035301527d3",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "solver/controller.json",
+          "bytes": 2040,
+          "sha256": "f1b0d8a6ea033c5d56f513094af891e8fcb5fbedbd78cfc59bf58995031b3ba4",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "solver/critic/.metadata",
+          "bytes": 729387,
+          "sha256": "d3dd5781c6ddbfe778fcdd100f2e51fc254b6bf164a677c6a1fc207d24f27ee9",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "solver/critic/__0_0.distcp",
+          "bytes": 8393907960,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "solver/critic/__1_0.distcp",
+          "bytes": 8393889999,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "solver/critic/__2_0.distcp",
+          "bytes": 8393891512,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "solver/critic/__3_0.distcp",
+          "bytes": 8393889999,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "solver/critic/adam-rank0.json",
+          "bytes": 290,
+          "sha256": "bfb6e6f7b3a806a783a615575acd92baf3dfc5a1b3f60807f16ed1d5b747d9ff",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "solver/critic/adam-rank1.json",
+          "bytes": 290,
+          "sha256": "607d0b8ed8061af5dff0f4762ca35571b084ee79caf405e5fe2ce986d6684ef6",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "solver/critic/adam-rank2.json",
+          "bytes": 290,
+          "sha256": "d76262043c4dda1d9c0c81cd19cc77138f630b4bf2a3d458ffc7a858cfdac94a",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "solver/critic/adam-rank3.json",
+          "bytes": 290,
+          "sha256": "9bda0f8777f012a8a7a7d0dbe44ba65361c6ad1f4fb4f5855bad4c7249cbefeb",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "solver/critic/joint_critic_settings.json",
+          "bytes": 65,
+          "sha256": "27592213c8121eb2aaabb96331e6ed3b5144c763a0b52193a74936fa394cf3f1",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "solver/critic/joint_schedule.json",
+          "bytes": 818,
+          "sha256": "41c7d55d65d3da5e68b5f0645edb8d4ab46442034e65ac3fa5da95796f7d06ac",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "solver/critic/joint_value_norm.json",
+          "bytes": 279,
+          "sha256": "0eed69f88ab77deb2d4401cab17d4763c12abbcda2bf2c178803a581c3519925",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "solver/critic/optim_world_size_4_rank_0.pt",
+          "bytes": 15873901382,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "solver/critic/optim_world_size_4_rank_1.pt",
+          "bytes": 15873868614,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "solver/critic/optim_world_size_4_rank_2.pt",
+          "bytes": 15873868614,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "solver/critic/optim_world_size_4_rank_3.pt",
+          "bytes": 15873868614,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "solver/critic/training-rank0.pt",
+          "bytes": 14941,
+          "sha256": "e18cb7e8c3c4618eaf3e9db2f1887ce5ed1a62a3b93f210cecdadc80b6b67b90",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "solver/critic/training-rank1.pt",
+          "bytes": 14877,
+          "sha256": "7ec6efcabd55a7ca3a4b95c21cb4e98370b09353ac9b0ce5ef0fcd70600feab7",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "solver/critic/training-rank2.pt",
+          "bytes": 14877,
+          "sha256": "1caa126e3e9cc3e8a551385f54e30221668e208104d7105e6bdff0f169f88b99",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "solver/critic/training-rank3.pt",
+          "bytes": 14941,
+          "sha256": "bb35410e6eea03182d9d96567b93610107be0dfc56959307fb2e76906737a605",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "solver/metrics.jsonl",
+          "bytes": 1648361,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "solver/spec.json",
+          "bytes": 7523,
+          "sha256": "c016fceb33a3098c84e333de73fe5bed3be486270d400e1ec127c09129d4851f",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "solver.json",
+          "bytes": 5887,
+          "sha256": "46fa6a81e91b867efc968e0eb0020dd556568f49174b4f5d8fcc3c8f02909684",
+          "hash_scope": "rehashed_small_file"
+        }
+      ],
+      "bytes": 412701154136,
+      "proposed_remote_prefix": "releases/20261012/checkpoints/full-native-0144"
+    },
+    {
+      "id": "without_peer-native-0072",
+      "source": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/without_peer/recovery/round-0072-attempt-0003",
+      "purpose": "Resume the interrupted without_peer arm at72, not the76 recorded metric rows.",
+      "priority": "resume_without_peer",
+      "roles": "editor_and_solver",
+      "rounds": 24,
+      "files": [
+        {
+          "path": "COMMITTED.json",
+          "bytes": 875,
+          "sha256": "4f56da0f6203ae6711072f0c000f63fc7c1b46ab6ce10c747330d4c5c5967b2a",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "OWNER.json",
+          "bytes": 229,
+          "sha256": "abb60a23c4dd880999e6171025c9c226d910b7d7f9b6ff19466c0abcf42b23c8",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "editor/actor/.metadata",
+          "bytes": 729739,
+          "sha256": "d4426b6c9dd958fabf647cfa1babec8e71c9cea7fefa0414c6b9a6703588f56b",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "editor/actor/__0_0.distcp",
+          "bytes": 9411010296,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "editor/actor/__1_0.distcp",
+          "bytes": 9411010296,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "editor/actor/__2_0.distcp",
+          "bytes": 9411010296,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "editor/actor/__3_0.distcp",
+          "bytes": 9411010296,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "editor/actor/adam-rank0.json",
+          "bytes": 288,
+          "sha256": "610cafb250a7dd544428dccc25c1cccdf6bfda97e9de5270c30f200cb29dfa32",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "editor/actor/adam-rank1.json",
+          "bytes": 288,
+          "sha256": "7823f141c4c2c25a2c21bc47dd9556fba36b805edc26ce6fa0865be581d4a144",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "editor/actor/adam-rank2.json",
+          "bytes": 288,
+          "sha256": "473d9a3646842d1edbfad42ab3508c3442d48ecb02451b53bcb9922f456734e9",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "editor/actor/adam-rank3.json",
+          "bytes": 288,
+          "sha256": "83a07c51cb45567411b4115539b38ff3518fe5a21f87c65c2c6097ef30e13ff2",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "editor/actor/joint_schedule.json",
+          "bytes": 812,
+          "sha256": "a40b65651c90bc478307edb8d14d8361e9659fad5ccc7b5ca23eb462b19538d1",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "editor/actor/optim_world_size_4_rank_0.pt",
+          "bytes": 17908105065,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "editor/actor/optim_world_size_4_rank_1.pt",
+          "bytes": 17908105065,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "editor/actor/optim_world_size_4_rank_2.pt",
+          "bytes": 17908105065,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "editor/actor/optim_world_size_4_rank_3.pt",
+          "bytes": 17908105065,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "editor/actor/training-rank0.pt",
+          "bytes": 14941,
+          "sha256": "a1a184ab4c36b0a0eca56e30a837e82ab35be76460d16d9fd628fdf89769a566",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "editor/actor/training-rank1.pt",
+          "bytes": 14877,
+          "sha256": "18bd872318730cc917d34e90721f76108ad3e319ba3a1dc7189c1e1705cb3e47",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "editor/actor/training-rank2.pt",
+          "bytes": 14877,
+          "sha256": "80ebb9eaa31bdee84bac535d65d3b9d637cb335b3f3a9fac2c859435cbee87a5",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "editor/actor/training-rank3.pt",
+          "bytes": 14941,
+          "sha256": "56bd06038df00e314776781b6b645741e02a3565811961b8028e69708d74b174",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "editor/controller.json",
+          "bytes": 2022,
+          "sha256": "487e365666faec09c8460f83a81d9a7098bddcb7a6de4e46e551f64b7a9af05d",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "editor/critic/.metadata",
+          "bytes": 729395,
+          "sha256": "4bd328c096928e7a26c621c4f99db47857e73045b9ff230338913072b4f4f440",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "editor/critic/__0_0.distcp",
+          "bytes": 8393907960,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "editor/critic/__1_0.distcp",
+          "bytes": 8393889999,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "editor/critic/__2_0.distcp",
+          "bytes": 8393891512,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "editor/critic/__3_0.distcp",
+          "bytes": 8393889999,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "editor/critic/adam-rank0.json",
+          "bytes": 288,
+          "sha256": "a7a4ad2203e154c24de93d3ac4226d93123406bdf8374ae294de97b7434d6e80",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "editor/critic/adam-rank1.json",
+          "bytes": 288,
+          "sha256": "95a986b9f26ddd2d855cca294897de5be9efaab38e2a30c88acbea6b3e7cec6d",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "editor/critic/adam-rank2.json",
+          "bytes": 288,
+          "sha256": "aa116baf91982aa5748f6f48662becba74a6fb93bcec48b5f50ef7f0b0c6ffc0",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "editor/critic/adam-rank3.json",
+          "bytes": 288,
+          "sha256": "2bbe1063b945b200ef7b6a9f3f1179c9c4ca5bfc150175ffdde285df60424eaf",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "editor/critic/joint_critic_settings.json",
+          "bytes": 65,
+          "sha256": "27592213c8121eb2aaabb96331e6ed3b5144c763a0b52193a74936fa394cf3f1",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "editor/critic/joint_schedule.json",
+          "bytes": 812,
+          "sha256": "a40b65651c90bc478307edb8d14d8361e9659fad5ccc7b5ca23eb462b19538d1",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "editor/critic/joint_value_norm.json",
+          "bytes": 279,
+          "sha256": "e0206c218842ee166b3c37fc51b5903ad21d7a6ecf84829195625657c1da257d",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "editor/critic/optim_world_size_4_rank_0.pt",
+          "bytes": 15873901382,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "editor/critic/optim_world_size_4_rank_1.pt",
+          "bytes": 15873868614,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "editor/critic/optim_world_size_4_rank_2.pt",
+          "bytes": 15873868614,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "editor/critic/optim_world_size_4_rank_3.pt",
+          "bytes": 15873868614,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "editor/critic/training-rank0.pt",
+          "bytes": 14941,
+          "sha256": "fa8d5cf685c2822769fe52a15af22fbdb6cee82612333c5bc2cde170873c0540",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "editor/critic/training-rank1.pt",
+          "bytes": 14877,
+          "sha256": "251616c56aec4bbe9f82a4c25c4b2fba685e4cf4173063a99c3a093224b32eb7",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "editor/critic/training-rank2.pt",
+          "bytes": 14877,
+          "sha256": "6f62c977bd6b9ea39521dbd36a636c67c8314bbc78a11637a4c3ba4607e7d9fb",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "editor/critic/training-rank3.pt",
+          "bytes": 14941,
+          "sha256": "da6c1f3980b50bf87fa79a4217453fae334ed56a7e596d19b0d87746a54b0897",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "editor/metrics.jsonl",
+          "bytes": 595000,
+          "sha256": "515d9482296d8e07cedb45b4dcf0ac19951bd014c5b5d0a6c0345625c24bded3",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "editor/spec.json",
+          "bytes": 8026,
+          "sha256": "82438ceca06522bc93cbb6775040b6152e6d26e813e3a1a233aea5ee5d7a9e32",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "editor.json",
+          "bytes": 5447,
+          "sha256": "0f466790dcd53321dad37229a0608b388c11fd094e07ae20e40388e00ab8d21c",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "solver/actor/.metadata",
+          "bytes": 729739,
+          "sha256": "2de3579979042ec3c9df35514cde662838c552989eb73a763d3f13f92b304407",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "solver/actor/__0_0.distcp",
+          "bytes": 9411010296,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "solver/actor/__1_0.distcp",
+          "bytes": 9411010296,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "solver/actor/__2_0.distcp",
+          "bytes": 9411010296,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "solver/actor/__3_0.distcp",
+          "bytes": 9411010296,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "solver/actor/adam-rank0.json",
+          "bytes": 288,
+          "sha256": "d1fed06e11680a00d0339a35c8b3dd9eadda28c15f6a24e7c731c5bdae91cfb6",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "solver/actor/adam-rank1.json",
+          "bytes": 288,
+          "sha256": "c6f5ddec075c7f077f9df89b4c78cd26e8b84aa798d1119cf2e0d8607711d867",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "solver/actor/adam-rank2.json",
+          "bytes": 288,
+          "sha256": "8c289089ecff908803bbcf987d3bf241e31f19745c2647efb936b9ef253a0016",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "solver/actor/adam-rank3.json",
+          "bytes": 288,
+          "sha256": "949f2358280428d2561e4bd818d71bddee7176e8555bf207bbe4b1bba437112c",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "solver/actor/joint_schedule.json",
+          "bytes": 810,
+          "sha256": "67a2e2be8be643cc67a2c1bd48e6be4d1a709ee464ee7419240114783a730b1c",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "solver/actor/optim_world_size_4_rank_0.pt",
+          "bytes": 17908105065,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "solver/actor/optim_world_size_4_rank_1.pt",
+          "bytes": 17908105065,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "solver/actor/optim_world_size_4_rank_2.pt",
+          "bytes": 17908105065,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "solver/actor/optim_world_size_4_rank_3.pt",
+          "bytes": 17908105065,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "solver/actor/training-rank0.pt",
+          "bytes": 14941,
+          "sha256": "676bdc77778a1db04786f5242b0d23e099d13deb1a8dd292cdafb3e803e070a0",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "solver/actor/training-rank1.pt",
+          "bytes": 14877,
+          "sha256": "0ee7682f8ba142bd22065881a5d16ce7487269ac085495a817429792894c3e9b",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "solver/actor/training-rank2.pt",
+          "bytes": 14877,
+          "sha256": "fae5843d2ea0ef5d0d8b5a99b00c4c56650d6801d26858b3cb2e9102270eb62f",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "solver/actor/training-rank3.pt",
+          "bytes": 14941,
+          "sha256": "c41e3b4abbdfc8200085aa26b79a2d15cf7aed98748c0ed7be2a70de74e26b7f",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "solver/controller.json",
+          "bytes": 2023,
+          "sha256": "44cf15553e0d399cb2d9525f0e6052e0b8a8c189b60f7f7832a1856213c27d39",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "solver/critic/.metadata",
+          "bytes": 729395,
+          "sha256": "cd39c29bef2047a5a0535247dea00dce8a7d2d305ecc36d158b87197c66f61ba",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "solver/critic/__0_0.distcp",
+          "bytes": 8393907960,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "solver/critic/__1_0.distcp",
+          "bytes": 8393889999,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "solver/critic/__2_0.distcp",
+          "bytes": 8393891512,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "solver/critic/__3_0.distcp",
+          "bytes": 8393889999,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "solver/critic/adam-rank0.json",
+          "bytes": 290,
+          "sha256": "38a05158da5eba65ca61d33b7f9930e7d739b09df401f8579626916041c4927d",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "solver/critic/adam-rank1.json",
+          "bytes": 290,
+          "sha256": "f44b002273ffd7e2d0a12189bff0cf4eaf658a5e397c6f2a8be40340122a3810",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "solver/critic/adam-rank2.json",
+          "bytes": 290,
+          "sha256": "faedbe1565179632ba809353376c2aa0ff265cb25dea81899d48ae3ef4fe9a2f",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "solver/critic/adam-rank3.json",
+          "bytes": 290,
+          "sha256": "6e727fb60fa840f60f3b8d7625780fc00047095409845e9227df522563654d9d",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "solver/critic/joint_critic_settings.json",
+          "bytes": 65,
+          "sha256": "27592213c8121eb2aaabb96331e6ed3b5144c763a0b52193a74936fa394cf3f1",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "solver/critic/joint_schedule.json",
+          "bytes": 810,
+          "sha256": "67a2e2be8be643cc67a2c1bd48e6be4d1a709ee464ee7419240114783a730b1c",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "solver/critic/joint_value_norm.json",
+          "bytes": 279,
+          "sha256": "ce4e605f73c51b65bd22a3eb0310db73c25c179e4bdab373ecd8dde8623162e1",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "solver/critic/optim_world_size_4_rank_0.pt",
+          "bytes": 15873901382,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "solver/critic/optim_world_size_4_rank_1.pt",
+          "bytes": 15873868614,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "solver/critic/optim_world_size_4_rank_2.pt",
+          "bytes": 15873868614,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "solver/critic/optim_world_size_4_rank_3.pt",
+          "bytes": 15873868614,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "solver/critic/training-rank0.pt",
+          "bytes": 14941,
+          "sha256": "e5e2b3abb58100432951ec5c260b0456501ab90d194149525e5293c5fe4a4920",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "solver/critic/training-rank1.pt",
+          "bytes": 14877,
+          "sha256": "a4b5cb489317e27a681e2d7399ab2e696d4bea45f108078f0dc41bd728b5c584",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "solver/critic/training-rank2.pt",
+          "bytes": 14877,
+          "sha256": "d6d1ad03528c8d6c804dee689e98e2418231bcaa145d32dc739ae6a90300f484",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "solver/critic/training-rank3.pt",
+          "bytes": 14941,
+          "sha256": "fcca0c81a6a9aaa9a599212a89a0cd450d0bf8edb16cf73667975bf99acc73eb",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "solver/metrics.jsonl",
+          "bytes": 802192,
+          "sha256": "db0d167c5292f53552af808eb2068e538cc3387ad0b2a510691a924328982020",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "solver/spec.json",
+          "bytes": 8258,
+          "sha256": "082fe7d08a8c40ffc730594b4c13b1b4cdcd5c5a584dd3e425d2b2952fe11d5a",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "solver.json",
+          "bytes": 5447,
+          "sha256": "105fb4f9ac0af274b396d686be6210059f2031a6187f039639baaf9fee00b5bd",
+          "hash_scope": "rehashed_small_file"
+        }
+      ],
+      "bytes": 412699691155,
+      "proposed_remote_prefix": "releases/20261012/checkpoints/without_peer-native-0072"
+    },
+    {
+      "id": "full-96-editor-actor",
+      "source": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/attempts/attempt-0001/full/editor/optimizer/engine/checkpoints/chengboliu/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2-full/editor/actor/epoch0epochstep95globalstep95",
+      "purpose": "Saved HF evaluation weights; not complete optimizer recovery.",
+      "priority": "evaluation_or_diagnostic",
+      "rounds": 96,
+      "role": "editor",
+      "kind": "actor",
+      "files": [
+        {
+          "path": "chat_template.jinja",
+          "bytes": 7756,
+          "sha256": "a4aee8afcf2e0711942cf848899be66016f8d14a889ff9ede07bca099c28f715",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "config.json",
+          "bytes": 2907,
+          "sha256": "61b28512ab514a5b9910eb79b1a6f534ad9c7a90a74167b22323d933a4d6a028",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "generation_config.json",
+          "bytes": 163,
+          "sha256": "8b56df7a575716b6768e6d28c74763a1f93e06c90b219e5a6b3d3c6aeae8c29b",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "joint_schedule.json",
+          "bytes": 813,
+          "sha256": "0fa35d78022cce17939374ca8cccbef88054f54a6525145ed0157b780a1a1d25",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "model.safetensors",
+          "bytes": 18819722392,
+          "prior_sha256": "0463e4d024426f53683b657694529ef55eb06b690893291436a10761ac5cb13f",
+          "hash_scope": "prior_full_hash_not_recomputed_for_this_release"
+        },
+        {
+          "path": "preprocessor_config.json",
+          "bytes": 482,
+          "sha256": "957eb01d1ea45341a92d543daec95857a7cbeff5803834bc0603b27ba7b41b3f",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "processor_config.json",
+          "bytes": 1296,
+          "sha256": "01562eddd6f9e9ec4bc31656a3b7055284cafbf889acc6c4348dca431ae31f68",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "runtime_supplements.json",
+          "bytes": 628,
+          "sha256": "987cfe07a3ce4ef6a9d13658b14e733200068f4b6c10e4bc9d18e32241f55718",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "tokenizer.json",
+          "bytes": 19989325,
+          "prior_sha256": "06b9509352d2af50381ab2247e083b80d32d5c0aba91c272ca9ff729b6a0e523",
+          "hash_scope": "prior_full_hash_not_recomputed_for_this_release"
+        },
+        {
+          "path": "tokenizer_config.json",
+          "bytes": 1194,
+          "sha256": "1b9c2a5c7ccb91fe9cb0d6f34ff7f8ca64fd2557e106c7f67d7ea8240ec9f3f0",
+          "hash_scope": "rehashed_small_file"
+        }
+      ],
+      "bytes": 18839726956,
+      "proposed_remote_prefix": "releases/20261012/checkpoints/full-96-editor-actor"
+    },
+    {
+      "id": "full-96-editor-critic",
+      "source": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/attempts/attempt-0001/full/editor/optimizer/engine/checkpoints/chengboliu/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2-full/editor/critic/epoch0epochstep95globalstep95",
+      "purpose": "Saved HF evaluation weights; not complete optimizer recovery.",
+      "priority": "evaluation_or_diagnostic",
+      "rounds": 96,
+      "role": "editor",
+      "kind": "critic",
+      "files": [
+        {
+          "path": "chat_template.jinja",
+          "bytes": 7756,
+          "sha256": "a4aee8afcf2e0711942cf848899be66016f8d14a889ff9ede07bca099c28f715",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "config.json",
+          "bytes": 2907,
+          "sha256": "61b28512ab514a5b9910eb79b1a6f534ad9c7a90a74167b22323d933a4d6a028",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "joint_critic_settings.json",
+          "bytes": 65,
+          "sha256": "27592213c8121eb2aaabb96331e6ed3b5144c763a0b52193a74936fa394cf3f1",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "joint_schedule.json",
+          "bytes": 813,
+          "sha256": "0fa35d78022cce17939374ca8cccbef88054f54a6525145ed0157b780a1a1d25",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "joint_value_norm.json",
+          "bytes": 279,
+          "sha256": "e88c22c376ebe374f405bfc3215ca0612c5719c831234d244e22a9fe77bc65f9",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "model.safetensors",
+          "bytes": 16785493008,
+          "prior_sha256": "ab5c90c35ab47828d4dca289d80e55e8490a3f413de582db5860b8509bc14431",
+          "hash_scope": "prior_full_hash_not_recomputed_for_this_release"
+        },
+        {
+          "path": "processor_config.json",
+          "bytes": 1296,
+          "sha256": "01562eddd6f9e9ec4bc31656a3b7055284cafbf889acc6c4348dca431ae31f68",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "tokenizer.json",
+          "bytes": 19989325,
+          "prior_sha256": "06b9509352d2af50381ab2247e083b80d32d5c0aba91c272ca9ff729b6a0e523",
+          "hash_scope": "prior_full_hash_not_recomputed_for_this_release"
+        },
+        {
+          "path": "tokenizer_config.json",
+          "bytes": 1194,
+          "sha256": "1b9c2a5c7ccb91fe9cb0d6f34ff7f8ca64fd2557e106c7f67d7ea8240ec9f3f0",
+          "hash_scope": "rehashed_small_file"
+        }
+      ],
+      "bytes": 16805496643,
+      "proposed_remote_prefix": "releases/20261012/checkpoints/full-96-editor-critic"
+    },
+    {
+      "id": "full-96-solver-actor",
+      "source": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/attempts/attempt-0001/full/solver/optimizer/engine/checkpoints/chengboliu/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2-full/solver/actor/epoch0epochstep95globalstep95",
+      "purpose": "Saved HF evaluation weights; not complete optimizer recovery.",
+      "priority": "evaluation_or_diagnostic",
+      "rounds": 96,
+      "role": "solver",
+      "kind": "actor",
+      "files": [
+        {
+          "path": "chat_template.jinja",
+          "bytes": 7756,
+          "sha256": "a4aee8afcf2e0711942cf848899be66016f8d14a889ff9ede07bca099c28f715",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "config.json",
+          "bytes": 2907,
+          "sha256": "61b28512ab514a5b9910eb79b1a6f534ad9c7a90a74167b22323d933a4d6a028",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "generation_config.json",
+          "bytes": 163,
+          "sha256": "8b56df7a575716b6768e6d28c74763a1f93e06c90b219e5a6b3d3c6aeae8c29b",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "joint_schedule.json",
+          "bytes": 810,
+          "sha256": "c1b818c07ec463d4909eb528b4c763e8347e2b4eb01343ad99743ee9ce8f8085",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "model.safetensors",
+          "bytes": 18819722392,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "preprocessor_config.json",
+          "bytes": 482,
+          "sha256": "957eb01d1ea45341a92d543daec95857a7cbeff5803834bc0603b27ba7b41b3f",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "processor_config.json",
+          "bytes": 1296,
+          "sha256": "01562eddd6f9e9ec4bc31656a3b7055284cafbf889acc6c4348dca431ae31f68",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "runtime_supplements.json",
+          "bytes": 748,
+          "sha256": "e87ab7954927b0123150155c6cb96793c6ca4ff3481d4507cb42cd0c3a271a40",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "tokenizer.json",
+          "bytes": 19989325,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "tokenizer_config.json",
+          "bytes": 1191,
+          "sha256": "1ec445f87ae14b966ca02c851bfc81a05979f05533ce5441be27915d49bb9cd9",
+          "hash_scope": "rehashed_small_file"
+        }
+      ],
+      "bytes": 18839727070,
+      "proposed_remote_prefix": "releases/20261012/checkpoints/full-96-solver-actor"
+    },
+    {
+      "id": "full-96-solver-critic",
+      "source": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/attempts/attempt-0001/full/solver/optimizer/engine/checkpoints/chengboliu/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2-full/solver/critic/epoch0epochstep95globalstep95",
+      "purpose": "Saved HF evaluation weights; not complete optimizer recovery.",
+      "priority": "evaluation_or_diagnostic",
+      "rounds": 96,
+      "role": "solver",
+      "kind": "critic",
+      "files": [
+        {
+          "path": "chat_template.jinja",
+          "bytes": 7756,
+          "sha256": "a4aee8afcf2e0711942cf848899be66016f8d14a889ff9ede07bca099c28f715",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "config.json",
+          "bytes": 2907,
+          "sha256": "61b28512ab514a5b9910eb79b1a6f534ad9c7a90a74167b22323d933a4d6a028",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "joint_critic_settings.json",
+          "bytes": 65,
+          "sha256": "27592213c8121eb2aaabb96331e6ed3b5144c763a0b52193a74936fa394cf3f1",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "joint_schedule.json",
+          "bytes": 810,
+          "sha256": "c1b818c07ec463d4909eb528b4c763e8347e2b4eb01343ad99743ee9ce8f8085",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "joint_value_norm.json",
+          "bytes": 278,
+          "sha256": "f31ad5022b063c45c4d462d495e3dd06960e3d91facdf7457abda1103d052086",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "model.safetensors",
+          "bytes": 16785493008,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "processor_config.json",
+          "bytes": 1296,
+          "sha256": "01562eddd6f9e9ec4bc31656a3b7055284cafbf889acc6c4348dca431ae31f68",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "tokenizer.json",
+          "bytes": 19989325,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "tokenizer_config.json",
+          "bytes": 1191,
+          "sha256": "1ec445f87ae14b966ca02c851bfc81a05979f05533ce5441be27915d49bb9cd9",
+          "hash_scope": "rehashed_small_file"
+        }
+      ],
+      "bytes": 16805496636,
+      "proposed_remote_prefix": "releases/20261012/checkpoints/full-96-solver-critic"
+    },
+    {
+      "id": "full-144-editor-actor",
+      "source": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/attempts/attempt-0001/full/editor/optimizer/engine/checkpoints/chengboliu/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2-full/editor/actor/epoch0epochstep143globalstep143",
+      "purpose": "Saved HF evaluation weights; not complete optimizer recovery.",
+      "priority": "evaluation_or_diagnostic",
+      "rounds": 144,
+      "role": "editor",
+      "kind": "actor",
+      "files": [
+        {
+          "path": "chat_template.jinja",
+          "bytes": 7756,
+          "sha256": "a4aee8afcf2e0711942cf848899be66016f8d14a889ff9ede07bca099c28f715",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "config.json",
+          "bytes": 2907,
+          "sha256": "61b28512ab514a5b9910eb79b1a6f534ad9c7a90a74167b22323d933a4d6a028",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "generation_config.json",
+          "bytes": 163,
+          "sha256": "8b56df7a575716b6768e6d28c74763a1f93e06c90b219e5a6b3d3c6aeae8c29b",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "joint_schedule.json",
+          "bytes": 817,
+          "sha256": "e131a9c76da31a0329f8ca2528e0b039bf06e39b869e5fb0f10a8fd4e06705a5",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "model.safetensors",
+          "bytes": 18819722392,
+          "prior_sha256": "8ddbe69fa5dc032ffa314ca2647ac9715f8e5bdd053baaf1b629c8b903165009",
+          "hash_scope": "prior_full_hash_not_recomputed_for_this_release"
+        },
+        {
+          "path": "preprocessor_config.json",
+          "bytes": 482,
+          "sha256": "957eb01d1ea45341a92d543daec95857a7cbeff5803834bc0603b27ba7b41b3f",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "processor_config.json",
+          "bytes": 1296,
+          "sha256": "01562eddd6f9e9ec4bc31656a3b7055284cafbf889acc6c4348dca431ae31f68",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "runtime_supplements.json",
+          "bytes": 637,
+          "sha256": "096afad140e0f1c3050e30b3919fa235d837a15a4d95684274dfae97ea1386f5",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "tokenizer.json",
+          "bytes": 19989325,
+          "prior_sha256": "06b9509352d2af50381ab2247e083b80d32d5c0aba91c272ca9ff729b6a0e523",
+          "hash_scope": "prior_full_hash_not_recomputed_for_this_release"
+        },
+        {
+          "path": "tokenizer_config.json",
+          "bytes": 1194,
+          "sha256": "1b9c2a5c7ccb91fe9cb0d6f34ff7f8ca64fd2557e106c7f67d7ea8240ec9f3f0",
+          "hash_scope": "rehashed_small_file"
+        }
+      ],
+      "bytes": 18839726969,
+      "proposed_remote_prefix": "releases/20261012/checkpoints/full-144-editor-actor"
+    },
+    {
+      "id": "full-144-editor-critic",
+      "source": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/attempts/attempt-0001/full/editor/optimizer/engine/checkpoints/chengboliu/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2-full/editor/critic/epoch0epochstep143globalstep143",
+      "purpose": "Saved HF evaluation weights; not complete optimizer recovery.",
+      "priority": "evaluation_or_diagnostic",
+      "rounds": 144,
+      "role": "editor",
+      "kind": "critic",
+      "files": [
+        {
+          "path": "chat_template.jinja",
+          "bytes": 7756,
+          "sha256": "a4aee8afcf2e0711942cf848899be66016f8d14a889ff9ede07bca099c28f715",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "config.json",
+          "bytes": 2907,
+          "sha256": "61b28512ab514a5b9910eb79b1a6f534ad9c7a90a74167b22323d933a4d6a028",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "joint_critic_settings.json",
+          "bytes": 65,
+          "sha256": "27592213c8121eb2aaabb96331e6ed3b5144c763a0b52193a74936fa394cf3f1",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "joint_schedule.json",
+          "bytes": 817,
+          "sha256": "e131a9c76da31a0329f8ca2528e0b039bf06e39b869e5fb0f10a8fd4e06705a5",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "joint_value_norm.json",
+          "bytes": 279,
+          "sha256": "dcdf6567ebf3e02884e2a2e4e0cf46ba7cd2f8beb6be13a455b9df5c06aaa64e",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "model.safetensors",
+          "bytes": 16785493008,
+          "prior_sha256": "413a2a14c0fc07f55e588f9fefd451019b9d8f4418deed4bf6e9a959db06408b",
+          "hash_scope": "prior_full_hash_not_recomputed_for_this_release"
+        },
+        {
+          "path": "processor_config.json",
+          "bytes": 1296,
+          "sha256": "01562eddd6f9e9ec4bc31656a3b7055284cafbf889acc6c4348dca431ae31f68",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "tokenizer.json",
+          "bytes": 19989325,
+          "prior_sha256": "06b9509352d2af50381ab2247e083b80d32d5c0aba91c272ca9ff729b6a0e523",
+          "hash_scope": "prior_full_hash_not_recomputed_for_this_release"
+        },
+        {
+          "path": "tokenizer_config.json",
+          "bytes": 1194,
+          "sha256": "1b9c2a5c7ccb91fe9cb0d6f34ff7f8ca64fd2557e106c7f67d7ea8240ec9f3f0",
+          "hash_scope": "rehashed_small_file"
+        }
+      ],
+      "bytes": 16805496647,
+      "proposed_remote_prefix": "releases/20261012/checkpoints/full-144-editor-critic"
+    },
+    {
+      "id": "full-144-solver-actor",
+      "source": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/attempts/attempt-0001/full/solver/optimizer/engine/checkpoints/chengboliu/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2-full/solver/actor/epoch0epochstep143globalstep143",
+      "purpose": "Saved HF evaluation weights; not complete optimizer recovery.",
+      "priority": "minimal_93pct_inference",
+      "rounds": 144,
+      "role": "solver",
+      "kind": "actor",
+      "files": [
+        {
+          "path": "chat_template.jinja",
+          "bytes": 7756,
+          "sha256": "a4aee8afcf2e0711942cf848899be66016f8d14a889ff9ede07bca099c28f715",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "config.json",
+          "bytes": 2907,
+          "sha256": "61b28512ab514a5b9910eb79b1a6f534ad9c7a90a74167b22323d933a4d6a028",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "generation_config.json",
+          "bytes": 163,
+          "sha256": "8b56df7a575716b6768e6d28c74763a1f93e06c90b219e5a6b3d3c6aeae8c29b",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "joint_schedule.json",
+          "bytes": 818,
+          "sha256": "41c7d55d65d3da5e68b5f0645edb8d4ab46442034e65ac3fa5da95796f7d06ac",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "model.safetensors",
+          "bytes": 18819722392,
+          "prior_sha256": "501fed2be8087a3d9e3361c574121378810429c732ebefeb4e974f9695f85922",
+          "hash_scope": "prior_full_hash_not_recomputed_for_this_release"
+        },
+        {
+          "path": "preprocessor_config.json",
+          "bytes": 482,
+          "sha256": "957eb01d1ea45341a92d543daec95857a7cbeff5803834bc0603b27ba7b41b3f",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "processor_config.json",
+          "bytes": 1296,
+          "sha256": "01562eddd6f9e9ec4bc31656a3b7055284cafbf889acc6c4348dca431ae31f68",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "runtime_supplements.json",
+          "bytes": 757,
+          "sha256": "a33315b0792fe92faf36c1838b9923e6a59e463d741c3d7f1eb749a21cfa9137",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "tokenizer.json",
+          "bytes": 19989325,
+          "prior_sha256": "06b9509352d2af50381ab2247e083b80d32d5c0aba91c272ca9ff729b6a0e523",
+          "hash_scope": "prior_full_hash_not_recomputed_for_this_release"
+        },
+        {
+          "path": "tokenizer_config.json",
+          "bytes": 1191,
+          "sha256": "1ec445f87ae14b966ca02c851bfc81a05979f05533ce5441be27915d49bb9cd9",
+          "hash_scope": "rehashed_small_file"
+        }
+      ],
+      "bytes": 18839727087,
+      "proposed_remote_prefix": "releases/20261012/checkpoints/full-144-solver-actor"
+    },
+    {
+      "id": "full-144-solver-critic",
+      "source": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/attempts/attempt-0001/full/solver/optimizer/engine/checkpoints/chengboliu/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2-full/solver/critic/epoch0epochstep143globalstep143",
+      "purpose": "Saved HF evaluation weights; not complete optimizer recovery.",
+      "priority": "evaluation_or_diagnostic",
+      "rounds": 144,
+      "role": "solver",
+      "kind": "critic",
+      "files": [
+        {
+          "path": "chat_template.jinja",
+          "bytes": 7756,
+          "sha256": "a4aee8afcf2e0711942cf848899be66016f8d14a889ff9ede07bca099c28f715",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "config.json",
+          "bytes": 2907,
+          "sha256": "61b28512ab514a5b9910eb79b1a6f534ad9c7a90a74167b22323d933a4d6a028",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "joint_critic_settings.json",
+          "bytes": 65,
+          "sha256": "27592213c8121eb2aaabb96331e6ed3b5144c763a0b52193a74936fa394cf3f1",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "joint_schedule.json",
+          "bytes": 818,
+          "sha256": "41c7d55d65d3da5e68b5f0645edb8d4ab46442034e65ac3fa5da95796f7d06ac",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "joint_value_norm.json",
+          "bytes": 279,
+          "sha256": "0eed69f88ab77deb2d4401cab17d4763c12abbcda2bf2c178803a581c3519925",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "model.safetensors",
+          "bytes": 16785493008,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "processor_config.json",
+          "bytes": 1296,
+          "sha256": "01562eddd6f9e9ec4bc31656a3b7055284cafbf889acc6c4348dca431ae31f68",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "tokenizer.json",
+          "bytes": 19989325,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "tokenizer_config.json",
+          "bytes": 1191,
+          "sha256": "1ec445f87ae14b966ca02c851bfc81a05979f05533ce5441be27915d49bb9cd9",
+          "hash_scope": "rehashed_small_file"
+        }
+      ],
+      "bytes": 16805496645,
+      "proposed_remote_prefix": "releases/20261012/checkpoints/full-144-solver-critic"
+    },
+    {
+      "id": "initial-engineer",
+      "source": "/mnt/3fs/xudong/coevolve/assets/Harness-R1/harness-r1",
+      "purpose": "Common initializer or original evidence-model weights; retain for reproduction.",
+      "priority": "original_inputs",
+      "files": [
+        {
+          "path": "chat_template.jinja",
+          "bytes": 7756,
+          "sha256": "a4aee8afcf2e0711942cf848899be66016f8d14a889ff9ede07bca099c28f715",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "config.json",
+          "bytes": 2900,
+          "sha256": "3fc65c38df56fa76051c21fd134586c6ea852553e97cdac4be6ba6d9af80e154",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "generation_config.json",
+          "bytes": 163,
+          "sha256": "3eed7757d418f2155aaef7b53fc66b53908e785f1a2d545a099d5f5227437236",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "model.safetensors",
+          "bytes": 18819722360,
+          "prior_sha256": "7d16d5ad5734af16b1fd0619caeb04270a024df86ca6e6c6e9bdb60e45f39af7",
+          "hash_scope": "prior_full_hash_not_recomputed_for_this_release"
+        },
+        {
+          "path": "preprocessor_config.json",
+          "bytes": 482,
+          "sha256": "957eb01d1ea45341a92d543daec95857a7cbeff5803834bc0603b27ba7b41b3f",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "processor_config.json",
+          "bytes": 1300,
+          "sha256": "14932921ca485d458a04dafd8069fbb0a4505622a48208d19ed247115801385b",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "provenance.json",
+          "bytes": 3774,
+          "sha256": "0075982586746eb593f8f62f4f5e9e49f9ccdd1e8127d1148a2965298e7f2c64",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "tokenizer.json",
+          "bytes": 19989325,
+          "prior_sha256": "06b9509352d2af50381ab2247e083b80d32d5c0aba91c272ca9ff729b6a0e523",
+          "hash_scope": "prior_full_hash_not_recomputed_for_this_release"
+        },
+        {
+          "path": "tokenizer_config.json",
+          "bytes": 1195,
+          "sha256": "d31e4f848da45ecf70ec28e51f680f96222e74217570d6a74d3c823a6f669f37",
+          "hash_scope": "rehashed_small_file"
+        }
+      ],
+      "bytes": 18839729255,
+      "proposed_remote_prefix": "releases/20261012/checkpoints/initial-engineer"
+    },
+    {
+      "id": "initial-solver",
+      "source": "/mnt/3fs/xudong/coevolve/runs/alfworld_solver_fast_v4_s42/training/optimizer/engine/checkpoints/chengboliu/alfworld_solver_fast_v4_s42/w1/actor/epoch0epochstep79globalstep79",
+      "purpose": "Common initializer or original evidence-model weights; retain for reproduction.",
+      "priority": "original_inputs",
+      "files": [
+        {
+          "path": "chat_template.jinja",
+          "bytes": 7756,
+          "sha256": "a4aee8afcf2e0711942cf848899be66016f8d14a889ff9ede07bca099c28f715",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "config.json",
+          "bytes": 2907,
+          "sha256": "61b28512ab514a5b9910eb79b1a6f534ad9c7a90a74167b22323d933a4d6a028",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "generation_config.json",
+          "bytes": 163,
+          "sha256": "8b56df7a575716b6768e6d28c74763a1f93e06c90b219e5a6b3d3c6aeae8c29b",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "model.safetensors",
+          "bytes": 18819722392,
+          "prior_sha256": "bf209698f2fb3f321b115f8b900714f244a4ca82ddf9bd65fe66b71fae869ae9",
+          "hash_scope": "prior_full_hash_not_recomputed_for_this_release"
+        },
+        {
+          "path": "preprocessor_config.json",
+          "bytes": 482,
+          "sha256": "957eb01d1ea45341a92d543daec95857a7cbeff5803834bc0603b27ba7b41b3f",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "processor_config.json",
+          "bytes": 1296,
+          "sha256": "01562eddd6f9e9ec4bc31656a3b7055284cafbf889acc6c4348dca431ae31f68",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "runtime_supplements.json",
+          "bytes": 643,
+          "sha256": "b71c84fd1d7d3044c3e18f136965459ed56b8e2e9d3d350d8d618aea108aea51",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "tokenizer.json",
+          "bytes": 19989325,
+          "prior_sha256": "06b9509352d2af50381ab2247e083b80d32d5c0aba91c272ca9ff729b6a0e523",
+          "hash_scope": "prior_full_hash_not_recomputed_for_this_release"
+        },
+        {
+          "path": "tokenizer_config.json",
+          "bytes": 1191,
+          "sha256": "1ec445f87ae14b966ca02c851bfc81a05979f05533ce5441be27915d49bb9cd9",
+          "hash_scope": "rehashed_small_file"
+        }
+      ],
+      "bytes": 18839726155,
+      "proposed_remote_prefix": "releases/20261012/checkpoints/initial-solver"
+    },
+    {
+      "id": "initial-engineer_critic",
+      "source": "/mnt/3fs/xudong/coevolve/runs/alfworld_engineer_fast_v1_s42/training/optimizer/engine/checkpoints/chengboliu/alfworld_engineer_fast_v1_s42/h_fast/critic/epoch0epochstep15globalstep15",
+      "purpose": "Common initializer or original evidence-model weights; retain for reproduction.",
+      "priority": "original_inputs",
+      "files": [
+        {
+          "path": "chat_template.jinja",
+          "bytes": 7756,
+          "sha256": "a4aee8afcf2e0711942cf848899be66016f8d14a889ff9ede07bca099c28f715",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "config.json",
+          "bytes": 2907,
+          "sha256": "61b28512ab514a5b9910eb79b1a6f534ad9c7a90a74167b22323d933a4d6a028",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "model.safetensors",
+          "bytes": 16785493008,
+          "prior_sha256": "ff9b6d4806de4e2219dcd650d1b963b8f79b8b6621b93dea4c740b396a1b2f8b",
+          "hash_scope": "prior_full_hash_not_recomputed_for_this_release"
+        },
+        {
+          "path": "processor_config.json",
+          "bytes": 1296,
+          "sha256": "01562eddd6f9e9ec4bc31656a3b7055284cafbf889acc6c4348dca431ae31f68",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "tokenizer.json",
+          "bytes": 19989325,
+          "prior_sha256": "06b9509352d2af50381ab2247e083b80d32d5c0aba91c272ca9ff729b6a0e523",
+          "hash_scope": "prior_full_hash_not_recomputed_for_this_release"
+        },
+        {
+          "path": "tokenizer_config.json",
+          "bytes": 1194,
+          "sha256": "1b9c2a5c7ccb91fe9cb0d6f34ff7f8ca64fd2557e106c7f67d7ea8240ec9f3f0",
+          "hash_scope": "rehashed_small_file"
+        }
+      ],
+      "bytes": 16805495486,
+      "proposed_remote_prefix": "releases/20261012/checkpoints/initial-engineer_critic"
+    },
+    {
+      "id": "initial-solver_critic",
+      "source": "/mnt/3fs/xudong/coevolve/runs/alfworld_solver_fast_v4_s42/training/optimizer/engine/checkpoints/chengboliu/alfworld_solver_fast_v4_s42/w1/critic/epoch0epochstep79globalstep79",
+      "purpose": "Common initializer or original evidence-model weights; retain for reproduction.",
+      "priority": "original_inputs",
+      "files": [
+        {
+          "path": "chat_template.jinja",
+          "bytes": 7756,
+          "sha256": "a4aee8afcf2e0711942cf848899be66016f8d14a889ff9ede07bca099c28f715",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "config.json",
+          "bytes": 2907,
+          "sha256": "61b28512ab514a5b9910eb79b1a6f534ad9c7a90a74167b22323d933a4d6a028",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "model.safetensors",
+          "bytes": 16785493008,
+          "prior_sha256": "169072a70ceffc9a87abb23549d6b6f316f4a73a3d3fbc31c457dff24166f203",
+          "hash_scope": "prior_full_hash_not_recomputed_for_this_release"
+        },
+        {
+          "path": "processor_config.json",
+          "bytes": 1296,
+          "sha256": "01562eddd6f9e9ec4bc31656a3b7055284cafbf889acc6c4348dca431ae31f68",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "tokenizer.json",
+          "bytes": 19989325,
+          "prior_sha256": "06b9509352d2af50381ab2247e083b80d32d5c0aba91c272ca9ff729b6a0e523",
+          "hash_scope": "prior_full_hash_not_recomputed_for_this_release"
+        },
+        {
+          "path": "tokenizer_config.json",
+          "bytes": 1191,
+          "sha256": "1ec445f87ae14b966ca02c851bfc81a05979f05533ce5441be27915d49bb9cd9",
+          "hash_scope": "rehashed_small_file"
+        }
+      ],
+      "bytes": 16805495483,
+      "proposed_remote_prefix": "releases/20261012/checkpoints/initial-solver_critic"
+    },
+    {
+      "id": "initial-historical_packet_solver",
+      "source": "/mnt/3fs/xudong/coevolve/assets/Harness-R1/target-agent-sft",
+      "purpose": "Common initializer or original evidence-model weights; retain for reproduction.",
+      "priority": "original_inputs",
+      "files": [
+        {
+          "path": "README.md",
+          "bytes": 1384,
+          "sha256": "b2db38f3a631938379bbde9e090cd54c56987461dd083beb135822fa54d3c8d1",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "chat_template.jinja",
+          "bytes": 7756,
+          "sha256": "a4aee8afcf2e0711942cf848899be66016f8d14a889ff9ede07bca099c28f715",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "config.json",
+          "bytes": 2929,
+          "sha256": "16eb90702454092ae1868aa213bc6f12080321ac3cb0aadaa4eae8bc2986792b",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "generation_config.json",
+          "bytes": 163,
+          "sha256": "792e5ff066684acf7946dc283b3683d684b7a149babf655b87fd6be7ec2b9a03",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "model.safetensors",
+          "bytes": 18819722392,
+          "prior_sha256": "9f52da7a3e4166e3af6b6ba8c0722a8abb396a7ac876e1cb4f83d2453c7bc2fb",
+          "hash_scope": "prior_full_hash_not_recomputed_for_this_release"
+        },
+        {
+          "path": "preprocessor_config.json",
+          "bytes": 482,
+          "sha256": "957eb01d1ea45341a92d543daec95857a7cbeff5803834bc0603b27ba7b41b3f",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "processor_config.json",
+          "bytes": 1300,
+          "sha256": "14932921ca485d458a04dafd8069fbb0a4505622a48208d19ed247115801385b",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "provenance.json",
+          "bytes": 3362,
+          "sha256": "5158061cac580f575dd3072f51bd6979a349883e2f5b7d524fbe727a89f58b41",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "runtime_supplements.json",
+          "bytes": 736,
+          "sha256": "96c55cbeaf8ec8d595090fe155c3467b1e674f7ac1d7f2a020c1de62749df678",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "tokenizer.json",
+          "bytes": 19989325,
+          "prior_sha256": "06b9509352d2af50381ab2247e083b80d32d5c0aba91c272ca9ff729b6a0e523",
+          "hash_scope": "prior_full_hash_not_recomputed_for_this_release"
+        },
+        {
+          "path": "tokenizer_config.json",
+          "bytes": 1151,
+          "sha256": "6afb788a36dfea1f5e6664cc9867ac6c39eb26b18ea338717825cf28ef444290",
+          "hash_scope": "rehashed_small_file"
+        }
+      ],
+      "bytes": 18839730980,
+      "proposed_remote_prefix": "releases/20261012/checkpoints/initial-historical_packet_solver"
+    },
+    {
+      "id": "historical97-editor-actor",
+      "source": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_convergence_v1r4/block-01/editor/optimizer/engine/checkpoints/chengboliu/alfworld_ma_convergence_v1_b01/editor/actor/epoch0epochstep95globalstep95",
+      "purpose": "Historical97 reference, not the new fixed-endpoint initialization.",
+      "priority": "historical_reference",
+      "files": [
+        {
+          "path": "chat_template.jinja",
+          "bytes": 7756,
+          "sha256": "a4aee8afcf2e0711942cf848899be66016f8d14a889ff9ede07bca099c28f715",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "config.json",
+          "bytes": 2907,
+          "sha256": "61b28512ab514a5b9910eb79b1a6f534ad9c7a90a74167b22323d933a4d6a028",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "generation_config.json",
+          "bytes": 163,
+          "sha256": "8b56df7a575716b6768e6d28c74763a1f93e06c90b219e5a6b3d3c6aeae8c29b",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "joint_schedule.json",
+          "bytes": 812,
+          "sha256": "5fc337cb5c52a3ac49cd5b6e00588b1fb51550ee0bab15ac45cddbec8911f56d",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "model.safetensors",
+          "bytes": 18819722392,
+          "prior_sha256": "259d9288e3297b66a44b31baf87fff30d5b57c78f6e1ff78de8a2abfce09dc66",
+          "hash_scope": "prior_full_hash_not_recomputed_for_this_release"
+        },
+        {
+          "path": "preprocessor_config.json",
+          "bytes": 482,
+          "sha256": "957eb01d1ea45341a92d543daec95857a7cbeff5803834bc0603b27ba7b41b3f",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "processor_config.json",
+          "bytes": 1296,
+          "sha256": "01562eddd6f9e9ec4bc31656a3b7055284cafbf889acc6c4348dca431ae31f68",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "runtime_supplements.json",
+          "bytes": 774,
+          "sha256": "6a60dc6382ae76f6a211862483176f17d0428b260be17d2278beb3fe0a2bdf89",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "tokenizer.json",
+          "bytes": 19989325,
+          "prior_sha256": "06b9509352d2af50381ab2247e083b80d32d5c0aba91c272ca9ff729b6a0e523",
+          "hash_scope": "prior_full_hash_not_recomputed_for_this_release"
+        },
+        {
+          "path": "tokenizer_config.json",
+          "bytes": 1194,
+          "sha256": "1b9c2a5c7ccb91fe9cb0d6f34ff7f8ca64fd2557e106c7f67d7ea8240ec9f3f0",
+          "hash_scope": "rehashed_small_file"
+        }
+      ],
+      "bytes": 18839727101,
+      "proposed_remote_prefix": "releases/20261012/checkpoints/historical97-editor-actor"
+    },
+    {
+      "id": "historical97-editor-critic",
+      "source": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_convergence_v1r4/block-01/editor/optimizer/engine/checkpoints/chengboliu/alfworld_ma_convergence_v1_b01/editor/critic/epoch0epochstep95globalstep95",
+      "purpose": "Historical97 reference, not the new fixed-endpoint initialization.",
+      "priority": "historical_reference",
+      "files": [
+        {
+          "path": "chat_template.jinja",
+          "bytes": 7756,
+          "sha256": "a4aee8afcf2e0711942cf848899be66016f8d14a889ff9ede07bca099c28f715",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "config.json",
+          "bytes": 2907,
+          "sha256": "61b28512ab514a5b9910eb79b1a6f534ad9c7a90a74167b22323d933a4d6a028",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "joint_schedule.json",
+          "bytes": 812,
+          "sha256": "5fc337cb5c52a3ac49cd5b6e00588b1fb51550ee0bab15ac45cddbec8911f56d",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "joint_value_norm.json",
+          "bytes": 277,
+          "sha256": "0fabc3081d267b68d3955f0f3361ea092128d8f521f43ef059f36df120887d15",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "model.safetensors",
+          "bytes": 16785493008,
+          "prior_sha256": "3b68c79216f7992269b64c71bc4805ee20339e6bbcbd7677050b93c51d3d75bf",
+          "hash_scope": "prior_full_hash_not_recomputed_for_this_release"
+        },
+        {
+          "path": "processor_config.json",
+          "bytes": 1296,
+          "sha256": "01562eddd6f9e9ec4bc31656a3b7055284cafbf889acc6c4348dca431ae31f68",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "tokenizer.json",
+          "bytes": 19989325,
+          "prior_sha256": "06b9509352d2af50381ab2247e083b80d32d5c0aba91c272ca9ff729b6a0e523",
+          "hash_scope": "prior_full_hash_not_recomputed_for_this_release"
+        },
+        {
+          "path": "tokenizer_config.json",
+          "bytes": 1194,
+          "sha256": "1b9c2a5c7ccb91fe9cb0d6f34ff7f8ca64fd2557e106c7f67d7ea8240ec9f3f0",
+          "hash_scope": "rehashed_small_file"
+        }
+      ],
+      "bytes": 16805496575,
+      "proposed_remote_prefix": "releases/20261012/checkpoints/historical97-editor-critic"
+    },
+    {
+      "id": "historical97-solver-actor",
+      "source": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_convergence_v1r4/block-01/solver/optimizer/engine/checkpoints/chengboliu/alfworld_ma_convergence_v1_b01/solver/actor/epoch0epochstep95globalstep95",
+      "purpose": "Historical97 reference, not the new fixed-endpoint initialization.",
+      "priority": "historical_reference",
+      "files": [
+        {
+          "path": "chat_template.jinja",
+          "bytes": 7756,
+          "sha256": "a4aee8afcf2e0711942cf848899be66016f8d14a889ff9ede07bca099c28f715",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "config.json",
+          "bytes": 2907,
+          "sha256": "61b28512ab514a5b9910eb79b1a6f534ad9c7a90a74167b22323d933a4d6a028",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "generation_config.json",
+          "bytes": 163,
+          "sha256": "8b56df7a575716b6768e6d28c74763a1f93e06c90b219e5a6b3d3c6aeae8c29b",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "joint_schedule.json",
+          "bytes": 809,
+          "sha256": "da404de32db5c9a930a370c8b939907da9b03e515428562c460a589d97d8fb0f",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "model.safetensors",
+          "bytes": 18819722392,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "preprocessor_config.json",
+          "bytes": 482,
+          "sha256": "957eb01d1ea45341a92d543daec95857a7cbeff5803834bc0603b27ba7b41b3f",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "processor_config.json",
+          "bytes": 1296,
+          "sha256": "01562eddd6f9e9ec4bc31656a3b7055284cafbf889acc6c4348dca431ae31f68",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "runtime_supplements.json",
+          "bytes": 774,
+          "sha256": "b21b3f68df7553b1b3868587a63d6e73a91d8ef72937ec968b2ffba33e16f24a",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "tokenizer.json",
+          "bytes": 19989325,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "tokenizer_config.json",
+          "bytes": 1191,
+          "sha256": "1ec445f87ae14b966ca02c851bfc81a05979f05533ce5441be27915d49bb9cd9",
+          "hash_scope": "rehashed_small_file"
+        }
+      ],
+      "bytes": 18839727095,
+      "proposed_remote_prefix": "releases/20261012/checkpoints/historical97-solver-actor"
+    },
+    {
+      "id": "historical97-solver-critic",
+      "source": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_convergence_v1r4/block-01/solver/optimizer/engine/checkpoints/chengboliu/alfworld_ma_convergence_v1_b01/solver/critic/epoch0epochstep95globalstep95",
+      "purpose": "Historical97 reference, not the new fixed-endpoint initialization.",
+      "priority": "historical_reference",
+      "files": [
+        {
+          "path": "chat_template.jinja",
+          "bytes": 7756,
+          "sha256": "a4aee8afcf2e0711942cf848899be66016f8d14a889ff9ede07bca099c28f715",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "config.json",
+          "bytes": 2907,
+          "sha256": "61b28512ab514a5b9910eb79b1a6f534ad9c7a90a74167b22323d933a4d6a028",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "joint_schedule.json",
+          "bytes": 809,
+          "sha256": "da404de32db5c9a930a370c8b939907da9b03e515428562c460a589d97d8fb0f",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "joint_value_norm.json",
+          "bytes": 278,
+          "sha256": "9c71dff2f010bfc455a02d78187605b77099f248f68c2df5f2629211eede880d",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "model.safetensors",
+          "bytes": 16785493008,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "processor_config.json",
+          "bytes": 1296,
+          "sha256": "01562eddd6f9e9ec4bc31656a3b7055284cafbf889acc6c4348dca431ae31f68",
+          "hash_scope": "rehashed_small_file"
+        },
+        {
+          "path": "tokenizer.json",
+          "bytes": 19989325,
+          "hash_scope": "size_only_requires_full_transfer_verification"
+        },
+        {
+          "path": "tokenizer_config.json",
+          "bytes": 1191,
+          "sha256": "1ec445f87ae14b966ca02c851bfc81a05979f05533ce5441be27915d49bb9cd9",
+          "hash_scope": "rehashed_small_file"
+        }
+      ],
+      "bytes": 16805496570,
+      "proposed_remote_prefix": "releases/20261012/checkpoints/historical97-solver-critic"
+    }
+  ],
+  "logical_bytes": 1129402364644,
+  "scope": "Local inventory, not remote availability or full large-tensor hash verification."
+}

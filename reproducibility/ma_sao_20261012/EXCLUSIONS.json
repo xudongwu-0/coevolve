@@ -1,0 +1,208 @@
+{
+  "entries": [
+    {
+      "path": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/BASELINE_RELEASE.json",
+      "reason": "host_process_privacy_or_separate_model_storage"
+    },
+    {
+      "path": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/NO_H200_PAUSE_VERIFIED.json",
+      "reason": "host_process_privacy_or_separate_model_storage"
+    },
+    {
+      "path": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/ROLLING_NATIVE_GATE.json",
+      "reason": "host_process_privacy_or_separate_model_storage"
+    },
+    {
+      "path": "/mnt/3fs/xudong/coevolve/assets/Harness-R1/harness-r1/tokenizer.json",
+      "reason": "host_process_privacy_or_separate_model_storage"
+    },
+    {
+      "path": "/mnt/3fs/xudong/coevolve/assets/Harness-R1/target-agent-sft/tokenizer.json",
+      "reason": "host_process_privacy_or_separate_model_storage"
+    },
+    {
+      "path": "/mnt/3fs/xudong/coevolve/runs/alfworld_engineer_fast_v1_s42/training/optimizer/engine/checkpoints/chengboliu/alfworld_engineer_fast_v1_s42/h_fast/critic/epoch0epochstep15globalstep15/tokenizer.json",
+      "reason": "host_process_privacy_or_separate_model_storage"
+    },
+    {
+      "path": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/attempts/attempt-0001/full/solver/optimizer/engine/checkpoints/chengboliu/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2-full/solver/actor/epoch0epochstep143globalstep143/tokenizer.json",
+      "reason": "host_process_privacy_or_separate_model_storage"
+    },
+    {
+      "path": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0144/selection/attempt-01/RELEASED.json",
+      "reason": "host_process_privacy_or_separate_model_storage"
+    },
+    {
+      "path": "/mnt/3fs/xudong/coevolve/runs/alfworld_solver_fast_v4_s42/training/optimizer/engine/checkpoints/chengboliu/alfworld_solver_fast_v4_s42/w1/actor/epoch0epochstep79globalstep79/tokenizer.json",
+      "reason": "host_process_privacy_or_separate_model_storage"
+    },
+    {
+      "path": "/mnt/3fs/xudong/coevolve/runs/alfworld_solver_fast_v4_s42/training/optimizer/engine/checkpoints/chengboliu/alfworld_solver_fast_v4_s42/w1/critic/epoch0epochstep79globalstep79/tokenizer.json",
+      "reason": "host_process_privacy_or_separate_model_storage"
+    },
+    {
+      "path": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/BASELINE_RELEASE.json",
+      "reason": "host_process_privacy_or_separate_model_storage"
+    },
+    {
+      "path": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/NATIVE_GATE.json",
+      "reason": "host_process_privacy_or_separate_model_storage"
+    },
+    {
+      "path": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/NO_H200_PAUSE_VERIFIED.json",
+      "reason": "host_process_privacy_or_separate_model_storage"
+    },
+    {
+      "path": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/ROLLING_NATIVE_GATE.json",
+      "reason": "host_process_privacy_or_separate_model_storage"
+    },
+    {
+      "path": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/serial15_20261012_self_fix01/PREREQUISITES_VERIFIED.json",
+      "reason": "host_process_privacy_or_separate_model_storage"
+    },
+    {
+      "path": "/mnt/3fs/xudong/coevolve/runs/source-snapshots/alfworld-ma-mechanisms-single-seed-v2/WHALE",
+      "reason": "symlink_not_followed",
+      "target": "/mnt/3fs/xudong/coevolve/WHALE"
+    },
+    {
+      "path": "/mnt/3fs/xudong/coevolve/runs/source-snapshots/alfworld-ma-mechanisms-single-seed-v2/assets",
+      "reason": "symlink_not_followed",
+      "target": "/mnt/3fs/xudong/coevolve/assets"
+    },
+    {
+      "path": "/mnt/3fs/xudong/coevolve/runs/source-snapshots/alfworld-ma-mechanisms-single-seed-v2/runs",
+      "reason": "symlink_not_followed",
+      "target": "/mnt/3fs/xudong/coevolve/runs"
+    },
+    {
+      "path": "/mnt/3fs/xudong/coevolve/runs/source-snapshots/alfworld-ma-mechanisms-single-seed-v2/third_party",
+      "reason": "symlink_not_followed",
+      "target": "/mnt/3fs/xudong/coevolve/third_party"
+    },
+    {
+      "path": "/mnt/3fs/xudong/coevolve/runs/source-snapshots/alfworld-ma-mechanisms-rolling12-v2/WHALE",
+      "reason": "symlink_not_followed",
+      "target": "/mnt/3fs/xudong/coevolve/WHALE"
+    },
+    {
+      "path": "/mnt/3fs/xudong/coevolve/runs/source-snapshots/alfworld-ma-mechanisms-rolling12-v2/assets",
+      "reason": "symlink_not_followed",
+      "target": "/mnt/3fs/xudong/coevolve/assets"
+    },
+    {
+      "path": "/mnt/3fs/xudong/coevolve/runs/source-snapshots/alfworld-ma-mechanisms-rolling12-v2/runs",
+      "reason": "symlink_not_followed",
+      "target": "/mnt/3fs/xudong/coevolve/runs"
+    },
+    {
+      "path": "/mnt/3fs/xudong/coevolve/runs/source-snapshots/alfworld-ma-mechanisms-rolling12-v2/third_party",
+      "reason": "symlink_not_followed",
+      "target": "/mnt/3fs/xudong/coevolve/third_party"
+    },
+    {
+      "path": "/mnt/3fs/xudong/coevolve/runs/source-snapshots/alfworld-ma-mechanisms-eval-recovery-v1/WHALE",
+      "reason": "symlink_not_followed",
+      "target": "/mnt/3fs/xudong/coevolve/WHALE"
+    },
+    {
+      "path": "/mnt/3fs/xudong/coevolve/runs/source-snapshots/alfworld-ma-mechanisms-eval-recovery-v1/assets",
+      "reason": "symlink_not_followed",
+      "target": "/mnt/3fs/xudong/coevolve/assets"
+    },
+    {
+      "path": "/mnt/3fs/xudong/coevolve/runs/source-snapshots/alfworld-ma-mechanisms-eval-recovery-v1/runs",
+      "reason": "symlink_not_followed",
+      "target": "/mnt/3fs/xudong/coevolve/runs"
+    },
+    {
+      "path": "/mnt/3fs/xudong/coevolve/runs/source-snapshots/alfworld-ma-mechanisms-eval-recovery-v1/third_party",
+      "reason": "symlink_not_followed",
+      "target": "/mnt/3fs/xudong/coevolve/third_party"
+    },
+    {
+      "path": "/mnt/3fs/xudong/coevolve/runs/source-snapshots/alfworld-ma-mechanisms-report-recovery-v1/WHALE",
+      "reason": "symlink_not_followed",
+      "target": "/mnt/3fs/xudong/coevolve/WHALE"
+    },
+    {
+      "path": "/mnt/3fs/xudong/coevolve/runs/source-snapshots/alfworld-ma-mechanisms-report-recovery-v1/assets",
+      "reason": "symlink_not_followed",
+      "target": "/mnt/3fs/xudong/coevolve/assets"
+    },
+    {
+      "path": "/mnt/3fs/xudong/coevolve/runs/source-snapshots/alfworld-ma-mechanisms-report-recovery-v1/runs",
+      "reason": "symlink_not_followed",
+      "target": "/mnt/3fs/xudong/coevolve/runs"
+    },
+    {
+      "path": "/mnt/3fs/xudong/coevolve/runs/source-snapshots/alfworld-ma-mechanisms-report-recovery-v1/third_party",
+      "reason": "symlink_not_followed",
+      "target": "/mnt/3fs/xudong/coevolve/third_party"
+    },
+    {
+      "path": "/mnt/3fs/xudong/coevolve/runs/source-snapshots/alfworld-ma-mechanisms-rolling12-v3/WHALE",
+      "reason": "symlink_not_followed",
+      "target": "/mnt/3fs/xudong/coevolve/WHALE"
+    },
+    {
+      "path": "/mnt/3fs/xudong/coevolve/runs/source-snapshots/alfworld-ma-mechanisms-rolling12-v3/assets",
+      "reason": "symlink_not_followed",
+      "target": "/mnt/3fs/xudong/coevolve/assets"
+    },
+    {
+      "path": "/mnt/3fs/xudong/coevolve/runs/source-snapshots/alfworld-ma-mechanisms-rolling12-v3/runs",
+      "reason": "symlink_not_followed",
+      "target": "/mnt/3fs/xudong/coevolve/runs"
+    },
+    {
+      "path": "/mnt/3fs/xudong/coevolve/runs/source-snapshots/alfworld-ma-mechanisms-rolling12-v3/third_party",
+      "reason": "symlink_not_followed",
+      "target": "/mnt/3fs/xudong/coevolve/third_party"
+    },
+    {
+      "path": "/mnt/3fs/xudong/coevolve/runs/source-snapshots/alfworld-ma-mechanisms-idle2h-v1/.pytest_cache",
+      "reason": "cache_or_git_metadata"
+    },
+    {
+      "path": "/mnt/3fs/xudong/coevolve/runs/source-snapshots/alfworld-ma-mechanisms-idle2h-v1/WHALE",
+      "reason": "symlink_not_followed",
+      "target": "/mnt/3fs/xudong/coevolve/WHALE"
+    },
+    {
+      "path": "/mnt/3fs/xudong/coevolve/runs/source-snapshots/alfworld-ma-mechanisms-idle2h-v1/assets",
+      "reason": "symlink_not_followed",
+      "target": "/mnt/3fs/xudong/coevolve/assets"
+    },
+    {
+      "path": "/mnt/3fs/xudong/coevolve/runs/source-snapshots/alfworld-ma-mechanisms-idle2h-v1/runs",
+      "reason": "symlink_not_followed",
+      "target": "/mnt/3fs/xudong/coevolve/runs"
+    },
+    {
+      "path": "/mnt/3fs/xudong/coevolve/runs/source-snapshots/alfworld-ma-mechanisms-idle2h-v1/third_party",
+      "reason": "symlink_not_followed",
+      "target": "/mnt/3fs/xudong/coevolve/third_party"
+    },
+    {
+      "path": "/mnt/3fs/xudong/coevolve/runs/source-snapshots/alfworld-ma-mechanisms-serial15-v3/WHALE",
+      "reason": "symlink_not_followed",
+      "target": "/mnt/3fs/xudong/coevolve/WHALE"
+    },
+    {
+      "path": "/mnt/3fs/xudong/coevolve/runs/source-snapshots/alfworld-ma-mechanisms-serial15-v3/assets",
+      "reason": "symlink_not_followed",
+      "target": "/mnt/3fs/xudong/coevolve/assets"
+    },
+    {
+      "path": "/mnt/3fs/xudong/coevolve/runs/source-snapshots/alfworld-ma-mechanisms-serial15-v3/runs",
+      "reason": "symlink_not_followed",
+      "target": "/mnt/3fs/xudong/coevolve/runs"
+    },
+    {
+      "path": "/mnt/3fs/xudong/coevolve/runs/source-snapshots/alfworld-ma-mechanisms-serial15-v3/third_party",
+      "reason": "symlink_not_followed",
+      "target": "/mnt/3fs/xudong/coevolve/third_party"
+    }
+  ]
+}

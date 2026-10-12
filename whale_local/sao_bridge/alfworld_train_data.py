@@ -1,4 +1,4 @@
-"""Train-only ALFWorld games isolated from existing evaluation goal groups."""
+"""Separate validated ALFWorld training and held-out evaluation catalogues."""
 from __future__ import annotations
 
 import argparse
@@ -12,6 +12,7 @@ from .alfworld_runtime import ALFWORLD_DATA
 from .common import file_sha, read_json, write_json
 
 TRAIN_SPLIT = "sao_train_v1"
+EVAL_SPLIT = "sao_eval_v1"
 TRAIN_WORKERS = 32
 VALIDATION_SPLITS = ("valid_seen", "valid_unseen", "valid_train")
 
@@ -148,6 +149,52 @@ def training_catalogue(
     return _load_catalogue(path, expected_sha256, root)
 
 
+@lru_cache(maxsize=8)
+def _load_evaluation_catalogue(
+    path: Path, expected_sha256: str, data_root: Path,
+) -> tuple[str, ...]:
+    if file_sha(path) != expected_sha256:
+        raise ValueError("ALFWorld held-out catalogue checksum changed")
+    catalogue = read_json(path)
+    if (not isinstance(catalogue, dict) or len(catalogue) != 1
+            or next(iter(catalogue)) not in {"valid_seen", "valid_unseen"}):
+        raise ValueError("Held-out catalogue must contain one reserved validation split")
+    split, games = next(iter(catalogue.items()))
+    if not isinstance(games, list) or not games:
+        raise ValueError("Held-out catalogue is empty or malformed")
+    legacy_goals = {goal_group(game) for game in evaluation_paths(data_root)}
+    groups = []
+    for game in games:
+        group = goal_group(game)
+        target = (data_root / game).resolve()
+        if (Path(game).parts[1] != split
+                or not target.is_relative_to((data_root / "json_2.1.1" / split).resolve())
+                or not target.is_file()):
+            raise ValueError("Held-out game is missing or outside its declared validation split")
+        if group in legacy_goals:
+            raise ValueError("Held-out catalogue overlaps a legacy500 goal group")
+        groups.append(group)
+    if len(games) != len(set(games)) or len(groups) != len(set(groups)):
+        raise ValueError("Held-out catalogue repeats a game or goal group")
+    return tuple(games)
+
+
+def evaluation_catalogue(
+    catalogue_path: str | Path | None, expected_sha256: str | None, *,
+    data_root: Path | None = None,
+) -> tuple[str, ...]:
+    """Load explicit validation games; never reinterpret a training catalogue."""
+    if not isinstance(expected_sha256, str) or not re.fullmatch(r"[0-9a-f]{64}", expected_sha256):
+        raise ValueError("Explicit held-out catalogue SHA-256 is required")
+    if not isinstance(catalogue_path, (str, Path)):
+        raise ValueError("Explicit held-out catalogue path is required")
+    root = (data_root if data_root is not None else ALFWORLD_DATA).resolve()
+    path = Path(catalogue_path).resolve()
+    if file_sha(path) != expected_sha256:
+        raise ValueError("ALFWorld held-out catalogue checksum changed")
+    return _load_evaluation_catalogue(path, expected_sha256, root)
+
+
 def task_count(
     split: str, catalogue_sha256: str | None = None, *,
     catalogue_path: str | Path | None = None,
@@ -156,6 +203,8 @@ def task_count(
         if catalogue_path is not None or catalogue_sha256 is not None:
             raise ValueError("The official test_set catalogue cannot be overridden")
         return 500
+    if split == EVAL_SPLIT:
+        return len(evaluation_catalogue(catalogue_path, catalogue_sha256))
     if split != TRAIN_SPLIT:
         raise ValueError(f"Unsupported ALFWorld task split: {split}")
     return len(training_catalogue(catalogue_path, catalogue_sha256))

@@ -1,0 +1,18 @@
+{
+  "schema": "paired-native-recovery-v1",
+  "status": "committed",
+  "completed_rounds": 72,
+  "roles": {
+    "editor": "0f466790dcd53321dad37229a0608b388c11fd094e07ae20e40388e00ab8d21c",
+    "solver": "105fb4f9ac0af274b396d686be6210059f2031a6187f039639baaf9fee00b5bd"
+  },
+  "previous": {
+    "generation": "round-0060-attempt-0003",
+    "completed_rounds": 60,
+    "sha256": "e926caa501e901617c6762ba7040e258f9ceab07db693e66aa7625252d3dd9a2",
+    "at_unix": 1791785221.1509135
+  },
+  "committed_at_unix": 1791786087.4666142,
+  "validation": "All shard sizes, small-file hashes, Adam counters, sampled fingerprints, ValueNorm, schedule and committed data/metric cursors; not full large-tensor hashes",
+  "sampling": "Resident serving is unchanged between saves; interrupted serving is restarted and uncommitted asynchronous work is discarded, not bitwise rollout replay"
+}

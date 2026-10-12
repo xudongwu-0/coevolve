@@ -1,0 +1,27 @@
+{
+  "schema": "ma-sao-progress-handoff-v1",
+  "study": "runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2",
+  "attempt": "runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/without_peer/attempts/attempt-0003",
+  "pause": "runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/serial15_20261012_self_fix01/CANCELLED.json",
+  "catalogue": "assets/alfworld_harness_r1/data/test_set.json",
+  "source_snapshots": [
+    "runs/source-snapshots/alfworld-ma-mechanisms-single-seed-v2",
+    "runs/source-snapshots/alfworld-ma-mechanisms-rolling12-v2",
+    "runs/source-snapshots/alfworld-ma-mechanisms-eval-recovery-v1",
+    "runs/source-snapshots/alfworld-ma-mechanisms-report-recovery-v1",
+    "runs/source-snapshots/alfworld-ma-mechanisms-rolling12-v3",
+    "runs/source-snapshots/alfworld-ma-mechanisms-idle2h-v1",
+    "runs/source-snapshots/alfworld-ma-mechanisms-serial15-v3"
+  ],
+  "expected": {
+    "without_peer_metric_rounds": {
+      "editor": 76,
+      "solver": 76
+    },
+    "without_peer_native_rounds": 72,
+    "full144_selected_successes": 186,
+    "full144_weight_only_successes": 179
+  },
+  "training_or_evaluation_submission_allowed": false,
+  "full144_extension_requested_then_paused_without_implementation": true
+}

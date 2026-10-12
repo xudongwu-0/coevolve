@@ -1,0 +1,84 @@
+{
+  "backend": "fsdp-vllm-adaptation-not-exact-relax",
+  "upstream": {
+    "repository": "https://github.com/DeepExperience/Harness-R1",
+    "commit": "94f2e087f573e1b82fc9568bb634d4ae9a887e28",
+    "algorithm_sources": [
+      "scripts/train_engineer_rl.sh",
+      "code/Relax/relax/utils/utils.py",
+      "code/Relax/relax/utils/training/ppo_utils.py",
+      "code/Relax/relax/backends/megatron/loss.py"
+    ]
+  },
+  "official_backend_probe": {
+    "shared_environment": {"torch": "2.10.0+cu129", "transformers": "5.7.0", "vllm": "0.19.1"},
+    "missing_modules": ["megatron", "sglang", "transformer_engine"],
+    "snapshot_requirement_conflict": "Bundled Relax requirements.txt pins transformers==5.3.0, contrary to the protected shared 5.7.0 environment.",
+    "public_relax_identity": "https://github.com/redai-infra/Relax/commit/99a0b6afd32a6cb740f9dc9d369ef1eb77c69da9",
+    "public_install_recipe": "https://github.com/redai-infra/Relax/blob/99a0b6afd32a6cb740f9dc9d369ef1eb77c69da9/docker/Dockerfile",
+    "public_megatron_identity": "https://github.com/NVIDIA/Megatron-LM/commit/fed130fe2bf232c906327f9e84cadc67bfe2950a",
+    "public_sglang_identity": "https://github.com/sgl-project/sglang/commit/4d4d3f2e5ce7a6bb4ae09e342c9f750648aec711",
+    "public_bridge_recipe_identity": "https://github.com/NVIDIA-NeMo/Megatron-Bridge/commit/af17edf52c514c58c79cd291b04a9b42bc5c57f3",
+    "bridge_requirement_conflict": "This public Relax Docker recipe pins Bridge af17edf..., whose pyproject.toml requires transformers>=5.8,<=5.12.1. It cannot be installed with its declared dependencies while preserving shared transformers==5.7.0.",
+    "decision": "No official backend was installed. Public identities were verified via git ls-remote and raw pinned Dockerfile/pyproject retrieval. Building an isolated SGLang/TE/FlashAttention/Bridge stack is outside bounded implementation execution, and the trimmed Harness snapshot supplies no compatible dependency pin set."
+  },
+  "algorithm_contract": {
+    "group_size": 8,
+    "rollout_packets": 4,
+    "rollout_samples": 32,
+    "optimizer_steps_per_rollout": 4,
+    "optimizer_minibatch_samples": 8,
+    "optimizer_iterations_are_not_epochs": true,
+    "reward": "harness_r1_searchqa.reward.reward_func score == delta_score; no validity bonus",
+    "frozen_target_protocol": {
+      "temperature": 1.0,
+      "top_p": 1.0,
+      "top_k": -1,
+      "enable_thinking": false,
+      "total_assistant_tokens": 4096,
+      "context_tokens": 16384
+    },
+    "group_normalization": "center rewards within each group; unbiased sample std (correction=1) plus 1e-6; no batch advantage whitening",
+    "ppo_clip": [0.8, 1.28],
+    "tis": "detached exp(old_actor_logprob - rollout_logprob) clipped to [0,2]",
+    "reduction": "mean of response-token losses per sample, then mean of eight samples",
+    "kl": "disabled by default (coefficient zero); optional low_var_kl against immutable fresh SFT reference",
+    "constant_groups": "retain with zero advantages and log the condition; execute all four AdamW steps, with optimizer momentum and weight decay still active",
+    "thinking": "apply_chat_template(enable_thinking=true, add_generation_prompt=true); require opening <think> prefill; generated continuation alone receives loss",
+    "checkpoint_load": "require qwen3_5_text fresh SFT and strict HF loading with no missing/unexpected/mismatched tensors. Model EOS must equal tokenizer im_end EOS (248046); rollout explicitly stops on that id. Rotary buffers remain FP32.",
+    "truncation": "reject overlong prompts; length-terminated responses retain their tokens, like the unmasked upstream default"
+  },
+  "adaptation_differences": [
+    "PyTorch FSDP FULL_SHARD replaces Megatron tensor-parallel training; FP32 master parameters and AdamW states are sharded across four or eight ranks.",
+    "GPU-resident sharded AdamW replaces the upstream precision-aware CPU-offloaded Adam implementation.",
+    "vLLM TP engines replace SGLang. Processed generation logprobs include temperature and top-p sampling transformations; TIS corrects their mismatch to temperature-scaled training probabilities.",
+    "vLLM 0.19.1 ships Qwen3_5ForCausalLM but does not register it. The rollout process and spawned TP workers lazily register this installed native text class through a worker-extension import hook, without changing shared packages or reconstructing a VLM.",
+    "Rollout engines explicitly use gdn_prefill_backend=triton. The default FlashInfer GDN prefill failed the parent's real 9B request because node4 has no nvcc/CUDA_HOME; target 4B serving is unaffected.",
+    "Rollout subprocesses set VLLM_PLUGINS empty to prevent unrelated shared-environment plugins (including awex_adapter, which imports absent Megatron) from altering native model registration.",
+    "Actor BF16 HF checkpoints are exported on disk after every update. Fresh vLLM engines reload that directory for the next rollout, including a final reload-only verification.",
+    "FP32 local actor shards, AdamW state and RNG are also persisted per rank for exact optimizer continuation on the same world size.",
+    "Distributed scheduling consumes each 32-sample batch once in four eight-sample minibatches, not four passes over the batch.",
+    "Train packet selection cycles a deterministic shuffled dataset order."
+  ],
+  "launch": {
+    "working_directory": "/mnt/3fs/xudong/coevolve",
+    "command": "CUDA_VISIBLE_DEVICES=0,1,2,3 PYTHONPATH=whale_local .venv-ppo/bin/torchrun --standalone --nproc_per_node=4 -m harness_r1_searchqa.grpo_train --model \"$FRESH_SFT_HF\" --data \"$TRAIN_PACKETS_JSONL\" --reward-config configs/searchqa_harness_r1_reward.yaml --config configs/searchqa_engineer_grpo.json --output \"$GRPO_OUTPUT\" --updates \"$NUM_UPDATES\" --rollout-gpus 4,5",
+    "resume": "Use --resume <previous-output>/checkpoint-NNNNNN with a fresh --output directory and the identical --model, data, reward config, source code, seed, config and world size. Set --updates to the total desired online update count.",
+    "requirements": [
+      "Parent supplies the fresh text-only qwen3_5_text SFT checkpoint and train packet JSONL; do not substitute the untouched official VLM base.",
+      "Four or eight disjoint actor GPUs plus two rollout GPUs. GPU ids in the example must be replaced with allocated physical ids.",
+      "Frozen SearchQA target and BM25 endpoints in reward YAML must be running on separate resources; a lost endpoint aborts rather than generating zero rewards.",
+      "Sufficient host memory to load the FP32 model on each rank, and disk for per-rank FP32 actor/Adam shards plus BF16 HF exports. The implementation is not a single-GPU full-Adam worker.",
+      "If using optional KL, budget an additional sharded immutable SFT reference on actor GPUs."
+    ]
+  },
+  "validation": {
+    "cpu_test_command": "CUDA_VISIBLE_DEVICES='' PYTHONPATH=whale_local OMP_NUM_THREADS=1 .venv-ppo/bin/python -m pytest -q tests/test_harness_r1_grpo.py --basetemp=runs/grpo_cpu_validation",
+    "result": "14 tests passed in 179.53s with CUDA_VISIBLE_DEVICES explicitly empty and torch.cuda.is_available()==False asserted; pinned Relax policy/TIS/KL parity, group std/constants, finite four-step optimizer update, persistent tiny actor/optimizer reload, token alignment, thinking prefill, infrastructure errors, disk sync identities, config, native text-engine registration and strict rejection of missing/unexpected/mismatched checkpoint weights before FSDP initialization. Both --help commands passed. Actual installed vLLM accepted lazy native-text registration and gdn_prefill_backend=triton without loading a model.",
+    "help_commands": [
+      "PYTHONPATH=whale_local .venv-ppo/bin/python -m harness_r1_searchqa.grpo_train --help",
+      "PYTHONPATH=whale_local .venv-ppo/bin/python -m harness_r1_searchqa.workflow --help"
+    ],
+    "not_verified": "No real distributed 9B training, GPU-memory claim, reward episode or vLLM model reload was executed: parent has not yet supplied SFT/dataset or authorized a real launch. Tiny CPU reload and mocked disk orchestration are validated, not a hardware-run reproduction."
+  }
+}

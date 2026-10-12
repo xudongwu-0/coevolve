@@ -1,0 +1,26 @@
+{
+  "status": "native_attempt_started",
+  "at_utc": "2026-10-09T11:26:16.329147+00:00",
+  "at_unix": 1791545176.3291595,
+  "controller_pid": 3626493,
+  "process_status": "sleeping",
+  "children": 2,
+  "shell_id": "ma-full-rolling12-two-hour",
+  "attached": true,
+  "active_attempt": {
+    "arm": "full",
+    "path": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/attempts/attempt-0001",
+    "resume_round": 0
+  },
+  "monitor": {
+    "status": "training",
+    "arm": "full",
+    "attempt": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/attempts/attempt-0001",
+    "progress": {
+      "editor": 0,
+      "solver": 0
+    },
+    "at_unix": 1791545175.1198308
+  },
+  "native_gate_sha256": "274efba8b16dc0c116d04869d6cec2ac270af9193c14eb1c0be8cf1d0b3b2e7c"
+}

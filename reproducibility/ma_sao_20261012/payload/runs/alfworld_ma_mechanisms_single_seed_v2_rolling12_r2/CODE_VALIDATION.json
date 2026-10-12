@@ -1,0 +1,20 @@
+{
+  "status": "passed",
+  "source_manifest_sha256": "5d8bf804dd0a538008e9067eb118cb5eba5987873032a737566cbcb3e9c3a631",
+  "test_log": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/CPU_VALIDATION.log",
+  "test_log_sha256": "3b6d478bd3391ae1cb263959e04ab1fad78e071b32fd82cd8b6a82a8c0b07e7a",
+  "tests": [
+    "tests/test_joint_recovery.py",
+    "tests/test_ma_rolling_recovery.py",
+    "tests/test_joint_continuation.py",
+    "tests/test_joint_schedule.py",
+    "tests/test_joint_rollout_budget.py",
+    "tests/test_joint_component_ablation.py",
+    "tests/test_ma_mechanism_study.py",
+    "tests/test_ma_mechanism_program.py"
+  ],
+  "at_unix": 1791533246.3403056,
+  "pins_sha256": "43779a12229a83b51857e74cde29893b6cd7df74dc86de8e96861245935a77c3",
+  "original_scientific_validation": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2/CODE_VALIDATION.json",
+  "original_scientific_validation_sha256": "df98e276afd402242d66aded41c62e3863f1be39781eb7ef80c5d3d8f60db47b"
+}

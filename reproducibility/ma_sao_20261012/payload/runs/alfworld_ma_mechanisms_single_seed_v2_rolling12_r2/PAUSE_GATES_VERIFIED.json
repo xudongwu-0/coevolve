@@ -1,0 +1,18 @@
+{
+  "status": "passed",
+  "checks": [
+    {
+      "driver": "original_two_hour_driver",
+      "blocked_as_expected": true,
+      "error": "The scheduled two-hour resumption was cancelled"
+    },
+    {
+      "driver": "corrected_commit_driver",
+      "blocked_as_expected": true,
+      "error": "The scheduled two-hour resumption was cancelled"
+    }
+  ],
+  "gpu_work_started": false,
+  "attempt0002_exists": false,
+  "at_unix": 1791620323.362835
+}

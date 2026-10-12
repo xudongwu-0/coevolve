@@ -1,0 +1,8 @@
+{
+  "status": "prepared",
+  "original_deadline_unix": 1791627044.3798063,
+  "authority": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2/resume_12round/AUTHORIZATION.json",
+  "authority_sha256": "6119bfe090602081e968ad829c8d3888b10ee7b6dfb9c4e372c56473b4b6b076",
+  "pins_sha256": "43779a12229a83b51857e74cde29893b6cd7df74dc86de8e96861245935a77c3",
+  "at_unix": 1791533679.9083564
+}

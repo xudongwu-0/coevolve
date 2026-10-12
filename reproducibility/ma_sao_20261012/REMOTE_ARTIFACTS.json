@@ -1,0 +1,42 @@
+{
+  "status": "not_uploaded",
+  "archives": [
+    {
+      "archive": "/mnt/3fs/xudong/coevolve/runs/ma_sao_handoff_20261010T081628Z/assets.tar.gz",
+      "bytes": 375866670,
+      "sha256": "404fd4f64b704af8b3fa782f8dcb876cdfb71c24a6e064afb6ae4797eb1c5976",
+      "hash_scope": "previous_verified_archive_digest",
+      "snapshot_date": "2026-10-10",
+      "remote_uploaded": false,
+      "remote_path": null,
+      "remote_revision": null
+    },
+    {
+      "archive": "/mnt/3fs/xudong/coevolve/runs/ma_sao_handoff_20261010T081628Z/evidence.tar.gz",
+      "bytes": 350790876,
+      "sha256": "e88c6d8b4ce7469247331563270204ba8be424bb9f5c40e4c8e22f9b394603f6",
+      "hash_scope": "previous_verified_archive_digest",
+      "snapshot_date": "2026-10-10",
+      "remote_uploaded": false,
+      "remote_path": null,
+      "remote_revision": null
+    },
+    {
+      "archive": "/mnt/3fs/xudong/coevolve/runs/ma_sao_handoff_20261010T081628Z/supplemental-logs.tar.gz",
+      "bytes": 957503,
+      "sha256": "33381c52c1e915311955e74abfb8eb76da53a417059804034b0287d1638c31ff",
+      "hash_scope": "previous_verified_archive_digest",
+      "snapshot_date": "2026-10-10",
+      "remote_uploaded": false,
+      "remote_path": null,
+      "remote_revision": null
+    }
+  ],
+  "current_without_peer25_to76_full_trajectories_in_git": false,
+  "current_trajectory_source": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/without_peer/attempts/attempt-0003/without_peer/joint",
+  "current_state_and_metric_evidence_in_git": true,
+  "github_repository": "https://github.com/xudongwu-0/coevolve",
+  "hf_repo_id": null,
+  "hf_revision": null,
+  "do_not_assume_local_archive_paths_exist_on_a_new_machine": true
+}

@@ -1,0 +1,13 @@
+{
+  "resume_round": 0,
+  "new_persisted_outcomes": 199,
+  "new_generated_role_receipts": {
+    "editor": 199,
+    "solver": 199
+  },
+  "new_committed_role_rounds": {
+    "editor": 24,
+    "solver": 24
+  },
+  "unpersisted_inflight_work_unknown": true
+}

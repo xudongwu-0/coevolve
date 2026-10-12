@@ -1,0 +1,6 @@
+{
+  "schema": "paired-native-recovery-v1",
+  "root": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/recovery",
+  "generation": "round-0144-attempt-0001",
+  "completed_rounds": 144
+}

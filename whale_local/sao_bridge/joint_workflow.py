@@ -15,8 +15,10 @@ from areal.utils.hf_utils import load_hf_tokenizer
 
 from . import alfworld_domain as domain
 from .alfworld_train_data import _immutable_json
-from .common import ROOT, read_json, write_json
+from .common import ROOT, read_json, write_json, file_sha
+from .joint_anchor import route_patch, MODES, is_anchor_round
 from .joint_critic import attach_joint_context
+from .joint_reward import role_reward
 from .joint_round import checked_behavior, record_failure, round_path, wait_record, wait_versions
 
 
@@ -47,7 +49,9 @@ def parse_proposal(text: str) -> tuple[dict, str | None]:
 
 class JointWorkflow(RolloutWorkflow):
     def __init__(self, role, tokenizer, gconfig, joint_root, total_tokens=4096,
-                 context_tokens=32768, max_lag=0):
+                 context_tokens=32768, max_lag=0, editor_reward_mode="team",
+                 anchor_mode=None, anchor_harness=None, anchor_harness_sha256=None,
+                 peer_weight_mode="bounded", editor_update_every_round=False):
         if role not in ("editor", "solver"):
             raise ValueError("Unknown joint role")
         self.role, self.root = role, Path(joint_root)
@@ -57,9 +61,29 @@ class JointWorkflow(RolloutWorkflow):
         if type(max_lag) is not int or max_lag not in (0, 1):
             raise ValueError("Only verified zero/one-round joint staleness is supported")
         self.max_lag = max_lag
+        if peer_weight_mode not in ("bounded", "unit"):
+            raise ValueError("Unknown teammate importance weight mode")
+        self.peer_weight_mode = peer_weight_mode
+        if type(editor_update_every_round) is not bool or (editor_update_every_round and (
+            anchor_mode != "sampled_control" or peer_weight_mode != "bounded"
+        )):
+            raise ValueError("Every-round Engineer updates cannot change routing or peer correction")
+        self.editor_update_every_round = editor_update_every_round
+        role_reward(role, 0.0, None, editor_reward_mode)
+        self.editor_reward_mode = editor_reward_mode
+        self.anchor_mode = anchor_mode
+        self.anchor_patch = None
+        if anchor_mode is not None:
+            if anchor_mode not in MODES or not anchor_harness or not anchor_harness_sha256:
+                raise ValueError("Anchor workflow requires a known arm and pinned harness")
+            if file_sha(Path(anchor_harness)) != anchor_harness_sha256:
+                raise ValueError("Fixed anchor harness changed")
+            self.anchor_patch = read_json(Path(anchor_harness))
 
     async def arun_episode(self, engine, data):
         version, slot = data["joint_version"], data["joint_slot"]
+        if self.anchor_mode is not None and data.get("anchor_round") is not is_anchor_round(version):
+            raise ValueError("Anchor rollout differs from the scheduled input")
         root = round_path(self.root, version)
         await wait_versions(self.root, max(0, version - self.max_lag))
         started = time.monotonic()
@@ -120,8 +144,12 @@ class JointWorkflow(RolloutWorkflow):
                     return completion.model_dump()
 
                 row = {**data, "task_name": f"joint-{version}-{slot}"}
+                applied_patch = proposal["patch"]
+                if self.anchor_mode is not None:
+                    applied_patch, _ = route_patch(proposal["patch"], self.anchor_patch,
+                                                  round_index=version, mode=self.anchor_mode)
                 episode = await domain.run_episode(
-                    row, domain.harness_spec(json.dumps(proposal["patch"])), generate,
+                    row, domain.harness_spec(json.dumps(applied_patch)), generate,
                     total_tokens=self.tokens, seed=42,
                 )
                 episode = {**episode, **identity}
@@ -132,11 +160,19 @@ class JointWorkflow(RolloutWorkflow):
                     "engineer_action_status": "valid" if proposal["model_error"] is None else "invalid_no_patch",
                     "solver_task_before_action": data["task_context"],
                 }
+            routing = {}
+            if self.anchor_mode is not None:
+                applied_patch, routing = route_patch(proposal["patch"], self.anchor_patch,
+                                                    round_index=version, mode=self.anchor_mode)
+                if self.role == "editor" and (episode.get("anchor_routing") != routing
+                                               or episode.get("applied_patch") != applied_patch):
+                    raise ValueError("Solver outcome lost the actual anchor intervention")
+                episode.update(anchor_routing=routing, applied_patch=applied_patch)
+                context.update(anchor_routing=routing)
             if not completions:
                 raise RuntimeError("Joint role produced no policy action")
-            reward = float(episode["reward"])
-            if reward not in (0.0, 1.0):
-                raise ValueError("Joint team outcome must be binary ALFWorld success")
+            team_reward = float(episode["reward"])
+            reward = role_reward(self.role, team_reward, proposal["model_error"], self.editor_reward_mode)
             client.set_reward(completions[-1].id, reward)
             calls = []
             for interaction in client.export_interactions(style="individual").values():
@@ -165,11 +201,21 @@ class JointWorkflow(RolloutWorkflow):
             trajectory["joint_slot"] = torch.tensor([slot], dtype=torch.long)
             write_json(root / f"{self.role}-receipt-{slot:03d}.json", {
                 **identity, "role": self.role, "reward": reward, "calls": calls,
+                "team_reward": team_reward, "editor_reward_mode": self.editor_reward_mode,
+                "configured_peer_weight_mode": self.peer_weight_mode,
+                "effective_peer_weight_mode": "unit" if (
+                    self.peer_weight_mode == "unit"
+                    or (self.anchor_mode is not None and is_anchor_round(version))
+                ) else "bounded",
                 "recorded_at_unix": time.time(),
                 "context": context, "context_tokens": len(context_ids),
                 "patch": proposal["patch"], "model_error": proposal["model_error"],
+                **({"applied_patch": applied_patch, "anchor_routing": routing}
+                   if self.anchor_mode is not None else {}),
                 "generated_tokens": expected, "elapsed_seconds": time.monotonic() - started,
                 "trajectory_style": "concat", "optimizer_resets_between_rounds": False,
+                **({"native_engineer_round_active": self.editor_update_every_round or not is_anchor_round(version)}
+                   if self.anchor_mode is not None else {}),
             })
             if self.role == "solver":
                 _immutable_json(root / f"outcome-{slot:03d}.json", episode)

@@ -68,9 +68,12 @@ def upstream_trainer(config, dataset, *, terminal_episodes: bool = False,
     with ExitStack() as cleanup:
         class ResourceManagedTrainer(PPOTrainer):
             def _save_hf(self, epoch, epoch_step, global_step):
+                recovery = schedule_spec.get("rolling_recovery") if schedule_spec else None
+                if recovery and global_step + 1 not in recovery["hf_rounds"]:
+                    return
                 self.saver.freq_ctl.begin(
                     epoch, epoch_step, global_step,
-                    final=global_step + 1 == self.config.total_train_steps,
+                    final=bool(recovery) or global_step + 1 == self.config.total_train_steps,
                 )
                 return super()._save_hf(epoch, epoch_step, global_step)
 
@@ -116,6 +119,9 @@ def upstream_trainer(config, dataset, *, terminal_episodes: bool = False,
             config, train_dataset=dataset, valid_dataset=None,
         ) as trainer:
             trainer.saver.freq_ctl = StepFrequency(trainer.saver.freq_ctl)
+            if schedule_spec is not None and schedule_spec.get("rolling_recovery"):
+                from .joint_recovery import restore_trainer
+                restore_trainer(trainer, schedule_spec)
             warmup = int(os.environ.get("MA_SAO_CRITIC_WARMUP_STEPS", "0"))
             if schedule_spec is not None:
                 from .joint_schedule import install_schedule

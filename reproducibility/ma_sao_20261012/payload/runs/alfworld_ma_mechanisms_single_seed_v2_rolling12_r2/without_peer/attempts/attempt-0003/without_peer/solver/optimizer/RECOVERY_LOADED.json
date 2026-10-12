@@ -1,0 +1,81 @@
+{
+  "status": "restored",
+  "completed_rounds": 24,
+  "checkpoint": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/without_peer/recovery/round-0024-attempt-0001/COMMITTED.json",
+  "checkpoint_sha256": "663b66c43b17d194983da4bfc77512ab86a90748710a10b174d91b934ed56bc3",
+  "next_sample_index": 192,
+  "adam_reset": false,
+  "warmup_repeated": false,
+  "bitwise_rollout_resume": false,
+  "verified_optimizer_fingerprints": {
+    "actor": [
+      {
+        "sampled_sha256": "23fecd8e3a8b7022c6fa5c230412d7a130ce9a879e7894b23be5712f4247220b",
+        "state_tensors": 1708,
+        "parameters_with_state": 427,
+        "min_adam_step": 21.0,
+        "max_adam_step": 21.0,
+        "scope": "All Adam step counters and up to64 elements of each parameter/moment tensor"
+      },
+      {
+        "sampled_sha256": "f352ba6e8eefb00a9c2059a3e9792cb4488da47ac4a2d1a63dbae3fd77f94b2b",
+        "state_tensors": 1708,
+        "parameters_with_state": 427,
+        "min_adam_step": 21.0,
+        "max_adam_step": 21.0,
+        "scope": "All Adam step counters and up to64 elements of each parameter/moment tensor"
+      },
+      {
+        "sampled_sha256": "3f574784e78e01af2406655a4db587fe68211bb3d6ebd751f5b1ed86eaaab87d",
+        "state_tensors": 1708,
+        "parameters_with_state": 427,
+        "min_adam_step": 21.0,
+        "max_adam_step": 21.0,
+        "scope": "All Adam step counters and up to64 elements of each parameter/moment tensor"
+      },
+      {
+        "sampled_sha256": "c2c6bf9156be3041730051ad9f51b7c2860ee36f2b5cf1f7334cedcb4129b162",
+        "state_tensors": 1708,
+        "parameters_with_state": 427,
+        "min_adam_step": 21.0,
+        "max_adam_step": 21.0,
+        "scope": "All Adam step counters and up to64 elements of each parameter/moment tensor"
+      }
+    ],
+    "critic": [
+      {
+        "sampled_sha256": "5c2e92aced9e1ef82052611c40d6fe30017fbf734ada61550aeafd251c1a96c2",
+        "state_tensors": 1708,
+        "parameters_with_state": 427,
+        "min_adam_step": 48.0,
+        "max_adam_step": 48.0,
+        "scope": "All Adam step counters and up to64 elements of each parameter/moment tensor"
+      },
+      {
+        "sampled_sha256": "b3c7abda8147477eef68455bbc91a45ea41077384c81ff5bcf50a72e7100657f",
+        "state_tensors": 1708,
+        "parameters_with_state": 427,
+        "min_adam_step": 48.0,
+        "max_adam_step": 48.0,
+        "scope": "All Adam step counters and up to64 elements of each parameter/moment tensor"
+      },
+      {
+        "sampled_sha256": "4b0285503e8358a349f06cf344435a84f9b0bf17034890bfcf13b1fe7aa3553b",
+        "state_tensors": 1708,
+        "parameters_with_state": 427,
+        "min_adam_step": 48.0,
+        "max_adam_step": 48.0,
+        "scope": "All Adam step counters and up to64 elements of each parameter/moment tensor"
+      },
+      {
+        "sampled_sha256": "e9f2eff7be166054c704b1a3f79355aa3dcb74545d82180ce664e3e58c7cc774",
+        "state_tensors": 1708,
+        "parameters_with_state": 427,
+        "min_adam_step": 48.0,
+        "max_adam_step": 48.0,
+        "scope": "All Adam step counters and up to64 elements of each parameter/moment tensor"
+      }
+    ]
+  },
+  "at_unix": 1791782528.5279713
+}

@@ -1,0 +1,30 @@
+{
+  "host": "dev-NDH200-026",
+  "gpu_indices": [
+    1,
+    2,
+    3,
+    4,
+    5,
+    6,
+    7
+  ],
+  "authority": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/serial15_20261012_self_fix01/AUTHORIZATION.json",
+  "authority_sha256": "3854e3a81cc8324b66a2bd5120cb12b840db845caf8fad17621412951b6c8f6c",
+  "excluded_gpu_processes": [
+    {
+      "pid": 1138383,
+      "uid": 1002,
+      "gpu_indices": [
+        0
+      ],
+      "verified_filler": false
+    }
+  ],
+  "actor_gpus": 4,
+  "rollout_gpus": 3,
+  "original_actor_gpus": 4,
+  "original_rollout_gpus": 4,
+  "learner_rank_count_unchanged": true,
+  "at_unix": 1791782073.9440985
+}

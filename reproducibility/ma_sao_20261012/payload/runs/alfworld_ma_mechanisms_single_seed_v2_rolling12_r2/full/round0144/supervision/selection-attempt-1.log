@@ -1,0 +1,9 @@
+environment: PID 3792526, GPUs 
+solver_replica0: PID 3792580, GPUs 0
+solver_replica1: PID 3792581, GPUs 1
+solver_replica2: PID 3792582, GPUs 2
+solver_replica3: PID 3792583, GPUs 3
+solver_replica4: PID 3792584, GPUs 4
+solver_replica5: PID 3792585, GPUs 5
+solver_replica6: PID 3792595, GPUs 6
+solver_replica7: PID 3792600, GPUs 7

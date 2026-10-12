@@ -2,15 +2,19 @@
 from __future__ import annotations
 
 import argparse
+from contextlib import contextmanager
 import json
 import os
 from pathlib import Path
 import threading
 import time
+from urllib.parse import urlsplit
+
+import httpx
 
 from .budget import model_digests
 from .alfworld_reward_service import reward_data_identity, validate_metadata
-from .common import ensure_model_runtime_metadata, read_json, write_json
+from .common import ensure_model_runtime_metadata, file_sha, read_json, write_json
 from .gpu_telemetry import (
     monitor as monitor_gpu_processes,
     summarize as summarize_gpu_processes,
@@ -67,7 +71,65 @@ def training_spec(config: dict, run: Path, evaluator_url: str) -> dict:
             "critic_gradient_checkpointing", True
         ),
         "gdn_prefill_backend": "triton",
+        **{key: config[key] for key in (
+            "training_kernel_overlay", "training_kernel_versions",
+            "training_kernel_validation", "pinned_files", "rollout_setup_timeout",
+            "kl_ctl", "reference_model", "reference_storage_dtype",
+        ) if key in config},
     }
+
+
+def external_solver_binding(config: dict) -> list[str] | None:
+    external = config.get("external_solver")
+    if external is None:
+        return None
+    if not isinstance(external, dict):
+        raise ValueError("External frozen Solver requires a pinned serving binding")
+    path = Path(external["binding"])
+    if file_sha(path) != external["binding_sha256"]:
+        raise ValueError("External frozen Solver serving binding changed")
+    binding = read_json(path)
+    urls = binding.get("urls")
+    if (
+        binding.get("status") != "ready"
+        or binding.get("consumer_host") != os.uname().nodename
+        or binding.get("provider_host") not in ("dev-NDH200-025", "dev-NDH200-026")
+        or Path(binding["model"]).resolve() != Path(config["solver_model"]).resolve()
+        or binding.get("solver_version") != config["solver_version"]
+        or not isinstance(urls, list) or not 1 <= len(urls) <= 8
+        or any(not isinstance(url, str) for url in urls)
+        or len(urls) != len(set(urls))
+        or config.get("actor_gpus") != 4 or config.get("rollout_gpus") != 4
+        or config["batch_size"] % 4
+    ):
+        raise ValueError("External Solver changed counterpart identity or eight-GPU learner allocation")
+    for value in urls:
+        if not isinstance(value, str):
+            raise ValueError("External Solver URLs must be strings")
+        url = urlsplit(value)
+        if (url.scheme != "http" or url.hostname != "127.0.0.1" or url.path != "/v1"
+                or not url.port or url.username or url.password or url.query or url.fragment):
+            raise ValueError("External Solver must use explicit local forwarded inference endpoints")
+    return urls
+
+
+@contextmanager
+def frozen_solver(launch: Launcher, config: dict):
+    external = external_solver_binding(config)
+    if external is not None:
+        with httpx.Client(trust_env=False, timeout=10) as client:
+            for url in external:
+                client.get(url.removesuffix("/v1") + "/health").raise_for_status()
+        yield ",".join(external)
+        return
+    with launch.vllm(
+        config["solver_model"], port=config.get("solver_port", 19501),
+        gpus="4,5,6,7", name=f"{config['phase']}_solver",
+        data_parallel=4, max_model_len=32768, tool_call_parser="qwen3_xml",
+        gdn_prefill_backend="triton", language_model_only=True, max_num_seqs=32,
+        server_args=["--enable-prefix-caching"],
+    ) as urls:
+        yield urls
 
 
 def monitor_gpus(path: Path, stop: threading.Event, interval: float) -> None:
@@ -109,6 +171,7 @@ def main() -> None:
     write_json(run / "config.json", config)
     started = time.time()
     try:
+        external_solver_binding(config)
         preflight_spec = training_spec(
             config, run, f"http://127.0.0.1:{config.get('reward_service_port', 28600)}"
         )
@@ -155,14 +218,7 @@ def main() -> None:
     )
     telemetry.start()
     try:
-        with launch.vllm(
-            config["solver_model"], port=config.get("solver_port", 19501),
-            gpus="4,5,6,7", name=f"{config['phase']}_solver",
-            data_parallel=4, max_model_len=32768, tool_call_parser="qwen3_xml",
-            gdn_prefill_backend="triton", language_model_only=True,
-            max_num_seqs=32,
-            server_args=["--enable-prefix-caching"],
-        ) as urls:
+        with frozen_solver(launch, config) as urls:
             reward = reward_config(config, run, urls.split(","))
             write_json(run / "reward_config.json", reward)
             reward_port = config.get("reward_service_port", 28600)
@@ -177,7 +233,8 @@ def main() -> None:
             write_json(run / "train_spec.json", spec)
             trainer = launch.module(
                 "sao_bridge.large_train", ["--spec", run / "train_spec.json"],
-                gpus="0,1,2,3", name=f"{config['phase']}_train",
+                gpus="0,1,2,3,4,5,6,7" if config.get("external_solver") is not None else "0,1,2,3",
+                name=f"{config['phase']}_train",
             )
             launch.wait(
                 trainer, f"{config['phase']}_train",

@@ -1,0 +1,11 @@
+{
+  "backend": "bridge_async",
+  "argv": [
+    "/dev/shm/sao-venv-ppo/bin/python",
+    "/mnt/3fs/xudong/coevolve/runs/source-snapshots/alfworld-ma-mechanisms-rolling12-v2/whale_local/sao_bridge/alfworld_controller.py",
+    "--host",
+    "127.0.0.1",
+    "--port",
+    "28000"
+  ]
+}

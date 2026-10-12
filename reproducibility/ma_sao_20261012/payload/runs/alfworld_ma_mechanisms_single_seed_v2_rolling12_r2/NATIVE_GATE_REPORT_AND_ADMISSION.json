@@ -1,0 +1,73 @@
+{
+  "status": "native_gate_verified_before_formal_launch",
+  "at_unix": 1791544930.416112,
+  "native_gate_sha256": "274efba8b16dc0c116d04869d6cec2ac270af9193c14eb1c0be8cf1d0b3b2e7c",
+  "resources": {
+    "node4": {
+      "remaining_gpu_pids": [],
+      "verified_filler_pids": [],
+      "foreign_gpu_pids": [],
+      "vanished_gpu_pids": [],
+      "filler_kind": null,
+      "filler_unit_active": false,
+      "operator_pause": {
+        "verified": true,
+        "host": "dev-NDH200-026",
+        "path": "/mnt/3fs/models/bruli/gpu-utilization-20260925/nodes/dev-NDH200-026/PAUSED",
+        "sha256": "3813f00ec52be29e21d943c7533f16cc1320512cb67e6aef1bdb0ad12d9a9ad8",
+        "content": {
+          "paused": true,
+          "reason": "User requested stopping GPU stress on s23-s26",
+          "created_utc": "2026-10-08T03:11:08.248074+00:00"
+        },
+        "service": {
+          "ExecStart": "{ path=/usr/bin/python3 ; argv[]=/usr/bin/python3 -B /mnt/3fs/xudong/gpu-utilization/adaptive_gpu_filler.py supervisor ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+          "User": "bruli",
+          "ActiveState": "inactive",
+          "ConditionResult": "no"
+        },
+        "verified_at_unix": 1791544928.0341995
+      }
+    },
+    "node3": {
+      "release": {
+        "remaining_gpu_pids": [],
+        "verified_filler_pids": [],
+        "foreign_gpu_pids": [],
+        "vanished_gpu_pids": [],
+        "filler_kind": null,
+        "filler_unit_active": false,
+        "operator_pause": {
+          "verified": true,
+          "host": "dev-NDH200-025",
+          "path": "/mnt/3fs/models/bruli/gpu-utilization-20260925/nodes/dev-NDH200-025/PAUSED",
+          "sha256": "67b820779e73d84c165f0229e6240fb4bb1d052330e4eeff6ef5c23f74f614db",
+          "content": {
+            "paused": true,
+            "reason": "User requested stopping GPU stress on s23-s26",
+            "created_utc": "2026-10-08T03:11:08.231854+00:00"
+          },
+          "service": {
+            "ExecStart": "{ path=/usr/bin/python3 ; argv[]=/usr/bin/python3 -B /mnt/3fs/xudong/gpu-utilization/adaptive_gpu_filler.py supervisor ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+            "User": "bruli",
+            "ActiveState": "inactive",
+            "ConditionResult": "no"
+          },
+          "verified_at_unix": 1791544929.2089603
+        }
+      },
+      "released": true,
+      "at_unix": 1791544929.2089875
+    },
+    "released": true,
+    "at_unix": 1791544929.2158387,
+    "distributed_launchers": {
+      "node4": [],
+      "node3": []
+    }
+  },
+  "recorded_native_canary_environment_episodes": 216,
+  "logical_completed_canary_environment_episodes": 120,
+  "unpersisted_inflight_work_unknown": true,
+  "formal_weights_reused": false
+}

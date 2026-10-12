@@ -200,10 +200,19 @@ class JointTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "token budget"):
             attach_joint_context(row, list(range(1025)))
 
-    def test_two_live_role_workflows_share_one_outcome_and_separate_probabilities(self):
+    def test_two_live_role_workflows_share_one_outcome_and_separate_probabilities(self, anchor_mode=None):
+        version = 2 if anchor_mode else 0
+        kwargs = {}
+        fixed = {"benchmark": "alfworld", "actions": [], "description": "fixed-anchor"}
+        if anchor_mode:
+            from sao_bridge.common import file_sha
+            anchor_path = self.root / "anchor.json"
+            write_json(anchor_path, fixed)
+            kwargs = {"anchor_mode": anchor_mode, "anchor_harness": str(anchor_path),
+                      "anchor_harness_sha256": file_sha(anchor_path)}
         for role in ("editor", "solver"):
-            publish_version(self.root, role, 0)
-        write_json(self.root / "round-0000/ENVIRONMENT_READY.json", {"version": 0})
+            publish_version(self.root, role, version)
+        write_json(self.root / f"round-{version:04d}/ENVIRONMENT_READY.json", {"version": version})
         clients = []
 
         class Client:
@@ -214,7 +223,7 @@ class JointTests(unittest.TestCase):
                 client.interaction = InteractionWithTokenLogpReward(
                     model_response=SimpleNamespace(
                         input_tokens=list(range(100)), output_tokens=[101, 102],
-                        output_logprobs=[-0.1, -0.2], output_versions=[0, 0],
+                        output_logprobs=[-0.1, -0.2], output_versions=[version, version],
                         stop_reason="stop", input_len=100, output_len=2,
                     ),
                     chat_template_type="concat",
@@ -234,11 +243,15 @@ class JointTests(unittest.TestCase):
                 return {str(client.role): client.interaction}
 
         async def episode(row, harness, generate, **kwargs):
+            if anchor_mode == "fixed_anchor":
+                self.assertEqual(harness, fixed)
+            else:
+                self.assertEqual(harness, {"benchmark": "alfworld", "actions": []})
             await generate([], None, 4096, 42)
             return {"reward": 1., "tokens": 2, "task_id": row["task_id"]}
 
         data = {
-            "id": "paired-0", "joint_version": 0, "joint_slot": 0,
+            "id": "paired-0", "joint_version": version, "anchor_round": bool(anchor_mode), "joint_slot": 0,
             "task_id": 7, "task_context": "pick up cup", "critic_evidence": "Prior W79 missed a cup.",
             "messages": [{"role": "user", "content": "historical failure packet"}],
         }
@@ -248,9 +261,10 @@ class JointTests(unittest.TestCase):
             patch("sao_bridge.joint_workflow.ArealOpenAI", Client),
             patch("sao_bridge.joint_workflow.parse_proposal", return_value=({"benchmark": "alfworld", "actions": []}, "invalid patch")),
             patch("sao_bridge.joint_workflow.domain.run_episode", side_effect=episode),
+            patch("sao_bridge.joint_workflow.domain.harness_spec", side_effect=__import__("json").loads),
         ):
             workers = [
-                JointWorkflow(role, "model", SimpleNamespace(temperature=1.), str(self.root))
+                JointWorkflow(role, "model", SimpleNamespace(temperature=1.), str(self.root), **kwargs)
                 for role in ("editor", "solver")
             ]
 
@@ -263,12 +277,25 @@ class JointTests(unittest.TestCase):
         self.assertEqual(int(editor["loss_mask"].sum()), 2)
         self.assertEqual(int(solver["loss_mask"].sum()), 2)
         for role in ("editor", "solver"):
-            receipt = read_json(self.root / f"round-0000/{role}-receipt-000.json")
-            self.assertEqual(receipt["calls"][0]["versions"], [0, 0])
+            receipt = read_json(self.root / f"round-{version:04d}/{role}-receipt-000.json")
+            self.assertEqual(receipt["calls"][0]["versions"], [version, version])
             self.assertEqual(receipt["model_error"], "invalid patch")
             self.assertNotIn("reward", receipt["context"])
             self.assertNotIn("action", receipt["context"])
-        self.assertEqual(read_json(self.root / "round-0000/outcome-000.json")["sample_id"], "paired-0")
+            if anchor_mode:
+                self.assertFalse(receipt["anchor_routing"]["engineer_update_eligible"])
+                self.assertEqual(receipt["anchor_routing"]["solver_peer_weight_rule"], "unit")
+                if anchor_mode == "fixed_anchor":
+                    self.assertEqual(receipt["applied_patch"], fixed)
+                    self.assertNotEqual(receipt["patch"], fixed)
+        self.assertEqual(read_json(self.root / f"round-{version:04d}/outcome-000.json")["sample_id"], "paired-0")
+
+
+    def test_fixed_anchor_workflows_execute_fixed_patch_and_preserve_shadow(self):
+        self.test_two_live_role_workflows_share_one_outcome_and_separate_probabilities("fixed_anchor")
+
+    def test_sampled_anchor_control_executes_proposal_with_same_update_eligibility(self):
+        self.test_two_live_role_workflows_share_one_outcome_and_separate_probabilities("sampled_control")
 
 
 if __name__ == "__main__":

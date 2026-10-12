@@ -66,3 +66,44 @@ def test_async_behavior_allows_only_true_one_round_lag():
         checked_behavior(calls, 1)
     with pytest.raises(ValueError):
         checked_behavior(calls, 2, max_lag=1)
+
+
+def test_unit_ablation_preserves_exchange_and_raw_diagnostics(tmp_path):
+    with ThreadPoolExecutor(max_workers=2) as workers:
+        editor = workers.submit(prepare_joint_update, trajectory(0.), tmp_path, "editor", 1, "unit")
+        solver = workers.submit(prepare_joint_update, trajectory(10.), tmp_path, "solver", 1, "unit")
+        eweights, estats = editor.result(timeout=5)
+        sweights, sstats = solver.result(timeout=5)
+    assert eweights == sweights == [1.]
+    assert estats['peer_raw_importance_mean'] == 2.
+    assert estats['peer_raw_clipped_fraction'] == 1.
+    assert estats['peer_importance_clipped_fraction'] == 0.
+    assert estats['peer_unit_weight_mode'] == sstats['peer_unit_weight_mode'] == 1.
+    assert len(list((tmp_path / 'round-0001').glob('*-proximal-000.json'))) == 2
+    with pytest.raises(ValueError, match='Unknown teammate'):
+        prepare_joint_update(trajectory(), tmp_path, 'editor', 1, 'typo')
+
+
+@pytest.mark.parametrize("enabled,version,expected", [(False, 2, "bounded"),
+                                                     (True, 1, "bounded"),
+                                                     (True, 2, "unit"),
+                                                     (True, 3, "bounded")])
+def test_materialized_actor_worker_selects_anchor_weight_mode(monkeypatch, enabled, version, expected):
+    from types import SimpleNamespace
+    from unittest.mock import Mock
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "third_party/sao/vendor/AReaL"))
+    from sao_bridge.terminal_actor import TerminalFSDPPPOActor
+    monkeypatch.setenv("MA_SAO_ASYNC_JOINT_ROOT", "/unused-test-root")
+    monkeypatch.setenv("MA_SAO_JOINT_ROLE", "solver")
+    monkeypatch.setenv("MA_SAO_PEER_WEIGHT_MODE", "bounded")
+    if enabled:
+        monkeypatch.setenv("MA_SAO_ANCHOR_SCHEDULE", "1")
+    else:
+        monkeypatch.delenv("MA_SAO_ANCHOR_SCHEDULE", raising=False)
+    exchange = Mock(return_value=([1.], {}))
+    monkeypatch.setattr("sao_bridge.joint_updates.prepare_joint_update", exchange)
+    actor = SimpleNamespace(get_version=lambda: version,
+        actor=SimpleNamespace(_compute_advantages=lambda data, meta: {"advantages": torch.ones(1, 2)}))
+    result = TerminalFSDPPPOActor._terminal_advantages(actor, {}, None)
+    assert exchange.call_args.kwargs["weight_mode"] == expected
+    assert torch.equal(result["advantages"], torch.ones(1, 2))

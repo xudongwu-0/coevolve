@@ -1,0 +1,12 @@
+{
+  "status": "complete",
+  "request_sha256": "0e7eeb03aac47e676e497d3aefb44dec5c7b7215b17046f3683d0e32f9ad83cd",
+  "sample_index": 3,
+  "decode_seed": 5003072,
+  "prompt_id": "alfworld-packet-90-100-w1-sample3",
+  "model_label": "candidate",
+  "valid": false,
+  "model_failure": "PatchValidationError(\"hook code has invalid syntax: unmatched ')' (<unknown>, line 44)\")",
+  "patch": null,
+  "patch_sha256": null
+}

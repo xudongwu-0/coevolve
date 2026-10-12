@@ -1,0 +1,7 @@
+{
+  "status": "blocked_error",
+  "error": "RuntimeError(\"Native role process exited unsuccessfully: [{'pid': 4063504, 'returncode': 1}, {'pid': 4063503, 'returncode': None}]\")",
+  "retry_after_idle_allowed": false,
+  "evidence": [],
+  "at_unix": 1791615150.1949656
+}

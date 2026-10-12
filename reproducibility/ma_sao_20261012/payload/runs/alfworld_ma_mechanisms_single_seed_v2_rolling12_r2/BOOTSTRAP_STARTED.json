@@ -1,0 +1,13 @@
+{
+  "pid": 3514619,
+  "attached": true,
+  "source": "/mnt/3fs/xudong/coevolve/runs/source-snapshots/alfworld-ma-mechanisms-rolling12-v2",
+  "at_unix": 1791533227.6603873,
+  "formal_training": false,
+  "stages": [
+    "exact_cpu_tests",
+    "input_binding",
+    "resource_admission",
+    "native12_stop_restore15"
+  ]
+}

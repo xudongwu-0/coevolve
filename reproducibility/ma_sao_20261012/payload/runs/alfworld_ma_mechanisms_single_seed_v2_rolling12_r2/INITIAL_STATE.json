@@ -1,0 +1,16 @@
+{
+  "engineer": "/mnt/3fs/xudong/coevolve/assets/Harness-R1/harness-r1",
+  "engineer_critic": "/mnt/3fs/xudong/coevolve/runs/alfworld_engineer_fast_v1_s42/training/optimizer/engine/checkpoints/chengboliu/alfworld_engineer_fast_v1_s42/h_fast/critic/epoch0epochstep15globalstep15",
+  "solver": "/mnt/3fs/xudong/coevolve/runs/alfworld_solver_fast_v4_s42/training/optimizer/engine/checkpoints/chengboliu/alfworld_solver_fast_v4_s42/w1/actor/epoch0epochstep79globalstep79",
+  "solver_critic": "/mnt/3fs/xudong/coevolve/runs/alfworld_solver_fast_v4_s42/training/optimizer/engine/checkpoints/chengboliu/alfworld_solver_fast_v4_s42/w1/critic/epoch0epochstep79globalstep79",
+  "solver_version": "sao-v4-step79-a17ff627a522",
+  "solver_epoch_version": 1,
+  "engineer_version": 0,
+  "harness": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/initial/patches/-1-proposal01.json",
+  "packets": "/mnt/3fs/xudong/coevolve/assets/alfworld_engineer_fast_v1/packets.json",
+  "packets_sha256": "c4d858eb53407178d7f97f3acdf98e8cabb9af6674476b86c7fb0bf24144e315",
+  "initialization": "Common official H0 Actor, pre-MA W1 Actor, raw ordinary-H1/W1 critics and fresh Adam. No trained-MA critic, ValueNorm state, or selected97% checkpoint is inherited. Historical W0 prompt messages remain identical across methods.",
+  "original_sao_config_sha256": "d989dea112134470b26eb12228a97b46ed0cb8f8b6dda0c8c17340cacaa22386",
+  "solver_weights_sha256": "a17ff627a5229b7a0c1c8c58cf7935ec23a640e383424da98f50023ec7fda42d",
+  "historical_packet_solver": "/mnt/3fs/xudong/coevolve/assets/Harness-R1/target-agent-sft"
+}

@@ -1,0 +1,8 @@
+{
+  "status": "cancelled",
+  "reason": "User requested pausing experiments, stopping extension preparation, and inspecting node3/node4 only.",
+  "h200_training_allowed": false,
+  "automatic_submission_allowed": false,
+  "automatic_restart_allowed": false,
+  "extension_preparation_allowed": false
+}

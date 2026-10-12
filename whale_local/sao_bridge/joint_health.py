@@ -32,7 +32,7 @@ def assess(rows: list[dict], spec: dict) -> dict:
     nonfinite = [key for key, value in metrics.items()
                  if isinstance(value, (int, float)) and not math.isfinite(value)]
     hard = [f"nonfinite metric: {key}" for key in nonfinite]
-    if schedule_name(spec) == ALTERNATING:
+    if schedule_name(spec) != "simultaneous":
         try:
             validate_metric_row(spec, latest)
         except ValueError as exc:
@@ -42,16 +42,18 @@ def assess(rows: list[dict], spec: dict) -> dict:
         if grad <= 0:
             hard.append("actor has no nonzero gradient")
     warnings, stop_reasons = [], []
+    value_scope = "joint_value_norm" if spec.get("value_normalization", True) else "joint_critic"
     for suffix, threshold in (
         ("joint_policy/fixed_reference_kl", 0.10),
-        ("joint_value_norm/raw_value_mse", 4.0),
+        (f"{value_scope}/raw_value_mse", 4.0),
     ):
         eligible_rows = [row for row in rows if role_active(spec, row["global_step"])] \
-            if suffix.startswith("joint_value_norm/") else rows
+            if suffix.startswith(value_scope + "/") else rows
         if len(eligible_rows) >= 3 and all(
             metric_value(row["metrics"], suffix) > threshold for row in eligible_rows[-3:]
         ):
-            stop_reasons.append(f"three consecutive {suffix} > {threshold}")
+            target = stop_reasons if spec.get("stop_on_diagnostic_thresholds", True) else warnings
+            target.append(f"three consecutive {suffix} > {threshold}")
     if len(rows) >= 3 and all(
         metric_value(row["metrics"], "joint_policy/peer_importance_clipped_fraction") > 0.75
         for row in rows[-3:]
@@ -79,7 +81,7 @@ def assess(rows: list[dict], spec: dict) -> dict:
             for row in receipts
         ) / len(receipts),
         "fixed_reference_kl": metric_value(metrics, "joint_policy/fixed_reference_kl"),
-        "value_mse": metric_value(metrics, "joint_value_norm/raw_value_mse")
+        "value_mse": metric_value(metrics, f"{value_scope}/raw_value_mse")
         if role_active(spec, latest["global_step"]) else None,
         "schedule": round_metadata(spec, latest["global_step"]),
         "interpretation": "Training diagnostics only; loss is not a held-out performance guarantee.",
@@ -107,6 +109,14 @@ def metric_rows(path: Path) -> list[dict]:
 
 def recover_checkpoints(spec: dict, rows: list[dict]) -> dict:
     root = Path(spec["run"]) / "engine/checkpoints"
+    normalized = spec.get("value_normalization", True)
+    initial_norm_updates = 0
+    if schedule_name(spec) != "simultaneous":
+        initial_norm = Path(spec.get("critic_model", spec["model"])) / "joint_value_norm.json"
+        if initial_norm.exists():
+            initial_norm_updates = read_json(initial_norm).get("updates")
+            if type(initial_norm_updates) is not int or initial_norm_updates < 0:
+                raise ValueError("Invalid initial critic ValueNorm update count")
     by_role = {}
     for role in ("actor", "critic"):
         found = {}
@@ -116,12 +126,20 @@ def recover_checkpoints(spec: dict, rows: list[dict]) -> dict:
                 continue
             if not (path / "config.json").is_file() or not list(path.glob("*.safetensors")):
                 continue
-            if role == "critic" and not (path / "joint_value_norm.json").is_file():
+            if role == "critic" and normalized and not (path / "joint_value_norm.json").is_file():
                 raise ValueError("Committed normalized critic omitted its running statistics")
+            if role == "critic" and spec.get("component_ablation") is not None:
+                from .joint_critic import validate_critic_settings
+                if not (path / "joint_critic_settings.json").is_file():
+                    raise ValueError("Ablation checkpoint omitted its executed critic settings")
+                validate_critic_settings(path, {
+                    "cooperative_context": spec.get("critic_cooperative_context", True),
+                    "value_normalization": normalized,
+                })
             validate_checkpoint_metadata(path, spec, step + 1)
-            if role == "critic" and schedule_name(spec) == ALTERNATING:
+            if role == "critic" and normalized and schedule_name(spec) != "simultaneous":
                 if read_json(path / "joint_value_norm.json").get("updates") != (
-                    update_counts(spec, step + 1)["critic_steps"]
+                    initial_norm_updates + update_counts(spec, step + 1)["critic_steps"]
                 ):
                     raise ValueError("Scheduled critic ValueNorm count differs from native updates")
             if step in found:

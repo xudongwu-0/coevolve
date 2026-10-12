@@ -15,7 +15,7 @@ def run(spec_path: Path, launch: Launcher) -> None:
     root = Path(spec["joint_root"])
     rows = read_json(Path(spec["data"]))
     try:
-        for version in range(spec["steps"]):
+        for version in range(spec.get("recovery_start_round", 0), spec["steps"]):
             current = round_path(root, version)
             batch = rows[version * spec["batch_size"]:(version + 1) * spec["batch_size"]]
             assignments = []

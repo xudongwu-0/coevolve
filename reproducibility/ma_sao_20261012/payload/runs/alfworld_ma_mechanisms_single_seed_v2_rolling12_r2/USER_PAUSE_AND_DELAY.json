@@ -1,0 +1,14 @@
+{
+  "user_requested_at_utc": "2026-10-09T08:34:57.344+00:00",
+  "action": "pause_owned_training_validation_and_automatic_resubmission",
+  "resume_not_before_utc": "2026-10-09T10:34:57.344+00:00",
+  "minimum_resubmission_interval_seconds": 7200,
+  "interpretation": "Pause now; wait at least two hours before trying again. Recheck both nodes for no GPU workload or distributed launchers before starting.",
+  "checkpoint_interval_rounds_unchanged": 12,
+  "foreign_processes_must_not_be_modified": true,
+  "keep_every_committed_checkpoint_and_interruption_record": true,
+  "formal_training_still_requires_native_restore_gate": true,
+  "original_absolute_deadline_unchanged": true,
+  "supersedes_earlier_thirty_minute_retry_timing": true,
+  "status": "pause_requested"
+}

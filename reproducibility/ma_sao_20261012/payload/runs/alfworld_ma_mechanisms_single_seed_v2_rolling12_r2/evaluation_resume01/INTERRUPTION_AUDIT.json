@@ -1,0 +1,97 @@
+{
+  "status": "observed_controller_loss",
+  "previous_attempt": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0144/selection/attempt-01",
+  "previous_config_sha256": "f5ac84f33a0a4f7bfa6d89cf66e0987e3b7b56af9699ac4657ff7edf30ab3e85",
+  "controller_pid": 3626493,
+  "evaluator_pid": 3792500,
+  "controller_alive": false,
+  "evaluator_alive": false,
+  "controller_exit_code": 1,
+  "exit_evidence": "Attached shell ma-full-rolling12-two-hour returned1; both PIDs absent on first post-exit inspection",
+  "first_verified_exited_at_unix": 1791558290.346198,
+  "verified_at_unix": 1791608186.6702797,
+  "release_sha256": "da3bf16d2e77d6cb94c750b15179de3e90b1a961bd3b85d78cce11098b016c29",
+  "both_node_resources": {
+    "node4": {
+      "remaining_gpu_pids": [],
+      "verified_filler_pids": [],
+      "foreign_gpu_pids": [],
+      "vanished_gpu_pids": [],
+      "filler_kind": null,
+      "filler_unit_active": false,
+      "operator_pause": {
+        "verified": true,
+        "host": "dev-NDH200-026",
+        "path": "/mnt/3fs/models/bruli/gpu-utilization-20260925/nodes/dev-NDH200-026/PAUSED",
+        "sha256": "3813f00ec52be29e21d943c7533f16cc1320512cb67e6aef1bdb0ad12d9a9ad8",
+        "content": {
+          "paused": true,
+          "reason": "User requested stopping GPU stress on s23-s26",
+          "created_utc": "2026-10-08T03:11:08.248074+00:00"
+        },
+        "service": {
+          "ExecStart": "{ path=/usr/bin/python3 ; argv[]=/usr/bin/python3 -B /mnt/3fs/xudong/gpu-utilization/adaptive_gpu_filler.py supervisor ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+          "User": "bruli",
+          "ActiveState": "inactive",
+          "ConditionResult": "no"
+        },
+        "verified_at_unix": 1791608183.3089316
+      }
+    },
+    "node3": {
+      "release": {
+        "remaining_gpu_pids": [],
+        "verified_filler_pids": [],
+        "foreign_gpu_pids": [],
+        "vanished_gpu_pids": [],
+        "filler_kind": null,
+        "filler_unit_active": false,
+        "operator_pause": {
+          "verified": true,
+          "host": "dev-NDH200-025",
+          "path": "/mnt/3fs/models/bruli/gpu-utilization-20260925/nodes/dev-NDH200-025/PAUSED",
+          "sha256": "67b820779e73d84c165f0229e6240fb4bb1d052330e4eeff6ef5c23f74f614db",
+          "content": {
+            "paused": true,
+            "reason": "User requested stopping GPU stress on s23-s26",
+            "created_utc": "2026-10-08T03:11:08.231854+00:00"
+          },
+          "service": {
+            "ExecStart": "{ path=/usr/bin/python3 ; argv[]=/usr/bin/python3 -B /mnt/3fs/xudong/gpu-utilization/adaptive_gpu_filler.py supervisor ; ignore_errors=no ; start_time=[n/a] ; stop_time=[n/a] ; pid=0 ; code=(null) ; status=0/0 }",
+            "User": "bruli",
+            "ActiveState": "inactive",
+            "ConditionResult": "no"
+          },
+          "verified_at_unix": 1791608183.849305
+        }
+      },
+      "released": true,
+      "at_unix": 1791608183.8493369
+    },
+    "released": true,
+    "at_unix": 1791608183.8572223,
+    "distributed_launchers": {
+      "node4": [],
+      "node3": []
+    }
+  },
+  "logs": {
+    "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/FULL_CONTROL.log": "64fb9c8731a95e6691c63e5de3675197d4974cb0d401610fb916570c7a277579",
+    "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0144/supervision/selection-attempt-1.log": "261957e6173a1e71617978986620d2748c25913b0fdb455d632a7d8c9728341c",
+    "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0144/selection/attempt-01/supervision/environment.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0144/selection/attempt-01/supervision/solver_replica0.log": "071cf0ee1ceebcd2e77ba225da39b5fdcc53b32782d73cbcc8cacb19dfbe9545",
+    "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0144/selection/attempt-01/supervision/solver_replica1.log": "d4b8f15c754319847d83df2ba916e4acc2933dd45b84c2cec28777273f8c131e",
+    "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0144/selection/attempt-01/supervision/solver_replica2.log": "db0908d3513163797e88e7257114a9db2ebb285a74ffc62f01ca3dbc34aa1799",
+    "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0144/selection/attempt-01/supervision/solver_replica3.log": "9a596e761eec8d4c78809f5ec455e2e57ccc9d51394f95935410d97364402825",
+    "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0144/selection/attempt-01/supervision/solver_replica4.log": "c37675d2f7716e929c8df19a31b00fae350194c8052d6644b65172fa2dd44263",
+    "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0144/selection/attempt-01/supervision/solver_replica5.log": "58a8735be4ec5dc543a4ca476b3cee7ee7afd5f30c52ab21e011154bf9a1045d",
+    "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0144/selection/attempt-01/supervision/solver_replica6.log": "160d6e9df06562a13bf80f649eaf9c9492a77840594f24d1faf9770320a46b52",
+    "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0144/selection/attempt-01/supervision/solver_replica7.log": "e32c8160155c93a2530bbbdcc4af684a5e4867186e8272f6b3115c4cacba1928"
+  },
+  "repeat_completed_episodes": false,
+  "signal_and_sender": "unknown",
+  "original_top_level_failure_receipt_absent": true,
+  "original_evaluator_failure_receipt_absent": true,
+  "schedule_sha256": "16b3ff438cf43c6dd1dced1ea9baf022d238030f58bf814767c8c6aaaa5daea9",
+  "interpretation": "Observed abrupt controller/evaluator loss, not a proved external SIGTERM or known Python/transport error. One bounded evaluation-only continuation; preserve every completed outcome and stop on new unexplained errors."
+}

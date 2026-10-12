@@ -1,0 +1,239 @@
+{
+  "status": "in_progress",
+  "arms": {
+    "full": {
+      "status": "verified",
+      "arm": "full",
+      "training": {
+        "status": "passed",
+        "arm": "full",
+        "roles": {
+          "editor": {
+            "active_rounds": 96,
+            "inactive_rounds": 48,
+            "critic_only_warmup_steps": 3,
+            "actor_steps": 93,
+            "critic_steps": 192,
+            "consumed_trajectories": 768,
+            "generated_trajectories": 1152,
+            "recorded_action_tokens": 3067926,
+            "invalid_harness_episode_count": 106,
+            "elapsed_seconds": 10540.583318948746
+          },
+          "solver": {
+            "active_rounds": 144,
+            "inactive_rounds": 0,
+            "critic_only_warmup_steps": 3,
+            "actor_steps": 141,
+            "critic_steps": 288,
+            "consumed_trajectories": 1152,
+            "generated_trajectories": 1152,
+            "recorded_action_tokens": 858029,
+            "invalid_harness_episode_count": 106,
+            "elapsed_seconds": 10527.883791208267
+          }
+        },
+        "shared_environment_episodes": 1152,
+        "at_unix": 1791555754.8622515
+      },
+      "endpoints": {
+        "96": {
+          "status": "completed",
+          "arm": "full",
+          "rounds": 96,
+          "selection": {
+            "harness": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/initial/patches/-1-proposal01.json",
+            "label": "incumbent_harness",
+            "new_harness_selected": false,
+            "valid_proposals": 7,
+            "selection_scores": {
+              "no_patch": 0.9166666666666666,
+              "incumbent_harness": 0.9791666666666666,
+              "candidate-proposal00": 0.2708333333333333,
+              "candidate-proposal01": 0.9375,
+              "candidate-proposal02": 0.875,
+              "candidate-proposal03": 0.9166666666666666,
+              "candidate-proposal04": 0.9375,
+              "candidate-proposal05": 0.8958333333333334,
+              "candidate-proposal06": 0.8958333333333334,
+              "candidate-proposal07": 0.9166666666666666
+            },
+            "selection_matrix": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0096/selection/attempt-01",
+            "pair": {
+              "editor": {
+                "actor": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/attempts/attempt-0001/full/editor/optimizer/engine/checkpoints/chengboliu/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2-full/editor/actor/epoch0epochstep95globalstep95",
+                "critic": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/attempts/attempt-0001/full/editor/optimizer/engine/checkpoints/chengboliu/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2-full/editor/critic/epoch0epochstep95globalstep95"
+              },
+              "solver": {
+                "actor": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/attempts/attempt-0001/full/solver/optimizer/engine/checkpoints/chengboliu/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2-full/solver/actor/epoch0epochstep95globalstep95",
+                "critic": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/attempts/attempt-0001/full/solver/optimizer/engine/checkpoints/chengboliu/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2-full/solver/critic/epoch0epochstep95globalstep95"
+              }
+            },
+            "at_unix": 1791556738.7421548,
+            "main200_used_to_select": false
+          },
+          "scores": {
+            "no_patch": {
+              "successes": 178,
+              "accuracy": 0.89,
+              "questions": 200,
+              "report": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0096/evaluation200/attempt-01/reports/53a56c2f9537da0d78e856bb36436af24573acff4b627a60c758d87618c2d794.json",
+              "sha256": "eef702c33b730e94cecfcfd4552cef68184e0a7e4ba03c2272bd7e80a2568794"
+            },
+            "selected": {
+              "successes": 180,
+              "accuracy": 0.9,
+              "questions": 200,
+              "report": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0096/evaluation200/attempt-01/reports/54cf60d78be48813731bf8ce610f2036597bdbd54888eb139be3c6955f9dc42d.json",
+              "sha256": "89e429679bf50b5e642afcce62fa78a0d0f3cb313d2c98320194b2d53fa72462"
+            }
+          },
+          "main_matrix": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0096/evaluation200/attempt-01",
+          "main_started_at_unix": 1791556738.772906,
+          "physical_main_episodes": 400,
+          "primary_endpoint": false,
+          "at_unix": 1791557626.100598
+        },
+        "144": {
+          "status": "completed",
+          "arm": "full",
+          "rounds": 144,
+          "selection": {
+            "harness": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0144/patches/candidate-proposal01.json",
+            "label": "candidate-proposal01",
+            "new_harness_selected": true,
+            "valid_proposals": 7,
+            "selection_scores": {
+              "no_patch": 0.9166666666666666,
+              "incumbent_harness": 0.9166666666666666,
+              "candidate-proposal00": 0.8958333333333334,
+              "candidate-proposal01": 0.9583333333333334,
+              "candidate-proposal02": 0.8958333333333334,
+              "candidate-proposal03": 0.9166666666666666,
+              "candidate-proposal04": 0.875,
+              "candidate-proposal05": 0.8958333333333334,
+              "candidate-proposal06": 0.9375,
+              "candidate-proposal07": 0.9583333333333334
+            },
+            "selection_matrix": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0144/selection/attempt-02",
+            "pair": {
+              "editor": {
+                "actor": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/attempts/attempt-0001/full/editor/optimizer/engine/checkpoints/chengboliu/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2-full/editor/actor/epoch0epochstep143globalstep143",
+                "critic": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/attempts/attempt-0001/full/editor/optimizer/engine/checkpoints/chengboliu/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2-full/editor/critic/epoch0epochstep143globalstep143"
+              },
+              "solver": {
+                "actor": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/attempts/attempt-0001/full/solver/optimizer/engine/checkpoints/chengboliu/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2-full/solver/actor/epoch0epochstep143globalstep143",
+                "critic": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/attempts/attempt-0001/full/solver/optimizer/engine/checkpoints/chengboliu/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2-full/solver/critic/epoch0epochstep143globalstep143"
+              }
+            },
+            "at_unix": 1791610838.3344116,
+            "main200_used_to_select": false
+          },
+          "scores": {
+            "no_patch": {
+              "successes": 179,
+              "accuracy": 0.895,
+              "questions": 200,
+              "report": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0144/evaluation200/attempt-01/reports/53a56c2f9537da0d78e856bb36436af24573acff4b627a60c758d87618c2d794.json",
+              "sha256": "015c55e2affd6fde4e1cf789ca4583d458de2e1da7bebec096da331c3b797787"
+            },
+            "selected": {
+              "successes": 186,
+              "accuracy": 0.93,
+              "questions": 200,
+              "report": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0144/evaluation200/attempt-01/reports/0c872538137d647b0af3df3e9c2c306cf4392758925e8d44d31fecf867092169.json",
+              "sha256": "60cea4733fabbd36c1c666b0e65a73c91a41202e34c8db353b55f519cffbb048"
+            }
+          },
+          "main_matrix": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0144/evaluation200/attempt-01",
+          "main_started_at_unix": 1791610839.8189309,
+          "physical_main_episodes": 400,
+          "primary_endpoint": true,
+          "at_unix": 1791611743.962913
+        }
+      },
+      "training_seeds": [
+        1000043
+      ],
+      "primary_endpoint": 144,
+      "at_unix": 1791612117.543699,
+      "elapsed_seconds": 66947.15820240974,
+      "interruption_costs": {
+        "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/attempts/attempt-0001/COST.json": {
+          "resume_round": 0,
+          "new_persisted_outcomes": 1152,
+          "new_generated_role_receipts": {
+            "editor": 1152,
+            "solver": 1152
+          },
+          "new_committed_role_rounds": {
+            "editor": 144,
+            "solver": 144
+          },
+          "unpersisted_inflight_work_unknown": true
+        }
+      },
+      "recovery_semantics": "Native model/Adam/ValueNorm/RNG/cursor continuation, but fresh serving after interruption; uncommitted speculative work is retained as wasted cost, not replayed",
+      "evaluation_recovery": {
+        "interruption_audit": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/evaluation_resume01/INTERRUPTION_AUDIT.json",
+        "interruption_audit_sha256": "69b70e183e859f633575778a672916f78b4ee28a821075536c70807849279b00",
+        "resume_manifest": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/evaluation_resume01/RESUME_MATRIX.json",
+        "resume_manifest_sha256": "02e71988e022c904708fea0c8c26beb58d621a514803eb43a0c69625a00658b9",
+        "evaluation_source_manifest_sha256": "46befa66460a955db7e63de20ce9c401b7c5308c4a77ea156f1e053e13abb07b",
+        "driver_sha256": "736fbddbca58235cbd05fe1a537d1af91afa098256cfe3e58d90630e4c2c30a2",
+        "reused_completed_episodes": 82,
+        "previous_started_episodes": 144,
+        "previous_unfinished_episodes": 62,
+        "selection_logical_episodes": 432,
+        "selection_physical_episode_starts": 494,
+        "repeated_completed_episodes": 0,
+        "regenerated_harness_candidates": 0,
+        "unpersisted_inflight_tokens_unknown": true,
+        "signal_and_sender": "unknown"
+      }
+    }
+  },
+  "historical_reference_accuracy": 0.97,
+  "primary_control": "new_full",
+  "paired_exact_p": {},
+  "holm_adjusted_p_four_comparisons": {},
+  "single_training_seed": 1000043,
+  "fixed_primary_rounds": 144,
+  "prior_work": {
+    "original_v2": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2",
+    "v2_attempt02": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_attempt02",
+    "new_native_calibration_weights_are_not_formal_initialization": true,
+    "interrupted_partial_work_is_not_free_or_continued_without_state": true,
+    "evidence": {
+      "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2/full/INTERRUPTED.json": "e47e5ee1f585bbc04cc6760987670e363382de44e37dfcfc6b575907dba741fc",
+      "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2/full/INTERRUPTED.md": "c387791c83bc37bbea504683f55b009b371c5d6bcc6b3b7e5766d5673c056d8a",
+      "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_attempt02/full/INTERRUPTED.json": "d9e92e17464f0a11523b3ee43efeccbc4564b882d64e983cda50d7af85fa82da",
+      "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_attempt02/full/INTERRUPTED.md": "407ff32c7cf83305b3a6cafeb72b5da24de68adcff4362ea6912e378a380ed87"
+    }
+  },
+  "native_calibration": {
+    "status": "passed",
+    "pins_sha256": "43779a12229a83b51857e74cde29893b6cd7df74dc86de8e96861245935a77c3",
+    "memory_gate_inheritance_sha256": "eaf19ed2a2e03dc69ceb47ff3f30c40b7dabe2783e26afbb16ef209a76492530",
+    "real_schedule_cases": {
+      "full": {
+        "audit": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2/schedule-calibration/full/TRAINING_AUDIT.json",
+        "sha256": "39b0476a59f472ba44c473f778cfaeea96a1b3cb05abe3f1f9dbabff760380ba",
+        "shared_environment_episodes": 48
+      },
+      "always_joint": {
+        "audit": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2/schedule-calibration/always_joint/TRAINING_AUDIT.json",
+        "sha256": "21a734afd37940fe6c75f897593640d4031ade76d91cf3b12747e5a915191c5c",
+        "shared_environment_episodes": 48
+      }
+    },
+    "calibration_environment_episodes": 96,
+    "new_independent_training_seeds": 0,
+    "at_unix": 1791512197.2092643,
+    "inherited_from": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2/NATIVE_GATE.json",
+    "inherited_sha256": "feb43132eb244700872179379cb9ec6024a48f838ed397c63535f0c8e51f57fb",
+    "additional_rolling_restore_gate_required": true
+  },
+  "training_seed_robustness_claimed": false,
+  "at_unix": 1791612707.545576
+}

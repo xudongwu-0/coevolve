@@ -1,0 +1,16 @@
+{
+  "source": "/mnt/3fs/xudong/coevolve/assets/Harness-R1/target-agent-sft",
+  "weights_unchanged": true,
+  "files": {
+    "preprocessor_config.json": {
+      "source_sha256": "957eb01d1ea45341a92d543daec95857a7cbeff5803834bc0603b27ba7b41b3f",
+      "checkpoint_sha256": "957eb01d1ea45341a92d543daec95857a7cbeff5803834bc0603b27ba7b41b3f",
+      "status": "already_present"
+    },
+    "processor_config.json": {
+      "source_sha256": "14932921ca485d458a04dafd8069fbb0a4505622a48208d19ed247115801385b",
+      "checkpoint_sha256": "01562eddd6f9e9ec4bc31656a3b7055284cafbf889acc6c4348dca431ae31f68",
+      "status": "already_present"
+    }
+  }
+}

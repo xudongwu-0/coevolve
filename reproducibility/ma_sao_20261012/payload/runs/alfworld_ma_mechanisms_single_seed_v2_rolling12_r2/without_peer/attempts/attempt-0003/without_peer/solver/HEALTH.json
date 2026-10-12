@@ -1,0 +1,24 @@
+{
+  "status": "healthy",
+  "completed_steps": 76,
+  "hard_errors": [],
+  "stop_reasons": [],
+  "warnings": [],
+  "latest_team_success": 0.75,
+  "invalid_patch_fraction": 0.125,
+  "completion_cap_fraction": 0.0,
+  "fixed_reference_kl": 0.0017288425005972385,
+  "value_mse": 0.08688585460186005,
+  "schedule": {
+    "collection_round": 75,
+    "active_role": "both",
+    "source_round": 50,
+    "role_active": true,
+    "actor_update": true,
+    "critic_updates": 2,
+    "collection_policy_version": 75,
+    "actor_updates_before_round": 72,
+    "max_policy_version_lag": 1
+  },
+  "interpretation": "Training diagnostics only; loss is not a held-out performance guarantee."
+}

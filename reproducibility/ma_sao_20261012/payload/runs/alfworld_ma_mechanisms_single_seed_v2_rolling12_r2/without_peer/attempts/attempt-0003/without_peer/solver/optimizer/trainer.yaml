@@ -1,0 +1,237 @@
+experiment_name: alfworld_ma_mechanisms_single_seed_v2_rolling12_r2-without_peer
+trial_name: solver
+seed: 1000043
+enable_offload: false
+total_train_epochs: 144
+total_train_steps: 144
+tokenizer_path: ${actor.path}
+cluster:
+  n_nodes: 1
+  n_gpus_per_node: 7
+  fileroot: /mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/without_peer/attempts/attempt-0003/without_peer/solver/optimizer/engine
+  name_resolve:
+    type: nfs
+    nfs_record_root: /mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/without_peer/attempts/attempt-0003/without_peer/solver/optimizer/name_resolve
+scheduler:
+  type: local
+rollout:
+  backend: vllm:d3p1t1
+  admin_api_key: ${oc.env:SAO_LOCAL_ADMIN_TOKEN}
+  experiment_name: ${experiment_name}
+  trial_name: ${trial_name}
+  max_concurrent_rollouts: 16
+  queue_size: null
+  consumer_batch_size: 8
+  max_head_offpolicyness: 1
+  enable_rollout_tracing: false
+  scheduling_spec: ${actor.scheduling_spec}
+  fileroot: ${cluster.fileroot}
+  tokenizer_path: ${tokenizer_path}
+  dump_to_file: true
+  agent:
+    mode: inline
+    admin_api_key: ${oc.env:SAO_LOCAL_ADMIN_TOKEN}
+    export_style: individual
+    turn_discount: 1.0
+  setup_timeout: 1800
+gconfig:
+  n_samples: 1
+  min_new_tokens: 0
+  max_new_tokens: 4096
+  max_tokens: 32768
+  greedy: false
+  temperature: 1.0
+actor:
+  backend: fsdp:d4p1t1
+  experiment_name: ${experiment_name}
+  trial_name: ${trial_name}
+  path: /mnt/3fs/xudong/coevolve/runs/alfworld_solver_fast_v4_s42/training/optimizer/engine/checkpoints/chengboliu/alfworld_solver_fast_v4_s42/w1/actor/epoch0epochstep79globalstep79
+  init_from_scratch: false
+  disable_dropout: true
+  gradient_checkpointing: true
+  dtype: bfloat16
+  attn_impl: sdpa
+  mb_spec:
+    max_tokens_per_mb: 32768
+    n_mbs: 2
+  optimizer:
+    type: adam
+    lr: 5.0e-07
+    weight_decay: 0.0
+    beta1: 0.9
+    beta2: 0.999
+    eps: 1.0e-08
+    lr_scheduler_type: constant
+    gradient_clipping: 1.0
+    warmup_steps_proportion: 0.0
+  eps_clip: 0.2
+  eps_clip_higher: 0.2
+  temperature: ${gconfig.temperature}
+  reward_scaling: 1.0
+  reward_bias: 0.0
+  kl_ctl: 0.02
+  ppo_n_minibatches: 1
+  recompute_logprob: true
+  use_decoupled_loss: true
+  rejection_sampling:
+    level: token
+    action: mask
+    metric: ratio
+    lower: 0.3
+    upper: 5.0
+  adv_norm:
+    mean_level: batch
+    std_level: batch
+  weight_update_mode: xccl
+  max_new_tokens: ${gconfig.max_new_tokens}
+  scheduling_spec: &id001
+  - task_type: worker
+    port_count: 2
+    gpu: 1
+    mem: 32
+    cmd: python3 -m areal.infra.rpc.rpc_server
+    env_vars:
+      NCCL_IB_DISABLE: '1'
+      OMP_NUM_THREADS: '4'
+      VLLM_PLUGINS: ''
+      TOKENIZERS_PARALLELISM: 'false'
+      LITELLM_LOCAL_MODEL_COST_MAP: 'True'
+      GLOO_SOCKET_IFNAME: lo
+      NCCL_SOCKET_IFNAME: lo
+      TMPDIR: /dev/shm/sao-1008-supervision
+      TRITON_CACHE_DIR: /mnt/3fs/xudong/coevolve/runs/source-snapshots/alfworld-ma-mechanisms-serial15-v3/assets/runtime-cache/dev-NDH200-026/triton
+      TORCHINDUCTOR_CACHE_DIR: /mnt/3fs/xudong/coevolve/runs/source-snapshots/alfworld-ma-mechanisms-serial15-v3/assets/runtime-cache/dev-NDH200-026/torch
+      VLLM_CACHE_ROOT: /mnt/3fs/xudong/coevolve/runs/source-snapshots/alfworld-ma-mechanisms-serial15-v3/assets/runtime-cache/dev-NDH200-026/vllm
+      CUDA_CACHE_PATH: /mnt/3fs/xudong/coevolve/runs/source-snapshots/alfworld-ma-mechanisms-serial15-v3/assets/runtime-cache/dev-NDH200-026/cuda
+      PYTHONDONTWRITEBYTECODE: '1'
+      AREAL_CACHE_DIR: /mnt/3fs/xudong/coevolve/runs/source-snapshots/alfworld-ma-mechanisms-serial15-v3/assets/runtime-cache/dev-NDH200-026/areal
+      FLASHINFER_WORKSPACE_BASE: /mnt/3fs/xudong/coevolve/runs/source-snapshots/alfworld-ma-mechanisms-serial15-v3/assets/runtime-cache/dev-NDH200-026/flashinfer
+      HOME: /mnt/3fs/xudong/coevolve/runs/source-snapshots/alfworld-ma-mechanisms-serial15-v3/assets/runtime-cache/dev-NDH200-026/home
+      AREAL_HOST_IP: 127.0.0.1
+      PYTORCH_ALLOC_CONF: expandable_segments:True
+      SAO_ALFWORLD_CONTROLLER_URL: http://127.0.0.1:28000/api
+      SAO_ALFWORLD_HTTP_TIMEOUT: '900'
+      MA_SAO_JOINT_EPISODES: '1'
+      MA_SAO_VALUE_NORM: '1'
+      MA_SAO_COOPERATIVE_CONTEXT: '1'
+      MA_SAO_ASYNC_JOINT_ROOT: /mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/without_peer/attempts/attempt-0003/without_peer/joint
+      MA_SAO_JOINT_ROLE: solver
+      MA_SAO_PEER_WEIGHT_MODE: unit
+      MA_SAO_ANCHOR_SCHEDULE: '1'
+      SAO_RESOURCE_AUTHORITY: /mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/serial15_20261012_self_fix01/AUTHORIZATION.json
+      SAO_RESOURCE_AUTHORITY_SHA256: 3854e3a81cc8324b66a2bd5120cb12b840db845caf8fad17621412951b6c8f6c
+critic:
+  backend: ${actor.backend}
+  is_critic: true
+  experiment_name: ${experiment_name}
+  trial_name: ${trial_name}
+  path: /mnt/3fs/xudong/coevolve/runs/alfworld_solver_fast_v4_s42/training/optimizer/engine/checkpoints/chengboliu/alfworld_solver_fast_v4_s42/w1/critic/epoch0epochstep79globalstep79
+  init_from_scratch: false
+  disable_dropout: true
+  dtype: ${actor.dtype}
+  attn_impl: sdpa
+  eps_clip: 0.5
+  ppo_n_minibatches: 1
+  mb_spec:
+    max_tokens_per_mb: 34816
+    n_mbs: 2
+  optimizer:
+    type: adam
+    lr: 2.5e-06
+    weight_decay: 0.0
+    beta1: 0.9
+    beta2: 0.999
+    eps: 1.0e-08
+    lr_scheduler_type: constant
+    gradient_clipping: 1.0
+    warmup_steps_proportion: 0.0
+  scheduling_strategy:
+    type: colocation
+    target: actor
+    fork: false
+  scheduling_spec: ${actor.scheduling_spec}
+  gradient_checkpointing: true
+ref:
+  backend: fsdp:d4p1t1
+  experiment_name: alfworld_ma_mechanisms_single_seed_v2_rolling12_r2-without_peer
+  trial_name: solver
+  path: /mnt/3fs/xudong/coevolve/runs/alfworld_solver_fast_v4_s42/training/optimizer/engine/checkpoints/chengboliu/alfworld_solver_fast_v4_s42/w1/actor/epoch0epochstep79globalstep79
+  init_from_scratch: false
+  disable_dropout: true
+  dtype: bfloat16
+  attn_impl: sdpa
+  temperature: ${gconfig.temperature}
+  optimizer: null
+  mb_spec:
+    max_tokens_per_mb: 32768
+    n_mbs: 2
+  scheduling_strategy:
+    type: colocation
+    target: actor
+  scheduling_spec: *id001
+  optimizer_dtype: bfloat16
+vllm:
+  model: ${actor.path}
+  seed: ${seed}
+  skip_tokenizer_init: false
+  dtype: ${actor.dtype}
+  max_model_len: 32768
+  max_num_seqs: 16
+  gpu_memory_utilization: 0.7
+  enforce_eager: false
+  gdn_prefill_backend: triton
+train_dataset:
+  batch_size: 8
+  shuffle: false
+  drop_last: true
+  pin_memory: false
+  num_workers: 0
+  path: /mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/without_peer/attempts/attempt-0003/without_peer/solver/optimizer/data
+  type: rl
+  max_length: 512
+  scheduling_spec: null
+valid_dataset: null
+saver:
+  experiment_name: ${experiment_name}
+  trial_name: ${trial_name}
+  fileroot: ${cluster.fileroot}
+  freq_epochs: null
+  freq_steps: 48
+  freq_secs: null
+  mode: sync
+recover:
+  mode: disabled
+  experiment_name: ${experiment_name}
+  trial_name: ${trial_name}
+  fileroot: ${cluster.fileroot}
+  freq_epochs: null
+  freq_steps: null
+  freq_secs: null
+evaluator:
+  experiment_name: ${experiment_name}
+  trial_name: ${trial_name}
+  fileroot: ${cluster.fileroot}
+  freq_epochs: null
+  freq_steps: null
+  freq_secs: null
+stats_logger:
+  experiment_name: ${experiment_name}
+  trial_name: ${trial_name}
+  fileroot: ${cluster.fileroot}
+  wandb:
+    mode: disabled
+  swanlab:
+    mode: disabled
+  trackio:
+    mode: disabled
+perf_tracer:
+  experiment_name: ${experiment_name}
+  trial_name: ${trial_name}
+  fileroot: ${cluster.fileroot}
+  enabled: false
+  session_tracer:
+    enabled: false
+reward:
+  backend: local
+  on_error: raise
+  max_workers: 1

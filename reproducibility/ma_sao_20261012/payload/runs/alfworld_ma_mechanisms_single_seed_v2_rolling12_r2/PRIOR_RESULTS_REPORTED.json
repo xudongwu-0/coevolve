@@ -1,0 +1,15 @@
+{
+  "status": "reported_in_markdown_and_conversation",
+  "results": {
+    "alfworld_w3h3_from_w2_early79_v1": {
+      "result_sha256": "25635fe08529a45084eef4bd66a9bf67bd5a015afdd3062c2d3f074fe3ba906e",
+      "report_sha256": "b55962ef319f8debcb25a4d2b7c5c9d6ab4fc44e6dd563d83ae1ac5c0a49ead4"
+    },
+    "alfworld_ma_engineer_weights_w0_v1": {
+      "result_sha256": "8bd5355b485f6fa899ea0f08871fded5207492b79a7fcd80ceea0090eaa1f28b",
+      "report_sha256": "e2290cb1b9c30ea3b36f62f1f64ac06544a35a4570e4dd3a07d52908c1bda5e3"
+    }
+  },
+  "user_primary_only_scope_honored": true,
+  "at_unix": 1791463752.949509
+}

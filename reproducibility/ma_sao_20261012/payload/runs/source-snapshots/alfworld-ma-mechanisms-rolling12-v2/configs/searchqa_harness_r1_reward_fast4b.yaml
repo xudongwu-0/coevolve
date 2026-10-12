@@ -1,0 +1,17 @@
+harness_r1_eval_root: /mnt/3fs/xudong/coevolve/runs/searchqa_harness_r1_20260930/fast4b/reward_cache
+harness_r1_response_protocol: prefill_think_patch
+harness_r1_searchqa_data: /mnt/3fs/xudong/coevolve/assets/searchqa_sao_20260929
+harness_r1_target_urls:
+  - http://127.0.0.1:18901/v1
+  - http://127.0.0.1:18911/v1
+  - http://127.0.0.1:18921/v1
+  - http://127.0.0.1:18931/v1
+harness_r1_target_model_sha256: ed70e9c6825cc84b3c292455aa1e2c972da8b48b52f12d422cf7ccf61cbd25ae
+harness_r1_retrieval_url: http://127.0.0.1:18731
+harness_r1_target_temperature: 1.0
+harness_r1_rollout_max_tokens: 4096
+harness_r1_rollout_concurrency: 4
+harness_r1_rollout_http_timeout: 900
+harness_r1_cache_lock_timeout: 7200
+reward_max_concurrency: 8
+reward_num_workers: 8

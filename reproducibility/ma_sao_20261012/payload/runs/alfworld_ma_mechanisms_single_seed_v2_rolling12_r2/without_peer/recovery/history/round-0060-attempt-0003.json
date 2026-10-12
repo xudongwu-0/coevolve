@@ -1,0 +1,490 @@
+{
+  "schema": "paired-native-recovery-v1",
+  "status": "committed",
+  "completed_rounds": 60,
+  "roles": {
+    "editor": "a5ea1d6ab0b1432f435c34938e7472150af8c09b047a99ec3768a9d904551715",
+    "solver": "3f51dc9a5ffcc6be7398d3c2d9954dbe59ae5a4d5514c2230a6c572e2256864e"
+  },
+  "previous": {
+    "generation": "round-0048-attempt-0003",
+    "completed_rounds": 48,
+    "sha256": "452cfc7b2c9c606b9a49dccb0c0fecd786a2b7a363f87bba158504c625653b7a",
+    "at_unix": 1791784377.9631152
+  },
+  "committed_at_unix": 1791785220.880756,
+  "validation": "All shard sizes, small-file hashes, Adam counters, sampled fingerprints, ValueNorm, schedule and committed data/metric cursors; not full large-tensor hashes",
+  "sampling": "Resident serving is unchanged between saves; interrupted serving is restarted and uncommitted asynchronous work is discarded, not bitwise rollout replay",
+  "role_metadata": {
+    "editor": {
+      "schema": "paired-native-recovery-v1",
+      "role": "editor",
+      "completed_rounds": 60,
+      "batch_size": 8,
+      "committed_sample_cursor": 480,
+      "science_sha256": "651f644575c7b29ff34fed583a1ee76be8b120e979e5d5e23aaba44e1659caf5",
+      "data_sha256": "ecbe1065486f92116e3330ff797da40c6ada2edda1657836d5469d93340b302f",
+      "source_run": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/without_peer/attempts/attempt-0003/without_peer/editor/optimizer",
+      "source_joint": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/without_peer/attempts/attempt-0003/without_peer/joint",
+      "protected_hf_relative_paths": [],
+      "files": {
+        "actor/.metadata": {
+          "bytes": 729739,
+          "sha256": "f10994bdeaa38badb5ed6fbbaa6a979176f344d05ada62c02127a57fed938c62"
+        },
+        "actor/__0_0.distcp": {
+          "bytes": 9411010296
+        },
+        "actor/__1_0.distcp": {
+          "bytes": 9411010296
+        },
+        "actor/__2_0.distcp": {
+          "bytes": 9411010296
+        },
+        "actor/__3_0.distcp": {
+          "bytes": 9411010296
+        },
+        "actor/adam-rank0.json": {
+          "bytes": 288,
+          "sha256": "321c37354336d6805b5d82003949c7e73a12bc186d5aaf3ecfc752b2839f05fc"
+        },
+        "actor/adam-rank1.json": {
+          "bytes": 288,
+          "sha256": "4f327424e565389cb481c8c6af868cdaecf5b1d5559b1d4e0eb1a5d6e1ca0ab4"
+        },
+        "actor/adam-rank2.json": {
+          "bytes": 288,
+          "sha256": "a2a431c70b7de62d4542d60fd2d93608858482364d287432419c3680d3f2d644"
+        },
+        "actor/adam-rank3.json": {
+          "bytes": 288,
+          "sha256": "da88c7abdf4784a93093095941d9d49f962d598ddaa03a80e28188febafa968a"
+        },
+        "actor/joint_schedule.json": {
+          "bytes": 812,
+          "sha256": "bb8d1e5a89c71c40b9d0cf0b52d130d45bafd854659370bc178d42510fac6cae"
+        },
+        "actor/optim_world_size_4_rank_0.pt": {
+          "bytes": 17908105065
+        },
+        "actor/optim_world_size_4_rank_1.pt": {
+          "bytes": 17908105065
+        },
+        "actor/optim_world_size_4_rank_2.pt": {
+          "bytes": 17908105065
+        },
+        "actor/optim_world_size_4_rank_3.pt": {
+          "bytes": 17908105065
+        },
+        "actor/training-rank0.pt": {
+          "bytes": 14941,
+          "sha256": "80f02bf846ae499e6d65329c86b6618382aed8d38609853c1d536b94d319b2ba"
+        },
+        "actor/training-rank1.pt": {
+          "bytes": 14877,
+          "sha256": "be01d22aa9ca77848af44500f5dd31080d45af82f12b0d61eeb0d49ae22e1861"
+        },
+        "actor/training-rank2.pt": {
+          "bytes": 14877,
+          "sha256": "f6cf04f4ec16993af75c39f99b910f8fd3d52b19cf4c6825ab5920a797cc1dfa"
+        },
+        "actor/training-rank3.pt": {
+          "bytes": 14941,
+          "sha256": "3ff4ce2dde86076475dfeb7935c0de82fcfed03a1a4428ba0242beb9ac85052d"
+        },
+        "controller.json": {
+          "bytes": 2022,
+          "sha256": "bde17b5592c22151ac0070fa7b757d0516f2132a0c06221d0af5b122bd08fc52"
+        },
+        "critic/.metadata": {
+          "bytes": 729395,
+          "sha256": "b4b735a8933dab1db09712b6f2a0078fe051878cfb748ea95bd7c2b1efac1413"
+        },
+        "critic/__0_0.distcp": {
+          "bytes": 8393907960
+        },
+        "critic/__1_0.distcp": {
+          "bytes": 8393889999
+        },
+        "critic/__2_0.distcp": {
+          "bytes": 8393891512
+        },
+        "critic/__3_0.distcp": {
+          "bytes": 8393889999
+        },
+        "critic/adam-rank0.json": {
+          "bytes": 288,
+          "sha256": "fc34411e5ca85d9cc84e9c24323729e185d01260fbaca35e0a3e906f4ffe38c0"
+        },
+        "critic/adam-rank1.json": {
+          "bytes": 288,
+          "sha256": "132a23f9c52020780c99ca0f368fdf18c0ffee8f3492e1b72d7d4893b41abc82"
+        },
+        "critic/adam-rank2.json": {
+          "bytes": 288,
+          "sha256": "733b8119888326681c670fd0e0cc7a673d89982898c7c4411ea17a78f4fbaab9"
+        },
+        "critic/adam-rank3.json": {
+          "bytes": 288,
+          "sha256": "e0e97d1551d8c3ede3096c96a0981b6d47078e7e9c5859fcea4e6c1762b5e8e5"
+        },
+        "critic/joint_critic_settings.json": {
+          "bytes": 65,
+          "sha256": "27592213c8121eb2aaabb96331e6ed3b5144c763a0b52193a74936fa394cf3f1"
+        },
+        "critic/joint_schedule.json": {
+          "bytes": 812,
+          "sha256": "bb8d1e5a89c71c40b9d0cf0b52d130d45bafd854659370bc178d42510fac6cae"
+        },
+        "critic/joint_value_norm.json": {
+          "bytes": 277,
+          "sha256": "c9fae8ce106bbd208d44beec2eeecdc225732e3eded6ee3266ab63022a3a78b8"
+        },
+        "critic/optim_world_size_4_rank_0.pt": {
+          "bytes": 15873901382
+        },
+        "critic/optim_world_size_4_rank_1.pt": {
+          "bytes": 15873868614
+        },
+        "critic/optim_world_size_4_rank_2.pt": {
+          "bytes": 15873868614
+        },
+        "critic/optim_world_size_4_rank_3.pt": {
+          "bytes": 15873868614
+        },
+        "critic/training-rank0.pt": {
+          "bytes": 14941,
+          "sha256": "e28adecc5e10ffa5d20dd648422537ae8a16b4b7a3260b41ec8132143200e784"
+        },
+        "critic/training-rank1.pt": {
+          "bytes": 14877,
+          "sha256": "9d66ecb6d2740fa434e742311010f8b509a7f524fb863d3129106af5183f0351"
+        },
+        "critic/training-rank2.pt": {
+          "bytes": 14877,
+          "sha256": "80c89295ac15feaf850a83ffa0f3e3a29e1eafbab886354288b0a9cb8384bd47"
+        },
+        "critic/training-rank3.pt": {
+          "bytes": 14941,
+          "sha256": "1bf60f4be474fde18005b595ac6684dfd7225568287cd7ce35a641fb1de2e632"
+        },
+        "metrics.jsonl": {
+          "bytes": 492024,
+          "sha256": "188fee9088654d8836a4e44da183418ed1df3586b886feb395eb376d6d2c0764"
+        },
+        "spec.json": {
+          "bytes": 8026,
+          "sha256": "82438ceca06522bc93cbb6775040b6152e6d26e813e3a1a233aea5ee5d7a9e32"
+        }
+      },
+      "save_seconds": 280.87663984298706,
+      "at_unix": 1791785210.0641663
+    },
+    "solver": {
+      "schema": "paired-native-recovery-v1",
+      "role": "solver",
+      "completed_rounds": 60,
+      "batch_size": 8,
+      "committed_sample_cursor": 480,
+      "science_sha256": "971a0a7855a5a7a2f1b4bbf155609544a7008991c8853d967c5881edf5aeca0d",
+      "data_sha256": "ecbe1065486f92116e3330ff797da40c6ada2edda1657836d5469d93340b302f",
+      "source_run": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/without_peer/attempts/attempt-0003/without_peer/solver/optimizer",
+      "source_joint": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/without_peer/attempts/attempt-0003/without_peer/joint",
+      "protected_hf_relative_paths": [],
+      "files": {
+        "actor/.metadata": {
+          "bytes": 729739,
+          "sha256": "af88d2e2bd8e19290aff05620192ffd4e0ec04629d43c74521ae2acda2b40811"
+        },
+        "actor/__0_0.distcp": {
+          "bytes": 9411010296
+        },
+        "actor/__1_0.distcp": {
+          "bytes": 9411010296
+        },
+        "actor/__2_0.distcp": {
+          "bytes": 9411010296
+        },
+        "actor/__3_0.distcp": {
+          "bytes": 9411010296
+        },
+        "actor/adam-rank0.json": {
+          "bytes": 288,
+          "sha256": "188ebf96a174dbed48f0f06919b94304ceadc193f0cd5a8c1ede35269b46adc0"
+        },
+        "actor/adam-rank1.json": {
+          "bytes": 288,
+          "sha256": "9af2c9695696bbf1a0dca68c7a9ec2f4331e06fc54fe2e9b35b93ae377520159"
+        },
+        "actor/adam-rank2.json": {
+          "bytes": 288,
+          "sha256": "6a52c842d3ca2232628efa7f0e6a0641439f2cb27b213547ce0e967382fcb299"
+        },
+        "actor/adam-rank3.json": {
+          "bytes": 288,
+          "sha256": "28622cbd24c2d2f121d90a0dc5a7e60c39170e022b5ca396ddba60cb79158287"
+        },
+        "actor/joint_schedule.json": {
+          "bytes": 810,
+          "sha256": "02f0a0eef0321f7452a237cd152aabac3bd891f93451fb516d1c234f6bcf01e5"
+        },
+        "actor/optim_world_size_4_rank_0.pt": {
+          "bytes": 17908105065
+        },
+        "actor/optim_world_size_4_rank_1.pt": {
+          "bytes": 17908105065
+        },
+        "actor/optim_world_size_4_rank_2.pt": {
+          "bytes": 17908105065
+        },
+        "actor/optim_world_size_4_rank_3.pt": {
+          "bytes": 17908105065
+        },
+        "actor/training-rank0.pt": {
+          "bytes": 14941,
+          "sha256": "dbc065b954ba38f67c0583934b8f20359564d89b438346cc4a20e435c7f8a55d"
+        },
+        "actor/training-rank1.pt": {
+          "bytes": 14877,
+          "sha256": "046c7721ed334ed7b22b77e0d46d6c5858377a5f7f49b870f91ec19daab9e5a1"
+        },
+        "actor/training-rank2.pt": {
+          "bytes": 14877,
+          "sha256": "3b2bb15fa2422597f2346033dbc064da65223e96d2d0507776b944ad55b9f7cc"
+        },
+        "actor/training-rank3.pt": {
+          "bytes": 14941,
+          "sha256": "ee48e2aa99ee080cc78dac7728fe491e40f4873e9f70e2254235dfda423553d0"
+        },
+        "controller.json": {
+          "bytes": 2023,
+          "sha256": "13ae97abb6cd41c95305f9133aff5e6cf85c777faeef39de14122fa5700e2b22"
+        },
+        "critic/.metadata": {
+          "bytes": 729395,
+          "sha256": "be0c74bcb9dec859d2617f73fb133101ca6435c04892888f323d7a9daf1a3036"
+        },
+        "critic/__0_0.distcp": {
+          "bytes": 8393907960
+        },
+        "critic/__1_0.distcp": {
+          "bytes": 8393889999
+        },
+        "critic/__2_0.distcp": {
+          "bytes": 8393891512
+        },
+        "critic/__3_0.distcp": {
+          "bytes": 8393889999
+        },
+        "critic/adam-rank0.json": {
+          "bytes": 290,
+          "sha256": "53e26a22368fa9ec86a31b29ef5dce84bde1c9c16cfecdd1f0ba77181777579b"
+        },
+        "critic/adam-rank1.json": {
+          "bytes": 290,
+          "sha256": "d2742718f7438213e1c35d3c581675dd73f00bf329806f2923019f85e7b913c8"
+        },
+        "critic/adam-rank2.json": {
+          "bytes": 290,
+          "sha256": "9cfee0d3738f968c3e62ba7405155ae97054fd94a2946cff5a00b1b7377aec4e"
+        },
+        "critic/adam-rank3.json": {
+          "bytes": 290,
+          "sha256": "236cd0d17a7906110a518dd8379cb9ccadf8a3727e894f5566209245c7fe09ce"
+        },
+        "critic/joint_critic_settings.json": {
+          "bytes": 65,
+          "sha256": "27592213c8121eb2aaabb96331e6ed3b5144c763a0b52193a74936fa394cf3f1"
+        },
+        "critic/joint_schedule.json": {
+          "bytes": 810,
+          "sha256": "02f0a0eef0321f7452a237cd152aabac3bd891f93451fb516d1c234f6bcf01e5"
+        },
+        "critic/joint_value_norm.json": {
+          "bytes": 279,
+          "sha256": "01a6191fe49960d1ead85e8f2174ac77beefcc224ebc8736245bac582a896fba"
+        },
+        "critic/optim_world_size_4_rank_0.pt": {
+          "bytes": 15873901382
+        },
+        "critic/optim_world_size_4_rank_1.pt": {
+          "bytes": 15873868614
+        },
+        "critic/optim_world_size_4_rank_2.pt": {
+          "bytes": 15873868614
+        },
+        "critic/optim_world_size_4_rank_3.pt": {
+          "bytes": 15873868614
+        },
+        "critic/training-rank0.pt": {
+          "bytes": 14941,
+          "sha256": "ff68b48d3155899263b1394fe1d11be8bf8d3bc3f89eef05bcd7ec1362875011"
+        },
+        "critic/training-rank1.pt": {
+          "bytes": 14877,
+          "sha256": "4019d81257205fc7802c784abad5a811a3bcb86783972a3501e3ed06c1c22cea"
+        },
+        "critic/training-rank2.pt": {
+          "bytes": 14877,
+          "sha256": "ca35ea474d4e89fa7d0402afbc50589e8af5415810fe645778a73b4316971ded"
+        },
+        "critic/training-rank3.pt": {
+          "bytes": 14941,
+          "sha256": "ec075d66798d1e4c22bb88670876d287d5864a422548586a36409852913a6e15"
+        },
+        "metrics.jsonl": {
+          "bytes": 665501,
+          "sha256": "36c7db26d991460758ba33a30a80a6d7963c3fed10215afab0e962975b733bd4"
+        },
+        "spec.json": {
+          "bytes": 8258,
+          "sha256": "082fe7d08a8c40ffc730594b4c13b1b4cdcd5c5a584dd3e425d2b2952fe11d5a"
+        }
+      },
+      "save_seconds": 262.53042817115784,
+      "at_unix": 1791785220.6410127
+    }
+  },
+  "optimizer_fingerprints": {
+    "editor": {
+      "actor": [
+        {
+          "sampled_sha256": "546d523f3989940e4a03b15f4370cf4b90bccd7c93992e4a49976b0d2bb99545",
+          "state_tensors": 1708,
+          "parameters_with_state": 427,
+          "min_adam_step": 37.0,
+          "max_adam_step": 37.0,
+          "scope": "All Adam step counters and up to64 elements of each parameter/moment tensor"
+        },
+        {
+          "sampled_sha256": "53afa2bd7434fe6e268737402f94efdf2313dadd2be7eff9888e3cf94a2edab8",
+          "state_tensors": 1708,
+          "parameters_with_state": 427,
+          "min_adam_step": 37.0,
+          "max_adam_step": 37.0,
+          "scope": "All Adam step counters and up to64 elements of each parameter/moment tensor"
+        },
+        {
+          "sampled_sha256": "7694f7a664281e2fd6a861ae579fa85d370ef5b7f749384e5aeecd0ef700296c",
+          "state_tensors": 1708,
+          "parameters_with_state": 427,
+          "min_adam_step": 37.0,
+          "max_adam_step": 37.0,
+          "scope": "All Adam step counters and up to64 elements of each parameter/moment tensor"
+        },
+        {
+          "sampled_sha256": "bc76602516a3bab7a0efb846e4586533956e03acf38d2f8b4dc768a151c763d3",
+          "state_tensors": 1708,
+          "parameters_with_state": 427,
+          "min_adam_step": 37.0,
+          "max_adam_step": 37.0,
+          "scope": "All Adam step counters and up to64 elements of each parameter/moment tensor"
+        }
+      ],
+      "critic": [
+        {
+          "sampled_sha256": "0c52157cc94684b58136516e316d638b2b35db6184bd094d097d00ed044c79d2",
+          "state_tensors": 1708,
+          "parameters_with_state": 427,
+          "min_adam_step": 80.0,
+          "max_adam_step": 80.0,
+          "scope": "All Adam step counters and up to64 elements of each parameter/moment tensor"
+        },
+        {
+          "sampled_sha256": "cc285a343b946ecee786bba7aec6467601d2c5067c86236d204e776b42942d58",
+          "state_tensors": 1708,
+          "parameters_with_state": 427,
+          "min_adam_step": 80.0,
+          "max_adam_step": 80.0,
+          "scope": "All Adam step counters and up to64 elements of each parameter/moment tensor"
+        },
+        {
+          "sampled_sha256": "dd2a991bf2894e2c1349ff96c64c96095d0092d47e24c42f12353cac36bc84bc",
+          "state_tensors": 1708,
+          "parameters_with_state": 427,
+          "min_adam_step": 80.0,
+          "max_adam_step": 80.0,
+          "scope": "All Adam step counters and up to64 elements of each parameter/moment tensor"
+        },
+        {
+          "sampled_sha256": "00ade7b77a3e43a47f8cd539703a2ca0c162871c42b7b8f83ced9f1ad0e4e37e",
+          "state_tensors": 1708,
+          "parameters_with_state": 427,
+          "min_adam_step": 80.0,
+          "max_adam_step": 80.0,
+          "scope": "All Adam step counters and up to64 elements of each parameter/moment tensor"
+        }
+      ]
+    },
+    "solver": {
+      "actor": [
+        {
+          "sampled_sha256": "6bc7ca664175027c454daac65a879e4ce1d45723e56e6fa75f063bc76edf44f3",
+          "state_tensors": 1708,
+          "parameters_with_state": 427,
+          "min_adam_step": 57.0,
+          "max_adam_step": 57.0,
+          "scope": "All Adam step counters and up to64 elements of each parameter/moment tensor"
+        },
+        {
+          "sampled_sha256": "ac128c6510b0b4f291d4f401fc486f4d56e3c4f7691962890194ed445a613544",
+          "state_tensors": 1708,
+          "parameters_with_state": 427,
+          "min_adam_step": 57.0,
+          "max_adam_step": 57.0,
+          "scope": "All Adam step counters and up to64 elements of each parameter/moment tensor"
+        },
+        {
+          "sampled_sha256": "14dde1c760196fce289659945c4293117c3dd71605ba1116b2dbc56480bd38bf",
+          "state_tensors": 1708,
+          "parameters_with_state": 427,
+          "min_adam_step": 57.0,
+          "max_adam_step": 57.0,
+          "scope": "All Adam step counters and up to64 elements of each parameter/moment tensor"
+        },
+        {
+          "sampled_sha256": "121b3c29de568e666515b75c069cdd3c0b9c3f20f1407824b3b9299a0e60cd4d",
+          "state_tensors": 1708,
+          "parameters_with_state": 427,
+          "min_adam_step": 57.0,
+          "max_adam_step": 57.0,
+          "scope": "All Adam step counters and up to64 elements of each parameter/moment tensor"
+        }
+      ],
+      "critic": [
+        {
+          "sampled_sha256": "d531b401063c8d3b09f77bb5a386864d811ef21b40f5b9a36d273c03c4ac6b9f",
+          "state_tensors": 1708,
+          "parameters_with_state": 427,
+          "min_adam_step": 120.0,
+          "max_adam_step": 120.0,
+          "scope": "All Adam step counters and up to64 elements of each parameter/moment tensor"
+        },
+        {
+          "sampled_sha256": "1d133cbd5004825fe39aabcfd46c53ee85a475c03c3bcf8f76b66697367868b3",
+          "state_tensors": 1708,
+          "parameters_with_state": 427,
+          "min_adam_step": 120.0,
+          "max_adam_step": 120.0,
+          "scope": "All Adam step counters and up to64 elements of each parameter/moment tensor"
+        },
+        {
+          "sampled_sha256": "2b87a6da49e5d14e23b81c17ee3054082d823a4001cc31d47c7808359ee5ef35",
+          "state_tensors": 1708,
+          "parameters_with_state": 427,
+          "min_adam_step": 120.0,
+          "max_adam_step": 120.0,
+          "scope": "All Adam step counters and up to64 elements of each parameter/moment tensor"
+        },
+        {
+          "sampled_sha256": "bdca56b904dbda28c40d6f4dc6fbda2df40231b2a845e7e58d2756d4622349d1",
+          "state_tensors": 1708,
+          "parameters_with_state": 427,
+          "min_adam_step": 120.0,
+          "max_adam_step": 120.0,
+          "scope": "All Adam step counters and up to64 elements of each parameter/moment tensor"
+        }
+      ]
+    }
+  }
+}

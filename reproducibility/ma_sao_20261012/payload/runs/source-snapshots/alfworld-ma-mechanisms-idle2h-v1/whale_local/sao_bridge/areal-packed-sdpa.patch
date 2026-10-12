@@ -1,0 +1,47 @@
+diff --git a/areal/engine/fsdp_engine.py b/areal/engine/fsdp_engine.py
+index 27fc005f..0694ccb0 100644
+--- a/areal/engine/fsdp_engine.py
++++ b/areal/engine/fsdp_engine.py
+@@ -190,6 +190,18 @@ def _drop_multimodal_payloads(data: dict[str, Any]) -> None:
+             data.pop(key, None)
+ 
+ 
++def _packed_causal_mask(
++    cu_seqlens: torch.Tensor, length: int, device: torch.device
++) -> torch.Tensor:
++    """Boolean [1, 1, L, L] causal mask that isolates packed sequences (True attends)."""
++    positions = torch.arange(length, device=device)
++    boundaries = cu_seqlens.to(device=device, dtype=torch.long)[1:]
++    # Tokens beyond the last boundary (padding) form one extra isolated segment.
++    segment = torch.searchsorted(boundaries, positions, right=True)
++    mask = (segment[:, None] == segment[None, :]) & (positions[:, None] >= positions[None, :])
++    return mask[None, None]
++
++
+ def _prepare_multimodal_forward_inputs(
+     mb: dict[str, Any],
+     padded_mb: dict[str, Any],
+@@ -742,6 +754,23 @@ class FSDPEngine(TrainEngine):
+                 inputs.update(tree_kwargs)
+                 tree_attn_keys = list(tree_kwargs.keys())
+ 
++            # SDPA ignores cu_seqlens: without an explicit block-diagonal mask, every
++            # packed sequence attends to all earlier sequences in its micro-batch.
++            if (
++                not self.enable_tree_training
++                and self.config.attn_impl == "sdpa"
++                and isinstance(inputs.get("attention_mask"), dict)
++                and inputs.get("cu_seq_lens_q") is not None
++            ):
++                inputs = dict(inputs)
++                inputs["attention_mask"] = dict(
++                    inputs["attention_mask"],
++                    full_attention=_packed_causal_mask(
++                        inputs["cu_seq_lens_q"], inputs["input_ids"].shape[-1],
++                        inputs["input_ids"].device,
++                    ),
++                )
++
+             with trace_scope("fsdp_engine.forward"):
+                 outputs = self.model(**inputs)
+             logits = outputs.logits.squeeze(0)

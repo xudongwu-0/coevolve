@@ -1,0 +1,14 @@
+{
+  "status": "prepared",
+  "arm": "without_peer",
+  "resume_round": 24,
+  "recovery": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/without_peer/recovery/round-0024-attempt-0001/COMMITTED.json",
+  "recovery_sha256": "663b66c43b17d194983da4bfc77512ab86a90748710a10b174d91b934ed56bc3",
+  "at_unix": 1791782070.6122746,
+  "execution_authority": {
+    "authority": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/serial15_20261012_self_fix01/AUTHORIZATION.json",
+    "authority_sha256": "3854e3a81cc8324b66a2bd5120cb12b840db845caf8fad17621412951b6c8f6c",
+    "admission": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/serial15_20261012_self_fix01/admissions/1791781953411889907.json",
+    "admission_sha256": "aefdc34e10c9689766c614937339f2bfd70ff819eeba4498562c1ba45c210da5"
+  }
+}

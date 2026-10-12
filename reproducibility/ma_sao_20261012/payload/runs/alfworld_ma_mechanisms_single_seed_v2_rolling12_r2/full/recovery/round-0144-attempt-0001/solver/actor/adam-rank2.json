@@ -1,0 +1,8 @@
+{
+  "sampled_sha256": "9dd64f3e4d35aa0f045b39d4d5f22cda3d1e62b984890531190bd42bd133c391",
+  "state_tensors": 1708,
+  "parameters_with_state": 427,
+  "min_adam_step": 141.0,
+  "max_adam_step": 141.0,
+  "scope": "All Adam step counters and up to64 elements of each parameter/moment tensor"
+}

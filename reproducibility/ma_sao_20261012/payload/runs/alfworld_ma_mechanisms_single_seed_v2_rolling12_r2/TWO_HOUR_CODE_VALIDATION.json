@@ -1,0 +1,15 @@
+{
+  "status": "passed",
+  "driver_sha256": "20bb349b81c21d07051dd4bd9e7c4446b84332d0b6eafc0674259aab056c8786",
+  "test_file": "/mnt/3fs/xudong/coevolve/tests/test_ma_two_hour_resume.py",
+  "test_sha256": "c6c9c209b0ef93f3b70cf3a6c690ab8c853823205f35b1afe0f5b2baa2289b5f",
+  "test_log": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/TWO_HOUR_TESTS.log",
+  "test_log_sha256": "b75c0d8af37b38506dfd372ece9b651c877dcc4fcc20566cae0102a8fbe99b1c",
+  "source_manifest_sha256": "5d8bf804dd0a538008e9067eb118cb5eba5987873032a737566cbcb3e9c3a631",
+  "runtime_module": "/mnt/3fs/xudong/coevolve/runs/source-snapshots/alfworld-ma-mechanisms-rolling12-v2/whale_local/sao_bridge/alfworld_ma_rolling_recovery.py",
+  "test_files": [
+    "/mnt/3fs/xudong/coevolve/tests/test_ma_two_hour_resume.py",
+    "/mnt/3fs/xudong/coevolve/tests/test_ma_rolling_recovery.py"
+  ],
+  "at_unix": 1791535720.704095
+}

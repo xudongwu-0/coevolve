@@ -1,5 +1,239 @@
 # Fixed-sample SAO / MA-SAO research protocol
 
+For a standalone Chinese description of the implemented algorithm, improvements
+over staged SAO, objectives, update schedule and prior-art boundaries, see
+[MA-SAO algorithm](./MA_SAO_ALGORITHM.md).
+
+## Single-seed mechanism study requested on 2026-10-08
+
+Finish the early-W2-to-W3 continuation and the nine saved Engineer checkpoints
+evaluated with fixed W0 before starting ablation training. The user explicitly
+requires one training seed, not a seed sweep. The requested comparison has five
+configurations: full MA, unit teammate weights, no cooperative critic context,
+no ValueNorm, and always updating both roles. The user replaced the staged-SAO
+comparison with this schedule intervention. Context and normalization remain
+separate.
+
+The three isolated native removals retain independent learned critics, own-policy
+probability correction, the original2:3 update schedule, actor inputs and budgets.
+`component_ablation` declares `full`, `without_peer`, `without_context`,
+`without_value_norm`, or `always_joint`; config, critic workers, health diagnostics and saved critic
+settings must agree. Disabling context removes only the critic prefix, not actor
+tokens or policy actions. Disabling normalization trains in raw return units and
+must not reuse a normalized value head without a separately verified conversion.
+The study uses common pre-treatment initialization instead of branching from the
+development-selected97% checkpoint.
+
+The schedule intervention enables `editor_update_every_round` without changing
+`joint_joint_anchor`/`sampled_control` routing, critic inputs, or third-round unit
+teammate correction. Routing eligibility retains the baseline meaning;
+`native_engineer_round_active` and optimizer metrics record actual updates.
+At144 rounds every arm generates2304 role trajectories from1152 shared episodes.
+Full and the three removals consume H/W768/1152 trajectories, with93/141 Actor and
+192/288 Critic updates; always-joint consumes1152/1152, with141/141 Actor and
+288/288 Critic updates. Its20% extra total consumption is not equal compute.
+The historical peak-start every-round run also changed peer correction, so it
+does not replace this cleaner schedule intervention.
+
+Run the full control first, then report and audit its historical lineage before
+releasing ablations. Historical97% shares H0/W1 Actors and ordered training inputs,
+but inherited MA64 Critics/ValueNorm, reset Adam at round48, used24 rather than16
+candidate slots, and was a development-selected peak. It is a supplementary
+reference, not the component-causal control. A full score at or below94% flags a
+larger reference gap for explanation, not a score-driven retry or silent change
+of initialization. The four main paired comparisons use Holm adjustment and
+retain question-level, single-training-seed uncertainty.
+
+Before large runs, validate speed changes with fixed workloads and preserve
+decode/trajectory budgets. New context/normalization controls additionally require
+full32K/4096-token native actor/critic checks with their executed settings audited.
+Unchanged native-kernel evidence can be inherited with hash checks; two real
+six-round full/always-joint canaries must verify the new native schedule. Their96
+environment episodes are calibration cost, and their weights are not reused.
+Finite deterioration is reported rather than performance-stopped; nonfinite
+updates, resource conflicts and broken transport remain explicit failures.
+Resource monitoring is attached, read-only toward other users, limited to12h
+per wait and40h for the control-plus-ablation program. Three consecutive free
+two-node observations are required; waiting is not training or completion.
+
+Every major launch is announced without waiting for approval; each result is
+recorded in project Markdown and reported in the conversation. Failure-case
+selection uses complete same-question paired outcome populations, reports both
+directions, and links actual actions/observations. A case that full MA solves is
+illustrative, not proof that one mechanism caused the difference. No case is
+invented if a requested contrast is absent.
+
+## Current research order, updated for the 2026-10-07 seven-hour request
+
+1. Fixed-W1 H2-to-H3 continuation is complete and independently audited.
+   Valid proposals improved from2/8 to8/8, but proposal task quality did not
+   reliably improve. Both deployment selections retain the same old h2:
+   89% on this remeasurement, versus86.5% for the best new H3 proposal.
+   Preserve historical92% separately; a finite negative result does not
+   establish a universal SAO ceiling.
+2. Peak-start MA must provide early results within the window, but may continue
+   afterward. The verified starting checkpoint is97.0% at total144 rounds,
+   not97.5%. Its first96 new native rounds are complete: total192=93%/90.5%
+   without harness, total240=92%/89%. Extra96 versus the selected peak is-5pp,
+   paired CI[-8.5,-2], with0 improved/10 regressed questions. These are negative
+   early observations, not the final plateau.
+3. H3 raw200 and WHALE results are due by2026-10-07T23:37:12Z. The completed,
+   non-improving first MA block permits a bounded WHALE resource window;
+   do not wait for final MA convergence before starting this deadline task.
+   Original-state MA continuation resumes after WHALE release.
+
+No new SAO baseline, training-seed sweep or broad mechanism scan is inserted.
+The H3 raw new candidate is173/200=86.5%, not the89% retained-h2 deployment alias.
+One MA evaluation startup failed on a GPU context accidentally created by our
+CPU test; it had zero episodes. CPU tests now hide CUDA. The unchanged final
+matrix was recovered without new training or selection. Original failure
+evidence remains and the original coordinator has exited.
+The new verified CPU coordinator waits for a SHA-bound two-node WHALE release,
+then continues native block02. FP32/Adam/ValueNorm and the original24h safety
+deadline are preserved; a resource/time limit is not convergence.
+
+WHALE v12 continued160 preserved episodes/native Adam43 fromv10/v11 with
+originalW0/fixedRL-H0 and a planned640 Solver episodes/384 adaptive MH slots.
+Its H0 proposer is not gradient-trained.
+This matches the nominal H1-W1-H2 retained-system budgets, not discarded W2,
+all research costs, training population, tokens/FLOPs or selection processes.
+Native32K/4096 warm-Adam/export/reload passed onv9; v10 reuses that component
+proof only after exact non-scoring code/config/model identity checks. Its new
+parallel scoring path separately passed56 tests/48subtests and a real
+four-episode CPU-worker probe with no model calls. No newv10 smoke is claimed.
+The new sample-sharded native32K/restore test passed, but the original multi-step
+numeric trajectory gate failed and remains recorded. A separately predeclared
+fixed-weight full-gradient probe passed its repeatability-scaled threshold;
+this is not a claim of multi-step trajectory identity.
+V12 prospectively changes online episode batches to32/32/32/32/32/160 then
+160/160. Cycle boundaries remain320/640, but refresh frequency is a learning
+hyperparameter amendment, not runtime equivalence. Separate persistent H0 and
+Solver services passed128 concurrent full32K requests,0 environment episodes.
+Stop admitting RSFT batches at22:52:12UTC and MH iterations at23:12:12UTC.
+The hard23:37:12UTC deadline is unchanged. A shortened run is partial budget,
+distinct from the declared20pp development-regression stop.
+The first actual320-episode/192-proposal cycle is now complete: native Adam82,
+125 valid proposals, development9/10 versus initial6/10, unchanged selected h0.
+The second Solver segment also completed, reaching640 episodes/native Adam159.
+The second MH segment completed only1/8 iterations,24 proposals/6 valid,
+before the reporting reserve; its development score is10/10 with unchanged h0.
+The actual budget is640/216, not the required640/384. This is a time-truncated
+partial-budget result, not a performance-regression stop or two complete cycles.
+The final200 evaluation uses the frozen640-episode Solver and unchanged h0.
+Its verified result is163/200=81.5%, strict197160/197=81.2183%, versus historical
+SAO92%: -10.5pp, paired95%[-16.5,-4.5]. Relative to initial W0+h0 at85%,
+the difference is-3.5pp,95%[-8.5,+1]. Ten-task development100% did not establish
+main200 improvement. The raw report finished before the original user deadline,
+but168 planned proposals remain unconsumed; the full matched-budget requirement
+was not met. Both GPU allocations were released with SHA-bound terminal evidence
+to the waiting native MA continuation.
+The continuation actually started block02 at23:31UTC with a passed native-state
+boundary; no repeated first block, optimizer reset or extension of the original
+24-hour deadline was introduced.
+
+Method audit for the paper: the actual local AReaL advantage path defaults to
+gamma=lambda=1, with observation skipping and the complete-terminal fix.
+The separate length-adaptive helper is not called by that path. Do not claim
+all theoretical SAO features merely from repository naming. The current MA
+uses independent Critics and an experimental bounded teammate correction,
+not a complete standard-MAPPO reproduction.
+
+The comprehensive question/design/table/conclusion report is
+[ALFWorld experiments](./ALFWORLD_SAO_MA_SAO_EXPERIMENT_REPORT_2026-10-07.md).
+
+## Complementary fixed-Solver continuation requested on 2026-10-07
+
+The earlier fixed-h2 W2 recovery tests only Solver continuation, not whether
+Engineer learning has saturated. The user requests one additional historical
+Engineer phase from H2-step31 with the stronger W1 fixed:32 native rounds,
+batch6,192 consumed Engineer trajectories,27 Actor and32 Critic updates.
+H2 has no saved Adam; the fresh-Adam boundary and original five critic warmup
+rounds are explicit. Reuse the corrected ordinary-SAO backend and validated
+training kernels, without adding MA context, KL or ValueNorm.
+
+Evaluate only the final extra32-round checkpoint. Before/after Engineers get
+the same eight generation prompts/seeds and selection24 mean@2 budget.
+Report proposal-slot mean and validity separately from selected-system success.
+Both sides use the same saved h2 incumbent and promotion margin; also report
+the final Engineer's best valid candidate even if it fails the margin.
+Main200 remains reused development data, not a new sealed test.
+This is one new phase, not a repeated SAO baseline or a training-seed sweep.
+The resource insertion pauses only the current MA CPU coordinator while its
+independent native learners finish their96-round block; restore the coordinator
+after the fixed-W1 experiment releases GPUs. MA's frozen algorithm and native
+state are not edited, and the inserted wall time is disclosed.
+
+Completed outcome:27 nonzero Actor updates and32 Critic updates,192 consumed
+versus198 recorded generated trajectories,1120 reward environment episodes and
+1176 selection/report episodes. Proposal-slot mean improved by0.78125pp,
+95% CI[-4.4271,+5.7292]. The new candidate versus old h2 is-2.5pp,
+CI[-7,+2],8 improved/13 regressed questions. The before/after/historical
+deployment aliases share one physical policy report:zero difference is not
+evidence of statistical equivalence between different models.
+See the [result](../runs/alfworld_fixed_w1_h3_v1/COMPLETE.json) and
+[final audit](../runs/alfworld_fixed_w1_h3_v1/FINAL_AUDIT.json).
+
+## Every-round joint continuation requested on 2026-10-07
+
+The long mixed-schedule run inherited `joint_joint_anchor` / `sampled_control`
+from an earlier anchor-retention control. It updates both roles on two rounds,
+then only the Solver on the third; Engineer proposals on that third round are
+still generated and charged. This is not a required MA-SAO component and was
+not established as the optimal role-update ratio.
+
+The user now explicitly requests joint Engineer/Weight learning every round.
+The mixed run completes its fourth96-round block and both fixed endpoints
+without a hot algorithm change. A user-requested boundary that does not meet
+the original plateau rule is reported as not converged.
+
+The user subsequently chose the observed97% total-round144 checkpoint instead.
+The93.5%-start candidate was cancelled before training, with zero new rollouts;
+its frozen design is retained rather than rewritten. The separate peak-start
+candidate restores both native FP32 Actor/Critic pairs, Adam and checkpoint
+ValueNorm. Initial Adam Actor/Critic steps are64/128 for Engineer and96/192 for
+Solver. Original H0/W1 fixed references remain unchanged; no new Adam reset
+is introduced. Input continuation starts at source index768, matching the old
+mixed run's second block.
+
+Both independent Actors and both independent Critics update every round.
+All rounds use bounded teammate correction; no
+anchor routing or inactive Engineer updates remain. Cooperative critic inputs
+are retained, but critic network parameters are not shared. The action order
+is still Engineer proposal followed by Solver execution, with at most one-round
+policy lag; joint learning does not mean simultaneous physical actions.
+
+The exact task/prompt order, including repeated inputs but fresh trajectories,
+is retained. Per96-round block, both roles have96 Actor and192 Critic updates.
+Consumption is1536 role trajectories versus1280 previously; generated role
+trajectories remain1536 and environment episodes768. This is a20% consumption
+increase, not equal-consumed-rollout evidence. Activating Engineer updates and
+removing the third-round unit teammate weight form one scheduling candidate;
+neither mechanism is isolated by this comparison.
+
+Learning rates, KL, K2, selection and plateau thresholds are unchanged.
+The minimum192 additional rounds are measured from the new144-round origin;
+the earliest eligible plateau endpoint is total336, not240. The selected97%
+policy remains the initial evaluation incumbent, while training continues to
+sample fresh Engineer policies rather than replaying that one saved patch.
+
+This initialization was explicitly selected after inspecting the development
+curve. Report that selection bias, the inherited1920-role-trajectory lineage
+(excluding upstream initialization), and the separate full search/failure costs.
+Do not interpret a selected peak as an unbiased baseline or stable convergence.
+A bounded fixed-checkpoint cross-play remeasures W48/W144 with saved policies
+to diagnose the97% behavior; it does not choose the continuation checkpoint,
+introduce independent training seeds, or establish generator-wide RL causality.
+The original selection48 is a subset of report200, not a separate test cohort.
+Excluding those48 tasks leaves152 development tasks; excluding the three
+training-goal overlaps as well leaves149. These post-hoc sensitivity reports
+must not be relabelled independent confirmation of a peak selected on all200.
+
+Training, routing, finite Actor/Critic gradients, per-rank optimizer counters,
+all fixed endpoints and research gates are audited before claims of advantage.
+See the [frozen peak-start design](../runs/alfworld_ma_simultaneous_from97_v1/DESIGN.json),
+[driver](../runs/alfworld_ma_simultaneous_from97_v1/driver.py), and
+[cancelled pre-training candidate](../runs/alfworld_ma_simultaneous_convergence_v1/CANCELLED_BEFORE_TRAINING.json).
+
 ## Research controls following the initial MA run
 
 The October3 follow-up separates four experiments:

@@ -1,0 +1,168 @@
+{
+  "schema": "paired-native-recovery-v1",
+  "role": "solver",
+  "completed_rounds": 144,
+  "batch_size": 8,
+  "committed_sample_cursor": 1152,
+  "science_sha256": "094525fc2e6ef2f7ed53653377e5824a9d89af581c58c2ddccc70662bda63847",
+  "data_sha256": "ecbe1065486f92116e3330ff797da40c6ada2edda1657836d5469d93340b302f",
+  "source_run": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/attempts/attempt-0001/full/solver/optimizer",
+  "source_joint": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/attempts/attempt-0001/full/joint",
+  "protected_hf_relative_paths": [
+    "engine/checkpoints/chengboliu/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2-full/solver/actor/epoch0epochstep143globalstep143",
+    "engine/checkpoints/chengboliu/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2-full/solver/actor/epoch0epochstep95globalstep95",
+    "engine/checkpoints/chengboliu/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2-full/solver/critic/epoch0epochstep143globalstep143",
+    "engine/checkpoints/chengboliu/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2-full/solver/critic/epoch0epochstep95globalstep95"
+  ],
+  "files": {
+    "actor/.metadata": {
+      "bytes": 729731,
+      "sha256": "6eef625cd6e59860a202d7813b09596af0e4022c1a318618bd4263444fc0c64b"
+    },
+    "actor/__0_0.distcp": {
+      "bytes": 9411010296
+    },
+    "actor/__1_0.distcp": {
+      "bytes": 9411010296
+    },
+    "actor/__2_0.distcp": {
+      "bytes": 9411010296
+    },
+    "actor/__3_0.distcp": {
+      "bytes": 9411010296
+    },
+    "actor/adam-rank0.json": {
+      "bytes": 290,
+      "sha256": "c7b6a31ab759fb2cc4817aafb4f0f83e77ae56950d88267792063c4928c0864e"
+    },
+    "actor/adam-rank1.json": {
+      "bytes": 290,
+      "sha256": "47f798d637474ec9077dee06a6827824da1c800750d8de55d8e3c77f489ee2e4"
+    },
+    "actor/adam-rank2.json": {
+      "bytes": 290,
+      "sha256": "fd7fdba2c79c7f45db8a1d4662c3fc6a5526c343771faad66e65b87a4dac3cff"
+    },
+    "actor/adam-rank3.json": {
+      "bytes": 290,
+      "sha256": "f3edd8876d38aac3cc8db8d4a96b273078edf52afe94d371ec65df85799b14d7"
+    },
+    "actor/joint_schedule.json": {
+      "bytes": 818,
+      "sha256": "41c7d55d65d3da5e68b5f0645edb8d4ab46442034e65ac3fa5da95796f7d06ac"
+    },
+    "actor/optim_world_size_4_rank_0.pt": {
+      "bytes": 17908105065
+    },
+    "actor/optim_world_size_4_rank_1.pt": {
+      "bytes": 17908105065
+    },
+    "actor/optim_world_size_4_rank_2.pt": {
+      "bytes": 17908105065
+    },
+    "actor/optim_world_size_4_rank_3.pt": {
+      "bytes": 17908105065
+    },
+    "actor/training-rank0.pt": {
+      "bytes": 14941,
+      "sha256": "14769435d6b91d731af5990c6d0e441b7550224b4084e54086728d6b052e8103"
+    },
+    "actor/training-rank1.pt": {
+      "bytes": 14877,
+      "sha256": "510183246b9cbec90fc66cf90b0616d495cf54ed9303b25de3e62550335f3ca0"
+    },
+    "actor/training-rank2.pt": {
+      "bytes": 14877,
+      "sha256": "a4b3df7eec47441cfe6be482bd581122c4ecd00d7c7a7e109c332109f230f2c5"
+    },
+    "actor/training-rank3.pt": {
+      "bytes": 14941,
+      "sha256": "867b8244b30c7f776bed58b8740de193c3cff724f6827640f542e035301527d3"
+    },
+    "controller.json": {
+      "bytes": 2040,
+      "sha256": "f1b0d8a6ea033c5d56f513094af891e8fcb5fbedbd78cfc59bf58995031b3ba4"
+    },
+    "critic/.metadata": {
+      "bytes": 729387,
+      "sha256": "d3dd5781c6ddbfe778fcdd100f2e51fc254b6bf164a677c6a1fc207d24f27ee9"
+    },
+    "critic/__0_0.distcp": {
+      "bytes": 8393907960
+    },
+    "critic/__1_0.distcp": {
+      "bytes": 8393889999
+    },
+    "critic/__2_0.distcp": {
+      "bytes": 8393891512
+    },
+    "critic/__3_0.distcp": {
+      "bytes": 8393889999
+    },
+    "critic/adam-rank0.json": {
+      "bytes": 290,
+      "sha256": "bfb6e6f7b3a806a783a615575acd92baf3dfc5a1b3f60807f16ed1d5b747d9ff"
+    },
+    "critic/adam-rank1.json": {
+      "bytes": 290,
+      "sha256": "607d0b8ed8061af5dff0f4762ca35571b084ee79caf405e5fe2ce986d6684ef6"
+    },
+    "critic/adam-rank2.json": {
+      "bytes": 290,
+      "sha256": "d76262043c4dda1d9c0c81cd19cc77138f630b4bf2a3d458ffc7a858cfdac94a"
+    },
+    "critic/adam-rank3.json": {
+      "bytes": 290,
+      "sha256": "9bda0f8777f012a8a7a7d0dbe44ba65361c6ad1f4fb4f5855bad4c7249cbefeb"
+    },
+    "critic/joint_critic_settings.json": {
+      "bytes": 65,
+      "sha256": "27592213c8121eb2aaabb96331e6ed3b5144c763a0b52193a74936fa394cf3f1"
+    },
+    "critic/joint_schedule.json": {
+      "bytes": 818,
+      "sha256": "41c7d55d65d3da5e68b5f0645edb8d4ab46442034e65ac3fa5da95796f7d06ac"
+    },
+    "critic/joint_value_norm.json": {
+      "bytes": 279,
+      "sha256": "0eed69f88ab77deb2d4401cab17d4763c12abbcda2bf2c178803a581c3519925"
+    },
+    "critic/optim_world_size_4_rank_0.pt": {
+      "bytes": 15873901382
+    },
+    "critic/optim_world_size_4_rank_1.pt": {
+      "bytes": 15873868614
+    },
+    "critic/optim_world_size_4_rank_2.pt": {
+      "bytes": 15873868614
+    },
+    "critic/optim_world_size_4_rank_3.pt": {
+      "bytes": 15873868614
+    },
+    "critic/training-rank0.pt": {
+      "bytes": 14941,
+      "sha256": "e18cb7e8c3c4618eaf3e9db2f1887ce5ed1a62a3b93f210cecdadc80b6b67b90"
+    },
+    "critic/training-rank1.pt": {
+      "bytes": 14877,
+      "sha256": "7ec6efcabd55a7ca3a4b95c21cb4e98370b09353ac9b0ce5ef0fcd70600feab7"
+    },
+    "critic/training-rank2.pt": {
+      "bytes": 14877,
+      "sha256": "1caa126e3e9cc3e8a551385f54e30221668e208104d7105e6bdff0f169f88b99"
+    },
+    "critic/training-rank3.pt": {
+      "bytes": 14941,
+      "sha256": "bb35410e6eea03182d9d96567b93610107be0dfc56959307fb2e76906737a605"
+    },
+    "metrics.jsonl": {
+      "bytes": 1648361
+    },
+    "spec.json": {
+      "bytes": 7523,
+      "sha256": "c016fceb33a3098c84e333de73fe5bed3be486270d400e1ec127c09129d4851f"
+    }
+  },
+  "save_seconds": 217.75491976737976,
+  "at_unix": 1791555655.1971755
+}

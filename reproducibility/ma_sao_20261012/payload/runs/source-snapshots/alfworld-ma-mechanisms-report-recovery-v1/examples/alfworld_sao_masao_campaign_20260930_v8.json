@@ -1,0 +1,111 @@
+{
+  "protocol_revision": 8,
+  "campaign": "alfworld_sao_masao_20260930",
+  "objective": "Compare sequential SAO H-to-plateau then W-to-plateau against MA-SAO H/W alternation from identical released checkpoints.",
+  "upstream": {
+    "harness_r1_commit": "94f2e087f573e1b82fc9568bb634d4ae9a887e28",
+    "model_revision": "f6a915953f8206f3f5c7ef0b40240e1f4d2b6676",
+    "sao_commit": "ac2728149041b5f15ceb75413f467ce0659179cf",
+    "mappo_reference_commit": "de66d7a4b23fac2513f56f96f73b3f5cb96695ac"
+  },
+  "initialization": {
+    "engineer": "/mnt/3fs/xudong/coevolve/assets/Harness-R1/harness-r1",
+    "engineer_receipt": "/mnt/3fs/xudong/coevolve/assets/Harness-R1/harness-r1/provenance.json",
+    "solver": "/mnt/3fs/xudong/coevolve/assets/Harness-R1/target-agent-sft",
+    "solver_receipt": "/mnt/3fs/xudong/coevolve/assets/Harness-R1/target-agent-sft/provenance.json",
+    "harness": "official ALFWorld no-patch lifecycle harness"
+  },
+  "data": {
+    "source": "official mixed 500-task ALFWorld test_set used as a locally repartitioned research cohort",
+    "train": {"start": 0, "end": 240, "count": 240, "decision_use": true},
+    "reward": {"start": 240, "end": 300, "count": 60, "decision_use": true},
+    "dev": {"start": 300, "end": 400, "count": 100, "decision_use": true},
+    "test": {"start": 400, "end": 500, "count": 100, "decision_use": false},
+    "packet_size": 10,
+    "disclosure": "This is not the paper's untouched held-out benchmark; test is sealed only within this campaign."
+  },
+  "arms": {
+    "dev-NDH200-026": "sequential_sao",
+    "dev-NDH200-025": "ma_sao"
+  },
+  "seeds": {
+    "formal_primary": 42,
+    "infrastructure_smoke": 142,
+    "sealed_test_bootstrap": 20260930
+  },
+  "optimization": {
+    "engineer": {
+      "algorithm": "pinned SAO PPO/critic loop",
+      "actor_gpus": 3,
+      "rollout_gpus": 1,
+      "frozen_solver_gpus": 4,
+      "steps_per_round": 2,
+      "batch_size": 6,
+      "max_new_tokens": 4096,
+      "learning_rate": 1e-6,
+      "critic_learning_rate": 5e-6,
+      "temperature": 0.7,
+      "microbatch_tokens": 23040,
+      "layout_reason": "A no-update smoke reached the real critic backward pass but 2-way FSDP OOMed on an 18k-token trajectory with only 82 MiB free; 3-way FSDP completed one actor and two critic updates with 23 GiB peak headroom.",
+      "token_budget_reason": "All 23 valid released-Engineer train-matrix responses used at most 3,014 tokens; the only 12,288-token response was an invalid runaway. Training uses 4,096 while evaluation retains the official 12,288 cap.",
+      "microbatch_reason": "Exact chat-template audit over all 64 H1 rows found a maximum 18,606-token prompt and therefore a 22,702-token worst-case trajectory at the 4,096 generation cap. A 23,040-token microbatch fits every single trajectory while preventing two long trajectories from sharing a microbatch.",
+      "budget_reason": "AReaL requires the consumer batch to be divisible by the three-way actor data-parallel size. Six retains at least the intended four candidates per update while satisfying that invariant; use staged rounds and extend only after accepted development gain."
+    },
+    "solver": {
+      "algorithm": "pinned SAO PPO/critic loop",
+      "actor_gpus": 4,
+      "rollout_gpus": 4,
+      "steps_per_round": 2,
+      "batch_size": 4,
+      "learning_rate": 1e-6,
+      "critic_learning_rate": 5e-6,
+      "temperature": 1.0,
+      "budget_reason": "The real four-episode smoke needed 10m32s for its actor update and 21m47s for two critic updates after rollout/value preparation. Two-step rounds give an early development decision while amortizing model initialization and checkpoint export."
+    },
+    "ma_sao": {
+      "centralized_critic": "pre-action role, partner checkpoint, harness identity, partner version, and development calibration; actor remains decentralized",
+      "engineer_counterpart_refresh_replay_fraction_after_w_update": 0.25,
+      "engineer_interaction_credit_coefficient": 0.5,
+      "engineer_replay_max_head_offpolicyness": 16,
+      "round_data_rule": "cycle frozen task identities with a non-overlapping per-role sample offset; optimizer rows are newly generated unless explicitly marked replay",
+      "solver_cross_role_replay": false,
+      "solver_cross_role_replay_reason": "Official Harness-R1 ALFWorld reward receipts do not expose exact Solver behavior tokens/log-probabilities; do not fabricate MAPPO replay.",
+      "reward_cache_namespace": "solver checkpoint version",
+      "initial_schedule": "H1-W1-H2-W2"
+    }
+  },
+  "stopping": {
+    "minimum_rounds_per_role": 2,
+    "patience": 2,
+    "maximum_rounds_per_role": 8,
+    "minimum_dev_gain": 0.01,
+    "accept_candidate_only_if": "paired dev gain > 0 and one-sided bootstrap 95% lower bound > 0",
+    "converged_definition": "minimum rounds completed and no accepted >=1pp dev improvement for two consecutive role rounds",
+    "infrastructure_failures_are_not_model_scores": true
+  },
+  "comparison": {
+    "material_ma_sao_gain": "at least +5 percentage points over sequential SAO on sealed test with paired bootstrap 95% lower bound > 0",
+    "schedule_search_gate": "only after material MA-SAO gain on development and completion of both frozen-budget arms",
+    "initial_alternation": "H1-W1-H2, then one W round followed by one H refresh"
+  },
+  "evaluation": {
+    "development": "300-399 for stopping and candidate acceptance only",
+    "sealed_test": "400-499 exactly once after both arm states are frozen",
+    "report_both": [
+      "packet-transductive Engineer+Solver result, explicitly labelled",
+      "Solver no-patch result",
+      "reward-selected global harness on unseen tasks"
+    ],
+    "paired_bootstrap_samples": 10000
+  },
+  "runtime": {
+    "authorized_nodes": ["dev-NDH200-025", "dev-NDH200-026"],
+    "all_eight_gpus_per_node": true,
+    "agentbench_runtime": "run-local writable layout; shared upstream source and ALFWorld data are read-only symlink targets",
+    "pre_gpu_editor_capacity_audit": true,
+    "monitor_interval_seconds": 5,
+    "retry_infrastructure_failure_once": true,
+    "restore_verified_gpu_filler_when_completed_or_blocked": true,
+    "never_report_filler_utilization_as_algorithm_utilization": true
+  }
+}

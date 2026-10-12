@@ -1,0 +1,52 @@
+{
+  "checked_at_beijing": "2026-10-12T13:31:18+08:00",
+  "roles": {
+    "editor": {
+      "original_science_sha256": "651f644575c7b29ff34fed583a1ee76be8b120e979e5d5e23aaba44e1659caf5",
+      "restored_checkpoint": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/without_peer/recovery/round-0024-attempt-0001/COMMITTED.json",
+      "new_committed_rounds": 9,
+      "total_rounds": 33,
+      "all_new_numeric_metrics_finite": true,
+      "post_first_new_round_mean_seconds": 44.43826088309288,
+      "restored_native_optimizer_max_steps": {
+        "actor": [
+          13.0,
+          13.0,
+          13.0,
+          13.0
+        ],
+        "critic": [
+          32.0,
+          32.0,
+          32.0,
+          32.0
+        ]
+      },
+      "trainer_yaml_sha256": "4b26929868a54805a067a9c70c599a9a00684f853f685b2a21ba7e849906100c"
+    },
+    "solver": {
+      "original_science_sha256": "971a0a7855a5a7a2f1b4bbf155609544a7008991c8853d967c5881edf5aeca0d",
+      "restored_checkpoint": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/without_peer/recovery/round-0024-attempt-0001/COMMITTED.json",
+      "new_committed_rounds": 9,
+      "total_rounds": 33,
+      "all_new_numeric_metrics_finite": true,
+      "post_first_new_round_mean_seconds": 47.60173028707504,
+      "restored_native_optimizer_max_steps": {
+        "actor": [
+          21.0,
+          21.0,
+          21.0,
+          21.0
+        ],
+        "critic": [
+          48.0,
+          48.0,
+          48.0,
+          48.0
+        ]
+      },
+      "trainer_yaml_sha256": "ebe265e2cff13ba0c22c74302f307c06e0fe00b1bed113533acfaa7f0ff8229b"
+    }
+  },
+  "startup_at_beijing": "2026-10-12T13:14:30+08:00"
+}

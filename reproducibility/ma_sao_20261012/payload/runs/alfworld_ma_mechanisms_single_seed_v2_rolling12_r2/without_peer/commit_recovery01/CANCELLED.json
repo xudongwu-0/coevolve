@@ -1,0 +1,11 @@
+{
+  "status": "cancelled_before_second_attempt_by_user",
+  "user_requested_at_utc": "2026-10-10T08:16:28.028+00:00",
+  "instruction": "Pause automatic restarts and do not train on H200.",
+  "planned_resume_at_utc": "2026-10-10T08:52:33.772817+00:00",
+  "planned_attempt": "attempt-0002",
+  "automatic_resubmission_allowed": false,
+  "h200_training_allowed": false,
+  "preserve_committed_rounds": 24,
+  "requires_new_explicit_user_authorization": true
+}

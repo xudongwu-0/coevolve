@@ -1,0 +1,5 @@
+{
+  "logprobs_mode": "processed_logprobs",
+  "temperature": 0.7,
+  "reason": "Behavior logprobs must include the actual sampling transforms."
+}

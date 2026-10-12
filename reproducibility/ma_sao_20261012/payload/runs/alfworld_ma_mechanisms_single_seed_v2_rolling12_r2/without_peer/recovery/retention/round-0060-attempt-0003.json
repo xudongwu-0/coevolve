@@ -1,0 +1,15 @@
+{
+  "previous_generation": "round-0060-attempt-0003",
+  "previous_commit_sha256": "e926caa501e901617c6762ba7040e258f9ceab07db693e66aa7625252d3dd9a2",
+  "replacement_generation": "round-0072-attempt-0003",
+  "replacement_commit_sha256": "4f56da0f6203ae6711072f0c000f63fc7c1b46ab6ce10c747330d4c5c5967b2a",
+  "deletion_target": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/without_peer/recovery/round-0060-attempt-0003",
+  "at_unix": 1791786087.8257937,
+  "owner": {
+    "schema": "paired-native-recovery-v1",
+    "root": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/without_peer/recovery",
+    "generation": "round-0060-attempt-0003",
+    "completed_rounds": 60
+  },
+  "status": "deleted"
+}

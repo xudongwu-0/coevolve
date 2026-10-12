@@ -1,0 +1,40 @@
+{
+  "status": "passed",
+  "roles": {
+    "editor": {
+      "active_rounds": 32,
+      "inactive_rounds": 16,
+      "critic_only_warmup_steps": 3,
+      "actor_steps": 29,
+      "critic_steps": 64,
+      "consumed_policy_trajectories": 256,
+      "committed_generated_policy_trajectories": 384,
+      "inactive_counterpart_trajectories": 128,
+      "actor_updated_policy_trajectories": 232,
+      "critic_warmup_policy_trajectories": 24,
+      "collection_policy_version": 48,
+      "policy_version_semantics": "Native collection/lag version, not the number of weight-changing updates.",
+      "generated_policy_trajectories": 384,
+      "uncommitted_generated_policy_trajectories": 0,
+      "metrics_sha256": "5d3c738e6a2f6eaf4e62360ba9243e98f42395dd115b982f0a6593a4b2f6bf65"
+    },
+    "solver": {
+      "active_rounds": 48,
+      "inactive_rounds": 0,
+      "critic_only_warmup_steps": 3,
+      "actor_steps": 45,
+      "critic_steps": 96,
+      "consumed_policy_trajectories": 384,
+      "committed_generated_policy_trajectories": 384,
+      "inactive_counterpart_trajectories": 0,
+      "actor_updated_policy_trajectories": 360,
+      "critic_warmup_policy_trajectories": 24,
+      "collection_policy_version": 48,
+      "policy_version_semantics": "Native collection/lag version, not the number of weight-changing updates.",
+      "generated_policy_trajectories": 384,
+      "uncommitted_generated_policy_trajectories": 0,
+      "metrics_sha256": "3bab6cebee495f6e40dc39aa4c5e0d1cf3d3c062cbfdbc5c21a9759bf1779fa8"
+    }
+  },
+  "at_unix": 1791311460.6067688
+}

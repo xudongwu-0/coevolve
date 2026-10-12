@@ -1,0 +1,23 @@
+{
+  "run": "/mnt/3fs/xudong/coevolve/runs/sao_dapo_calibration_central_06",
+  "method": "central",
+  "model": "/mnt/3fs/xudong/coevolve/assets/Qwen3-4B-Instruct-2507",
+  "data": "/mnt/3fs/xudong/coevolve/assets/dapo_aime_protocol",
+  "seed": 42,
+  "cycles": 1,
+  "batch_size": 8,
+  "editor_steps": 2,
+  "solver_steps": 8,
+  "editor_lr": 0.000001,
+  "solver_lr": 0.000001,
+  "editor_temperature": 0.7,
+  "editor_tokens": 768,
+  "solver_tokens": 2048,
+  "staleness": 1,
+  "weight_update_mode": "xccl",
+  "reward_questions": 8,
+  "dev_limit": 16,
+  "proposals": 4,
+  "evaluate_test": false,
+  "formal_baseline": false
+}

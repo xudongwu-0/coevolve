@@ -1,0 +1,10 @@
+{
+  "status": "cancelled_by_user",
+  "user_requested_at_utc": "2026-10-10T08:16:28.028+00:00",
+  "instruction": "Pause automatic restarts. Do not use H200 for training. Preserve code, key data and checkpoints for handoff.",
+  "automatic_resubmission_allowed": false,
+  "h200_training_allowed": false,
+  "expires_at": null,
+  "requires_new_explicit_user_authorization": true,
+  "preserve_all_completed_and_partial_work": true
+}

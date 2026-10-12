@@ -1,0 +1,9 @@
+{
+  "required_seeds": [
+    42,
+    43
+  ],
+  "minimum_seed_delta": 0.0,
+  "minimum_mean_delta": 0.03,
+  "minimum_significant_seeds": 1
+}

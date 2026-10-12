@@ -2,6 +2,7 @@
 import asyncio
 import copy
 from contextlib import contextmanager
+import os
 from pathlib import Path
 import shutil
 import sys
@@ -10,6 +11,7 @@ import unittest
 from unittest.mock import AsyncMock, patch
 import uuid
 
+os.environ["CUDA_VISIBLE_DEVICES"] = ""
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "whale_local"))
 from sao_bridge import alfworld_whale_baseline as whale
@@ -244,6 +246,12 @@ class WhaleTests(unittest.TestCase):
         whale.validate_episodes([record], [row], 42, 4096, exact_tokens=True)
         failed = dict(record, reward=0, status="task limit reached")
         whale.validate_episodes([failed], [row], 42, 4096, exact_tokens=True)
+        for status in ("AGENT_INVALID_ACTION", "SampleStatus.AGENT_INVALID_ACTION", "agent invalid action"):
+            invalid = dict(record, reward=0.0, status=status)
+            whale.validate_episodes([invalid], [row], 42, 4096, exact_tokens=True)
+            self.assertEqual(whale.accepted_calls([invalid]), [])
+            with self.assertRaisesRegex(ValueError, "Nonterminal"):
+                whale.validate_episodes([dict(invalid, reward=1.0)], [row], 42, 4096, exact_tokens=True)
         self.assertEqual(whale.accepted_calls([record, failed]), record["calls"])
         self.assertEqual(whale.accepted_calls([failed]), [])
         for change in ({"rollout_seed": 1}, {"reward": float("nan")}, {"tokens": 3},
@@ -266,17 +274,19 @@ class WhaleTests(unittest.TestCase):
         self.assertEqual(messages[-1], {"role": "assistant", "content": "<think>\n"})
 
     def test_search_feedback_reaches_next_iteration_not_independent_best_of_n(self):
-        config = dict(self.config, mh_iterations=2, proposals_per_iteration=1)
+        config = dict(self.config, mh_iterations=2, proposals_per_iteration=1,
+                      reuse_solver_for_search=True)
         initial = self.artifact("initial")
-        prompts = []
+        prompts, reused = [], []
 
         async def proposal(urls, messages, config, seed):
             prompts.append(messages[1]["content"])
             return {"valid": True, "patch": {"benchmark": "alfworld", "actions": [],
                     "description": f"hypothesis-{len(prompts)}"}, "usage": {}, "text": ""}
 
-        def score(launch, model, harness, rows, root, config, seed):
+        def score(launch, model, harness, rows, root, config, seed, *, urls=None):
             name = root.name
+            reused.append(urls)
             return {"accuracy": {"h0": .1, "h1": .7, "h2": .6}[name],
                     "mean_turn_count": 10, "results": [{
                         "task_id": 1, "reward": 0, "turns": 10,
@@ -296,6 +306,179 @@ class WhaleTests(unittest.TestCase):
         self.assertIn("fresh-h1-failure", prompts[1])
         self.assertNotIn("fresh-h0-failure", prompts[1])
         self.assertEqual(selected.parent.name, "h1")
+        self.assertEqual(reused, [None, "http://127.0.0.1/v1", "http://127.0.0.1/v1"])
+        self.assertEqual(read_json(self.root / "search/SELECTED.json")["accuracy"], .7)
+
+    def test_native_overlay_is_opt_in_and_validated(self):
+        launch = SimpleNamespace(env={"PYTHONPATH": "/source/whale_local"})
+        self.assertEqual(whale.native_environment(self.config, launch), {})
+        config = dict(self.config, training_kernel_overlay="/missing")
+        with self.assertRaisesRegex(ValueError, "explicit pinned"):
+            whale.native_environment(config, launch)
+
+    def test_larger_online_batches_preserve_both320_episode_cycles(self):
+        config = dict(self.config, cycle_batch_episode_counts=[
+            [32, 32, 32, 32, 96, 96], [160, 160]])
+        whale.validate_config(config)
+        self.assertEqual([sum(cycle) for cycle in whale.rsft_batch_layout(config)], [320, 320])
+        for layout in ([[320], [160, 160]], [[32, 128], [160, 160]],
+                       [[32, 32, 32, 32, 96, 96], [160, False]]):
+            with self.subTest(layout=layout), self.assertRaises(ValueError):
+                whale.validate_config(dict(config, cycle_batch_episode_counts=layout))
+
+    def test_persistent_search_loads_two_isolated_models_once(self):
+        config = dict(self.config, persistent_search_services=True)
+        events = []
+
+        @contextmanager
+        def serving(launch, model, name, **kwargs):
+            events.append((name, kwargs))
+            yield "http://127.0.0.1:19801/v1" if kwargs["port"] == 19801 else "http://127.0.0.1:19701/v1"
+
+        with patch.object(whale, "serving", serving), \
+                patch.object(whale, "_harness_search", return_value=self.root / "selected") as search:
+            result = whale.harness_search(None, self.root / "solver", self.root / "harness",
+                                          [{"task_id": 3}], self.root / "mh", config, 0)
+        self.assertEqual(result, self.root / "selected")
+        self.assertEqual(len(events), 2)
+        self.assertTrue(all(event[1]["memory_fraction"] == .4 for event in events))
+        self.assertEqual(search.call_args.kwargs, {
+            "proposer_urls": "http://127.0.0.1:19801/v1", "solver_urls": "http://127.0.0.1:19701/v1"})
+
+    def test_shared_environment_preserves_native_catalogue_and_independent_harnesses(self):
+        rows = [{"id": "dev-3", "task_id": 3, "task_split": "sao_train_v1",
+                 "task_catalogue": "/frozen/train.json", "task_catalogue_sha256": "frozen"}]
+        harnesses = {name: self.artifact(name) for name in ("h1", "h2")}
+        calls = []
+        process = SimpleNamespace(poll=lambda: None)
+
+        def module(module_name, args, **kwargs):
+            calls.append((module_name, args, kwargs))
+            write_json(self.root / "environment/READY.json", {
+                "health": {"indices": {"h1": [3], "h2": [3]}}})
+            return process
+
+        launch = SimpleNamespace(module=module, ready=lambda *args: None,
+                                 stop=lambda child: calls.append(child))
+        with patch("sao_bridge.alfworld_solver_eval.bind_environment"):
+            with whale.environment_matrix(launch, self.root, harnesses, rows, self.config) as assigned:
+                self.assertEqual(assigned["h1"], [dict(rows[0], task_name="h1")])
+                self.assertEqual(assigned["h2"], [dict(rows[0], task_name="h2")])
+        self.assertIn("--harness-matrix", calls[0][1])
+        assignments = read_json(self.root / "assignments.json")
+        self.assertEqual([row["name"] for row in assignments], ["h1", "h2"])
+        self.assertEqual([row["catalogue_sha256"] for row in assignments], ["frozen", "frozen"])
+        self.assertEqual(calls[-1], process)
+
+    def test_parallel_candidate_scores_keep_order_seeds_and_bound_concurrency(self):
+        harnesses = {name: self.artifact(name) for name in ("h1", "h2", "h3")}
+        rows = [{"id": "same-seed-identity", "task_id": 3}]
+        active, maximum, calls = 0, 0, []
+
+        @contextmanager
+        def environments(launch, work, patches, actual_rows, config):
+            self.assertEqual(actual_rows, rows)
+            yield {name: [dict(rows[0], task_name=name)] for name in patches}
+
+        async def collect(urls, assigned, harness, config, seed, *, training, report_path):
+            nonlocal active, maximum
+            active += 1
+            maximum = max(maximum, active)
+            calls.append((assigned, seed, training, report_path))
+            await asyncio.sleep(.01 if harness.parent.name == "h1" else 0)
+            active -= 1
+            return {"accuracy": {"h1": .1, "h2": .2, "h3": .3}[harness.parent.name]}
+
+        config = dict(self.config, search_evaluation_concurrency=2)
+        with patch.object(whale, "environment_matrix", environments), \
+                patch.object(whale, "collect", side_effect=collect):
+            result = whale.score_search_candidates(None, "http://127.0.0.1/v1",
+                                                   harnesses, rows, self.root, config)
+        self.assertEqual(list(result), ["h1", "h2", "h3"])
+        self.assertEqual([x["accuracy"] for x in result.values()], [.1, .2, .3])
+        self.assertEqual(maximum, 2)
+        self.assertTrue(all(x[0][0]["id"] == rows[0]["id"] and x[1] == config["development_seed"]
+                            and x[2] is False and x[3].name == "report.json" for x in calls))
+
+    def test_parallel_candidate_failure_cancels_other_scores_without_fallback(self):
+        harnesses = {name: self.artifact(name) for name in ("h1", "h2")}
+        cancelled = []
+
+        @contextmanager
+        def environments(*args):
+            yield {name: [{"task_name": name}] for name in harnesses}
+
+        async def collect(urls, rows, harness, *args, **kwargs):
+            if harness.parent.name == "h1":
+                await asyncio.sleep(.01)
+                raise RuntimeError("explicit environment failure")
+            try:
+                await asyncio.sleep(30)
+            except asyncio.CancelledError:
+                cancelled.append(harness.parent.name)
+                raise
+
+        config = dict(self.config, search_evaluation_concurrency=2)
+        with patch.object(whale, "environment_matrix", environments), \
+                patch.object(whale, "collect", side_effect=collect):
+            with self.assertRaises(ExceptionGroup) as error:
+                whale.score_search_candidates(None, "http://127.0.0.1/v1",
+                                               harnesses, [{"task_id": 3}], self.root, config)
+        self.assertIn("explicit environment failure", str(error.exception.exceptions[0]))
+        self.assertEqual(cancelled, ["h2"])
+
+    def test_parallel_search_keeps_invalid_slots_and_updates_only_after_the_iteration(self):
+        config = dict(self.config, mh_iterations=1, proposals_per_iteration=3,
+                      reuse_solver_for_search=True, search_evaluation_concurrency=2)
+        initial = self.artifact("initial")
+        generated = [
+            {"valid": True, "patch": {"benchmark": "alfworld", "actions": [], "description": "first"}},
+            {"valid": False, "error": "invalid syntax"},
+            {"valid": True, "patch": {"benchmark": "alfworld", "actions": [], "description": "third"}},
+        ]
+        initial_report = {"accuracy": .1, "mean_turn_count": 10,
+                          "results": [{"task_id": 3, "reward": 0, "turns": 10, "messages": []}]}
+        scored = []
+
+        @contextmanager
+        def serving(*args):
+            yield "http://127.0.0.1/v1"
+
+        def score_candidates(launch, urls, harnesses, rows, root, actual_config):
+            scored.extend(harnesses)
+            return {name: {**initial_report, "accuracy": .7 if name == "h1" else .6}
+                    for name in harnesses}
+
+        with patch.object(whale, "propose", AsyncMock(side_effect=generated)), \
+                patch.object(whale, "score", return_value=initial_report) as singleton, \
+                patch.object(whale, "score_search_candidates", side_effect=score_candidates), \
+                patch.object(whale, "serving", serving):
+            result = whale.harness_search(None, self.root / "solver", initial, [{"task_id": 3}],
+                                          self.root / "search", config, 0)
+        self.assertEqual(scored, ["h1", "h3"])
+        self.assertEqual(singleton.call_count, 1)
+        self.assertEqual(result.parent.name, "h1")
+        archive = read_json(self.root / "search/iteration-00.json")["archive"]
+        self.assertEqual([row["name"] for row in archive], ["h0", "h1", "h2", "h3"])
+        self.assertFalse(archive[2]["valid"])
+
+    def test_search_and_early_stop_settings_are_validated(self):
+        for change in ({"reuse_solver_for_search": "yes"}, {"proposal_concurrency": 0},
+                       {"proposal_concurrency": 4}, {"early_stop_development_drop": 0},
+                       {"early_stop_development_drop": True}, {"search_evaluation_concurrency": 0},
+                       {"search_evaluation_concurrency": 9}, {"search_evaluation_concurrency": True},
+                       {"search_evaluation_concurrency": 2}):
+            with self.subTest(change=change), self.assertRaises(ValueError):
+                whale.validate_config(dict(self.config, **change))
+        self.assertTrue(whale.development_regressed(.7, .5, .2))
+        self.assertFalse(whale.development_regressed(.7, .6, .2))
+        self.assertFalse(whale.development_regressed(.7, .8, .2))
+        with self.assertRaises(ValueError):
+            whale.development_regressed(.7, float("nan"), .2)
+        with patch.object(whale.time, "time", return_value=100):
+            self.assertFalse(whale.training_time_exhausted({}))
+            self.assertFalse(whale.training_time_exhausted({"training_deadline_unix": 101}))
+            self.assertTrue(whale.training_time_exhausted({"training_deadline_unix": 100}))
 
     def test_parse_uses_official_code_hook_validation(self):
         source = '</think><patch>{"benchmark":"alfworld","description":"brief","actions":[{"type":"add_code_hook","hook":"make_pre_hint","code":"def hook(ctx, nb):\\n    return {\\\"message\\\": \\\"Finish the requested subgoal.\\\"}"}]}</patch>'
@@ -329,6 +512,14 @@ class WhaleTests(unittest.TestCase):
         sampler.close.assert_awaited_once()
         self.assertEqual(report["accuracy"], 1)
         self.assertEqual(report["results"][0]["calls"], record["calls"])
+        record.update(status="task error", reward=0)
+        raw = self.root / "failed-collect/report.json"
+        with patch("sao_bridge.evaluation.Sampler", return_value=FakeSampler()), \
+                patch("sao_bridge.alfworld_domain.run_episode", side_effect=native_episode), \
+                self.assertRaisesRegex(RuntimeError, "infrastructure"):
+            asyncio.run(whale.collect("http://127.0.0.1:1234/v1", [row], harness,
+                                     self.config, 42, training=True, report_path=raw))
+        self.assertEqual(read_json(raw)["results"][0]["status"], "task error")
 
     def test_native_rsft_cpu_gradient_is_token_weighted_not_sequence_weighted(self):
         import torch
@@ -566,7 +757,55 @@ class WhaleTests(unittest.TestCase):
         self.assertEqual(costs["rank_replicated_rsft_forward_calls"], 40)
 
     def test_gpu_smoke_orchestration_restores_after_two_steps_without_episodes(self):
-        frozen = {"config": self.config, "config_relative_path": str(whale.DEFAULT_CONFIG.relative_to(ROOT)),
+        self._smoke_orchestration(False)
+
+    def test_mixed_native_cost_counts_real_rank_calls_and_masked_padding(self):
+        write_json(self.root / "cycle-00-rsft-00/optimizer/COMMITTED.json", {
+            "accepted_calls": 5, "response_tokens": 20, "metrics": {"actor/sft_updates": 1},
+        })
+        write_json(self.root / "cycle-00-rsft-01/optimizer/COMMITTED.json", {
+            "accepted_calls": 9, "response_tokens": 37, "metrics": {"actor/sft_updates": 1},
+            "replicated_data_across_ranks": 1, "physical_rsft_forward_calls": 16,
+            "physical_rsft_response_token_positions": 44, "masked_padding_calls": 7,
+        })
+        result = whale.cost_report(self.root, self.config)
+        self.assertEqual(result["logical_rsft_forward_calls"], 14)
+        self.assertEqual(result["rank_replicated_rsft_forward_calls"], 56)
+        self.assertEqual(result["rank_replicated_rsft_response_token_positions"], 204)
+        self.assertTrue(result["mixed_native_execution_modes"])
+        self.assertIsNone(result["replicated_rank_multiplier"])
+        self.assertEqual(result["masked_native_padding_calls"], 7)
+
+    def test_native_prefix_rejects_learning_changes_and_changed_saved_evidence(self):
+        origin = self.root / "original"
+        write_json(origin / "FROZEN.json", {"config": self.config})
+        commit = origin / "execution/cycle-00-rsft-01/optimizer/COMMITTED.json"
+        write_json(commit, {"checkpoint": "frozen"})
+        pause = origin / "THROUGHPUT_PAUSED.json"
+        write_json(pause, {
+            "status": "coordinator_paused_after_native_commit",
+            "training_episodes": 2 * self.config["episodes_per_batch"],
+            "native_commit_sha256": whale.file_sha(commit),
+        })
+        prefix = {
+            "root": str(origin), "batches": 2, "frozen_sha256": whale.file_sha(origin / "FROZEN.json"),
+            "pause_sha256": whale.file_sha(pause), "pins": {
+                str(commit.relative_to(origin)): whale.file_sha(commit)}}
+        config = dict(self.config, parallel_rsft_samples=True, parallel_checkpoint_hashing=True,
+                      defer_reload_to_use=True, native_prefix=prefix)
+        self.assertEqual(whale.checked_prefix(config), (origin, self.config))
+        with self.assertRaisesRegex(ValueError, "learning/data"):
+            whale.checked_prefix(dict(config, learning_rate=self.config["learning_rate"] * 2))
+        write_json(commit, {"checkpoint": "changed"})
+        with self.assertRaisesRegex(ValueError, "paused checkpoint"):
+            whale.checked_prefix(config)
+
+    def test_sharded_gpu_smoke_exercises_full_context_on_every_rank(self):
+        self._smoke_orchestration(True)
+
+    def _smoke_orchestration(self, sharded):
+        config = dict(self.config, parallel_rsft_samples=True) if sharded else self.config
+        frozen = {"config": config, "config_relative_path": str(whale.DEFAULT_CONFIG.relative_to(ROOT)),
                   "adapter_sha256": whale.file_sha(Path(whale.__file__)),
                   "model_weights_verified": True}
         frozen_path = self.root / "FROZEN.json"
@@ -582,8 +821,9 @@ class WhaleTests(unittest.TestCase):
                 request = read_json(Path(command[-1]))
                 index = len(requests)
                 requests.append(request)
-                count = 4 if index == 0 else 2
-                steps = [[], [], [1], [1]] if index == 0 else [[2], [2]]
+                count = (8 if sharded else 2) * (2 if index == 0 else 1)
+                steps = ([[], [1]] if index == 0 else [[2]]) if sharded else (
+                    [[], [], [1], [1]] if index == 0 else [[2], [2]])
                 proof = {"steps_before": [] if index == 0 else [2],
                          "steps_after": [2 if index == 0 else 3], "restored_exactly": index == 1,
                          "forward_evidence": [{"input_tokens": 32768, "response_mask_tokens": 4096,
@@ -592,6 +832,8 @@ class WhaleTests(unittest.TestCase):
                 write_json(path / "COMMITTED.json", {
                     "checkpoint": str(path / "actor"), "purpose": "synthetic_gpu_smoke",
                     "accepted_episodes": 0, "synthetic_calls": count, "response_tokens": count * 4096,
+                    "physical_rsft_forward_calls": count * (1 if sharded else 8),
+                    "physical_rsft_response_token_positions": count * 4096 * (1 if sharded else 8),
                     "smoke_proofs": [dict(proof, rank=rank) for rank in range(8)],
                 })
                 return object()
@@ -617,12 +859,13 @@ class WhaleTests(unittest.TestCase):
                 patch.object(whale, "serving", fake_serving):
             result = whale.run_gpu_smoke(frozen_path, "dev-NDH200-026", output)
         self.assertEqual(result["research_episodes"], 0)
-        self.assertEqual(result["rank_replicated_forward_calls"], 48)
+        self.assertEqual(result["rank_replicated_forward_calls"], 24 if sharded else 48)
         self.assertEqual(result["logical_optimizer_steps"], 3)
         self.assertEqual(result["full_context_tokens"], 32768)
         self.assertEqual(result["response_mask_tokens"], 4096)
-        self.assertEqual(result["logical_synthetic_response_tokens"], 24576)
-        self.assertEqual(result["rank_replicated_synthetic_response_positions"], 196608)
+        self.assertEqual(result["logical_synthetic_response_tokens"], 98304 if sharded else 24576)
+        self.assertEqual(result["rank_replicated_synthetic_response_positions"], 98304 if sharded else 196608)
+        self.assertIs(result["sample_sharded_rsft"], sharded)
         self.assertTrue(result["full_context_memory_validated"])
         self.assertEqual(Path(requests[0]["model"]), ROOT / self.config["initial_solver"])
         self.assertEqual(requests[1]["resume"], requests[0]["output"])
@@ -630,8 +873,14 @@ class WhaleTests(unittest.TestCase):
         self.assertTrue((output / "SMOKE_COMPLETE.json").is_file())
 
     def test_complete_alternation_wiring_and_final_selection_precede_eval(self):
+        self._alternation_wiring(False)
+
+    def test_reload_can_be_verified_by_actual_use_without_a_second_model_start(self):
+        self._alternation_wiring(True)
+
+    def _alternation_wiring(self, defer):
         config = dict(self.config, cycles=2, rsft_batches_per_cycle=2, episodes_per_batch=1,
-                      pinned_files={})
+                      pinned_files={}, defer_reload_to_use=defer)
         rows = [{"id": f"joint-{i}", "task_id": i % 2,
                  "task_split": "test_set"} for i in range(4)]
         data = self.root / "rows.json"
@@ -710,12 +959,16 @@ class WhaleTests(unittest.TestCase):
                 patch.object(whale, "serving", fake_serving):
             result = whale.run(frozen_path, "dev-NDH200-025")
         self.assertEqual(result["weight_update_batches"], 4)
-        self.assertEqual(events, ["train-rollout", "rsft", "reload"] * 2 + ["mh"] +
-                         ["train-rollout", "rsft", "reload"] * 2 + ["mh", "final-eval", "close"])
+        batch_events = ["train-rollout", "rsft"] + ([] if defer else ["reload"])
+        self.assertEqual(events, batch_events * 2 + ["mh"] +
+                         batch_events * 2 + ["mh", "final-eval", "close"])
         self.assertIsNone(resumes[0])
         self.assertTrue(all(resumes[1:]))
         self.assertEqual(trained_record_ids, [row["id"] for row in rows])
         self.assertTrue((self.root / "execution/RELEASED.json").is_file())
+        self.assertTrue(all(read_json(self.root / "execution" / f"cycle-{cycle:02d}-rsft-{step:02d}"
+                                      / "RELOAD_VERIFIED.json")["rollout_reload_verified"]
+                            for cycle in range(2) for step in range(2)))
 
 
 if __name__ == "__main__":

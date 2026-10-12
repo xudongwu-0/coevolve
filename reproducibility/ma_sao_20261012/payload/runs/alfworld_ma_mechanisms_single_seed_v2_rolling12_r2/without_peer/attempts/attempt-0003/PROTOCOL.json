@@ -1,0 +1,218 @@
+{
+  "status": "frozen_before_new_training",
+  "source": "/mnt/3fs/xudong/coevolve/runs/source-snapshots/alfworld-ma-mechanisms-rolling12-v2",
+  "root": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/without_peer/attempts/attempt-0003",
+  "arms": [
+    "full",
+    "without_peer",
+    "without_context",
+    "without_value_norm",
+    "always_joint"
+  ],
+  "training_seed": 1000043,
+  "training_seeds": [
+    1000043
+  ],
+  "study_revision": 2,
+  "unit_suffix": "single-seed-v2-rolling12-without_peer-0003",
+  "signal_tracing": true,
+  "joint_rounds": 144,
+  "batch_size": 8,
+  "curve_rounds": [
+    96,
+    144
+  ],
+  "primary_endpoint": 144,
+  "schedule": "joint_joint_anchor",
+  "anchor_mode": "sampled_control",
+  "initial_state": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/INITIAL_STATE.json",
+  "core200_protocol": "/mnt/3fs/xudong/coevolve/runs/source-snapshots/alfworld-ma-mechanisms-single-seed-v2/runs/alfworld_core_200_oneshot_v2/protocol.json",
+  "no_patch": "/mnt/3fs/xudong/coevolve/runs/source-snapshots/alfworld-ma-mechanisms-single-seed-v2/examples/alfworld_no_patch.json",
+  "h2": {
+    "template": "/mnt/3fs/xudong/coevolve/examples/alfworld_engineer_fast_v1_s42.json",
+    "proposal_seed": 5000045
+  },
+  "evaluation": {
+    "task_manifest": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_improve_v2/selection_manifest.json",
+    "selection_count": 48,
+    "report_count": 200,
+    "samples": 1,
+    "seed": 6000045,
+    "temperature": 1.0,
+    "solver_tokens": 4096,
+    "eval_concurrency": 128,
+    "environment_concurrency": 32,
+    "matrix_concurrency": 3,
+    "promotion_min_delta": 0.02,
+    "ties_keep_incumbent": true,
+    "report_after_both_arms_freeze": true,
+    "minimum_ma_gain": 0.05,
+    "positive_paired_95pct_lower_bound": true,
+    "bootstrap_draws": 10000,
+    "bootstrap_seed": 9000045,
+    "report_has_prior_development_exposure": true,
+    "legacy_sealed_test_opened": false,
+    "report_mode": "final_systems"
+  },
+  "incumbent_harness": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/initial/patches/-1-proposal01.json",
+  "incumbent_min_gain": 0.041666666666666664,
+  "per_role_consumed": {
+    "editor": 768,
+    "solver": 1152
+  },
+  "per_role_actor_updates": {
+    "editor": 93,
+    "solver": 141
+  },
+  "per_role_critic_updates": {
+    "editor": 192,
+    "solver": 288
+  },
+  "per_arm_budgets": {
+    "full": {
+      "roles": {
+        "editor": {
+          "active_rounds": 96,
+          "inactive_rounds": 48,
+          "critic_only_warmup_steps": 3,
+          "actor_steps": 93,
+          "critic_steps": 192,
+          "consumed_trajectories": 768
+        },
+        "solver": {
+          "active_rounds": 144,
+          "inactive_rounds": 0,
+          "critic_only_warmup_steps": 3,
+          "actor_steps": 141,
+          "critic_steps": 288,
+          "consumed_trajectories": 1152
+        }
+      },
+      "shared_environment_episodes": 1152,
+      "generated_role_trajectories": 2304
+    },
+    "without_peer": {
+      "roles": {
+        "editor": {
+          "active_rounds": 96,
+          "inactive_rounds": 48,
+          "critic_only_warmup_steps": 3,
+          "actor_steps": 93,
+          "critic_steps": 192,
+          "consumed_trajectories": 768
+        },
+        "solver": {
+          "active_rounds": 144,
+          "inactive_rounds": 0,
+          "critic_only_warmup_steps": 3,
+          "actor_steps": 141,
+          "critic_steps": 288,
+          "consumed_trajectories": 1152
+        }
+      },
+      "shared_environment_episodes": 1152,
+      "generated_role_trajectories": 2304
+    },
+    "without_context": {
+      "roles": {
+        "editor": {
+          "active_rounds": 96,
+          "inactive_rounds": 48,
+          "critic_only_warmup_steps": 3,
+          "actor_steps": 93,
+          "critic_steps": 192,
+          "consumed_trajectories": 768
+        },
+        "solver": {
+          "active_rounds": 144,
+          "inactive_rounds": 0,
+          "critic_only_warmup_steps": 3,
+          "actor_steps": 141,
+          "critic_steps": 288,
+          "consumed_trajectories": 1152
+        }
+      },
+      "shared_environment_episodes": 1152,
+      "generated_role_trajectories": 2304
+    },
+    "without_value_norm": {
+      "roles": {
+        "editor": {
+          "active_rounds": 96,
+          "inactive_rounds": 48,
+          "critic_only_warmup_steps": 3,
+          "actor_steps": 93,
+          "critic_steps": 192,
+          "consumed_trajectories": 768
+        },
+        "solver": {
+          "active_rounds": 144,
+          "inactive_rounds": 0,
+          "critic_only_warmup_steps": 3,
+          "actor_steps": 141,
+          "critic_steps": 288,
+          "consumed_trajectories": 1152
+        }
+      },
+      "shared_environment_episodes": 1152,
+      "generated_role_trajectories": 2304
+    },
+    "always_joint": {
+      "roles": {
+        "editor": {
+          "active_rounds": 144,
+          "inactive_rounds": 0,
+          "critic_only_warmup_steps": 3,
+          "actor_steps": 141,
+          "critic_steps": 288,
+          "consumed_trajectories": 1152
+        },
+        "solver": {
+          "active_rounds": 144,
+          "inactive_rounds": 0,
+          "critic_only_warmup_steps": 3,
+          "actor_steps": 141,
+          "critic_steps": 288,
+          "consumed_trajectories": 1152
+        }
+      },
+      "shared_environment_episodes": 1152,
+      "generated_role_trajectories": 2304
+    }
+  },
+  "critic_warmup_active_rounds": 3,
+  "learning_rate": 5e-07,
+  "critic_learning_rate": 2.5e-06,
+  "kl_ctl": 0.02,
+  "reference_storage_dtype": "bfloat16",
+  "prompt_invariance": "All arms collect identical1152 ordered inputs with originalW0 Engineer messages.",
+  "solver_exposure": "Identical1152 ordered Solver task exposures in every arm.",
+  "schedule_control": "Only activate Engineer optimization on the original third rounds. Keep sampled-control routing, source repetition, third-round unit teammate correction, reward and critic inputs unchanged. Legacy routing metadata describes baseline eligibility; native_engineer_round_active and optimizer metrics describe executed updates. Consumed role trajectories increase1920 to2304 (20%); generated trajectories and environment episodes remain equal.",
+  "staged_sao_comparator_excluded_by_user": true,
+  "new_training_uses_no_fresh100": true,
+  "resource_gate": [
+    "/mnt/3fs/xudong/coevolve/runs/source-snapshots/alfworld-ma-mechanisms-single-seed-v2/runs/alfworld_w3h3_from_w2_early79_v1/FINAL_AUDIT.json",
+    "/mnt/3fs/xudong/coevolve/runs/source-snapshots/alfworld-ma-mechanisms-single-seed-v2/runs/alfworld_ma_engineer_weights_w0_v1/FINAL_AUDIT.json"
+  ],
+  "native_gate": "Verified full32K full/no-context/no-ValueNorm evidence plus real6-round full/always-joint paired canaries, including third-round native updates and unchanged peer correction.",
+  "limitations": [
+    "Single training seed at user request; question bootstrap is not training-seed robustness.",
+    "Original200 and selection48 are reused development questions.",
+    "New full control does not reproduce the historical97% initialization with already-trained MA critics.",
+    "Always-joint matches generated/environment budgets, not consumed updates or total compute.",
+    "Historical97% also differs in the round48 Adam reset and24 versus16 proposal-selection opportunities.",
+    "No main200 checkpoint selection or performance-based retries."
+  ],
+  "at_unix": 1791482160.0389163,
+  "execution_revision": "paired-native-recovery-v1",
+  "original_absolute_deadline_unix": 1791627044.3798063,
+  "recovery_interval_rounds": 12,
+  "recovery_idle_seconds": 1800,
+  "recovery_sampling": "Native model/Adam/ValueNorm/RNG/cursor continuation, but fresh serving after interruption; uncommitted speculative work is retained as wasted cost, not replayed",
+  "execution_authority": {
+    "authority": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/serial15_20261012_self_fix01/AUTHORIZATION.json",
+    "authority_sha256": "3854e3a81cc8324b66a2bd5120cb12b840db845caf8fad17621412951b6c8f6c",
+    "admission": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/serial15_20261012_self_fix01/admissions/1791781953411889907.json",
+    "admission_sha256": "aefdc34e10c9689766c614937339f2bfd70ff819eeba4498562c1ba45c210da5"
+  }
+}

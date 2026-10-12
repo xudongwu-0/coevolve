@@ -1,0 +1,25 @@
+{
+  "credential_values_recorded": false,
+  "github": {
+    "account": "xudongwu-0",
+    "authentication": "SSH private key",
+    "repository": "xudongwu-0/coevolve",
+    "read_verified": true,
+    "receive_pack_dry_run_passed": true,
+    "unauthenticated_repository_http_status": 404
+  },
+  "huggingface": {
+    "account": "wxd02",
+    "role": "fineGrained",
+    "namespace_repo_write_declared": true,
+    "proposed_dataset": "wxd02/coevolve",
+    "dataset_lookup_http_status": 404,
+    "remote_writes_performed": false
+  },
+  "wandb": {
+    "account": "2373025856w",
+    "viewer_verified": true,
+    "remote_writes_performed": false
+  },
+  "authorized_model_uploads_now": false
+}

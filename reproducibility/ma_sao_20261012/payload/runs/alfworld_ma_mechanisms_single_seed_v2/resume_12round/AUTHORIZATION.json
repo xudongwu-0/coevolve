@@ -1,0 +1,28 @@
+{
+  "user_authorized_at_utc": "2026-10-09T07:30:43.519+00:00",
+  "status": "authorized_pending_recovery_validation",
+  "immediate_initial_launch_authorized_at_utc": "2026-10-09T07:40:26.631+00:00",
+  "initial_resource_gate": "Fresh empty two-node resource check; no initial thirty-minute delay",
+  "checkpoint_interval_rounds": 12,
+  "checkpoint_scope": "Same committed round for both roles; Actor, Critic, Adam, ValueNorm and training position",
+  "retention": "Commit and validate the next complete paired recovery point before deleting the previous owned recovery point; preserve evaluation milestones and final states",
+  "evaluation_milestones": [96, 144],
+  "after_external_termination": "Retain evidence and wait for both nodes to remain continuously free for at least 1800 seconds before resubmission",
+  "minimum_continuous_idle_seconds": 1800,
+  "idle_poll_interval_seconds": 60,
+  "probe_error_resets_idle_window": true,
+  "foreign_processes_must_not_be_modified": true,
+  "scientific_protocol_revision": 2,
+  "training_seed": 1000043,
+  "fixed_endpoint_rounds": 144,
+  "full_control_before_ablations": true,
+  "original_absolute_deadline_utc": "2026-10-10T10:10:44+00:00",
+  "frozen_v2_source_must_not_be_edited": true,
+  "supersedes_execution_restrictions": [
+    "../resume_after_idle/PAUSED_BY_USER.json",
+    "../../alfworld_ma_mechanisms_single_seed_v2_attempt02/NO_RESTART_AFTER_TERMINATION.json"
+  ],
+  "prior_attempts_and_partial_costs_retained": true,
+  "implementation_and_native_restore_validation_required_before_formal_training": true,
+  "observer_does_not_start_training": true
+}

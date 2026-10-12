@@ -1,6 +1,6 @@
 """Bounded, synthetic full-context native PPO regression; never saves model weights.
 
-Run on node3 via ``python -m sao_bridge.joint_memory_check --output runs/NAME``.
+Run on node3/node4 via ``python -m sao_bridge.joint_memory_check --output runs/NAME``.
 Uses original W0, four DP ranks, two singleton microbatches/rank, and a separate
 colocated reference process. The critic shares the actor workers, as in MA-SAO.
 Synthetic costs and rewards are deliberately not research-training results.
@@ -91,6 +91,11 @@ def synthetic_batch(eos_id: int) -> list[dict]:
 
 
 class AuditMixin:
+    def _save_initial_outputs(self, name: str, values: list[torch.Tensor]) -> None:
+        path = Path(os.environ["JOINT_MEMORY_OUTPUT"]) / f"{name}-rank{self.rank}.pt"
+        if not path.exists():
+            torch.save([value.detach().cpu() for value in values], path)
+
     def _record(self, event: str, **fields) -> None:
         role = "critic" if self.config.is_critic else (
             "ref" if self.config.optimizer is None else "actor"
@@ -153,6 +158,8 @@ class MemoryActor(AuditMixin, TerminalFSDPPPOActor):
             result = super().compute_logp(data)
         self._record("compute_logp", lengths=[int(row["attention_mask"].sum()) for row in data],
                      outputs=[tensor_summary(value) for value in result])
+        role = "reference" if self.config.optimizer is None else "proximal"
+        self._save_initial_outputs(role, result)
         return result
 
     @torch.no_grad()
@@ -171,18 +178,35 @@ class MemoryActor(AuditMixin, TerminalFSDPPPOActor):
 
 
 class MemoryCritic(AuditMixin, JointEpisodeCritic):
+    @torch.no_grad()
+    def compute_values(self, data):
+        result = super().compute_values(data)
+        self._save_initial_outputs("values", result)
+        self._record(
+            "critic_input_contract", settings=self.settings,
+            prefix_tokens=[int(row["joint_context_ids"].gt(0).sum())
+                           if self.cooperative_context else 0 for row in data],
+            output_lengths=[value.shape[-1] for value in result],
+        )
+        return result
+
     def ppo_update(self, data):
         torch.cuda.reset_peak_memory_stats()
         self._record("ppo_begin")
         super().ppo_update(data)
-        self._record("ppo_end")
+        self._record("ppo_end", value_norm_updates=self.value_norm.updates
+                     if self.value_norm is not None else None)
 
 
-def make_config(repo: Path, output: Path, *, model_role: str = "w0", rounds: int = 2):
+def make_config(repo: Path, output: Path, *, model_role: str = "w0", rounds: int = 2,
+                reference_storage_dtype: str | None = None,
+                critic_cooperative_context: bool = True, value_normalization: bool = True):
     import yaml
     from omegaconf import OmegaConf
     from areal.api.cli_args import PPOConfig, to_structured_cfg
 
+    if type(critic_cooperative_context) is not bool or type(value_normalization) is not bool:
+        raise ValueError("Native probe critic switches must be booleans")
     source = repo / "runs/alfworld_joint_async_6h_v5/solver/optimizer/trainer.yaml"
     raw = yaml.safe_load(source.read_text())
     raw.update(experiment_name=output.name, trial_name="memory",
@@ -195,9 +219,10 @@ def make_config(repo: Path, output: Path, *, model_role: str = "w0", rounds: int
         "TMPDIR": "/dev/shm", "PYTHONDONTWRITEBYTECODE": "1",
         "PYTORCH_ALLOC_CONF": "expandable_segments:True",
         "AREAL_HOST_IP": "127.0.0.1", "MA_SAO_JOINT_EPISODES": "1",
-        "MA_SAO_VALUE_NORM": "1", "JOINT_MEMORY_OUTPUT": str(output),
+        "MA_SAO_VALUE_NORM": str(int(value_normalization)), "JOINT_MEMORY_OUTPUT": str(output),
+        "MA_SAO_COOPERATIVE_CONTEXT": str(int(critic_cooperative_context)),
     }
-    cache = repo / "runs/joint_memory_cache_node3"
+    cache = output / "runtime-cache"
     environment.update({
         "AREAL_CACHE_DIR": str(cache / "areal"),
         "TRITON_CACHE_DIR": str(cache / "triton"),
@@ -214,6 +239,10 @@ def make_config(repo: Path, output: Path, *, model_role: str = "w0", rounds: int
         raw[name]["trial_name"] = "memory"
     raw["actor"]["scheduling_spec"][0]["env_vars"] = environment
     raw["ref"]["scheduling_spec"][0]["env_vars"] = environment
+    if reference_storage_dtype is not None:
+        if reference_storage_dtype not in ("bfloat16", "float32"):
+            raise ValueError("Invalid reference storage dtype")
+        raw["ref"]["optimizer_dtype"] = reference_storage_dtype
     # Keep native colocation/fork semantics, full context, clipping and PPO loss.
     config = OmegaConf.to_object(to_structured_cfg(OmegaConf.create(raw), PPOConfig))
     write_json(output / "config.json", asdict(config))
@@ -261,8 +290,23 @@ def summarize_audit(output: Path) -> dict:
             "outputs": ref["reference_output_invariance"]["outputs"],
         }
         audit["ranks"].append(details)
+        if "component_ablation" in scope:
+            expected_settings = {
+                "cooperative_context": scope["component_ablation"] != "without_context",
+                "value_normalization": scope["component_ablation"] != "without_value_norm",
+            }
+            contracts = [row for row in records["critic"] if row["event"] == "critic_input_contract"]
+            assert len(contracts) == actor_steps + warmup_rounds
+            assert all(row["settings"] == expected_settings for row in contracts)
+            assert all(row["prefix_tokens"] == [scope["critic_context_prefix"]] * 2
+                       and row["output_lengths"] == [LENGTH] * 2 for row in contracts)
+            updates = [row for row in records["critic"] if row["event"] == "ppo_end"]
+            assert [row["value_norm_updates"] for row in updates] == (
+                list(range(1, critic_steps + 1)) if expected_settings["value_normalization"]
+                else [None] * critic_steps)
     after = json.loads((output / "gpu-after.json").read_text())
-    assert not after["foreign_gpu_pids"] and after["filler_unit_active"]
+    from .resources import research_resources_released
+    assert research_resources_released(after)
     audit["gpu_after"] = after
     return audit
 
@@ -270,28 +314,46 @@ def summarize_audit(output: Path) -> dict:
 def run(
     output: Path, *, model_role: str = "w0", actor_rounds: int = 2,
     critic_updates_per_round: int = 1, critic_warmup_rounds: int = 0,
+    reference_storage_dtype: str | None = None,
+    verify_optimizer_handoff: bool = False,
+    component_ablation: str = "full",
 ) -> None:
     from areal.api import FinetuneSpec
     from areal.infra.scheduler.local import LocalScheduler
-    from .resources import gpu_release_audit
+    from .resources import gpu_release_audit, research_resources_released
 
-    if socket.gethostname() != "dev-NDH200-025":
-        raise RuntimeError("This bounded regression is authorized on node3 only")
+    if socket.gethostname() not in ("dev-NDH200-025", "dev-NDH200-026"):
+        raise RuntimeError("This bounded regression is authorized on node3/node4 only")
     if (model_role not in {"h0", "w0"} or actor_rounds < 2
             or critic_updates_per_round < 1 or critic_warmup_rounds < 0):
         raise ValueError("Require original H0/W0, at least two actor rounds, K>=1 and warmup>=0")
+    if component_ablation not in ("full", "without_context", "without_value_norm"):
+        raise ValueError("Native critic probe requires one isolated context or ValueNorm removal")
+    context_enabled = component_ablation != "without_context"
+    normalized = component_ablation != "without_value_norm"
     rounds = actor_rounds + critic_warmup_rounds
     output.mkdir(parents=True, exist_ok=False)
     before = gpu_release_audit()
     write_json(output / "gpu-before.json", before)
-    if before["foreign_gpu_pids"] or not before["filler_unit_active"]:
-        raise RuntimeError(f"Node3 ownership check failed: {before}")
+    if not research_resources_released(before):
+        raise RuntimeError(f"Research node ownership check failed: {before}")
     os.environ.update(JOINT_MEMORY_OUTPUT=str(output), MA_SAO_JOINT_EPISODES="1",
-                      MA_SAO_VALUE_NORM="1")
+                      MA_SAO_VALUE_NORM=str(int(normalized)),
+                      MA_SAO_COOPERATIVE_CONTEXT=str(int(context_enabled)),
+                      AREAL_HOST_IP="127.0.0.1")
     os.environ.pop("MA_SAO_ASYNC_JOINT_ROOT", None)
     os.environ.setdefault("SAO_LOCAL_ADMIN_TOKEN", "synthetic-memory-check-not-a-server")
     repo = Path(__file__).resolve().parents[2]
-    config = make_config(repo, output, model_role=model_role, rounds=rounds)
+    config = make_config(repo, output, model_role=model_role, rounds=rounds,
+                         reference_storage_dtype=reference_storage_dtype,
+                         critic_cooperative_context=context_enabled, value_normalization=normalized)
+    write_json(output / "runtime_interventions.json", {
+        "reference_storage_dtype": config.ref.optimizer_dtype,
+        "actor_storage_dtype": config.actor.optimizer_dtype,
+        "critic_storage_dtype": config.critic.optimizer_dtype,
+        "compute_dtype": config.actor.dtype,
+        "reference_has_optimizer": config.ref.optimizer is not None,
+    })
     write_json(output / "scope.json", {
         "kind": "synthetic_not_research_training",
         "input_source": "synthetic; no saved rollout tensors found in failed optimizer run",
@@ -300,9 +362,10 @@ def run(
         "microbatches_per_rank": 2, "actor_steps": actor_rounds,
         "critic_steps_per_actor_step": critic_updates_per_round,
         "critic_only_warmup_rounds": critic_warmup_rounds, "model_role": model_role,
-        "critic_context_prefix": CONTEXT_TOKEN_BUDGET,
-        "critic_full_length": LENGTH + CONTEXT_TOKEN_BUDGET,
-        "reference_offload": False, "checkpoint_writes": False,
+        "component_ablation": component_ablation,
+        "critic_context_prefix": CONTEXT_TOKEN_BUDGET if context_enabled else 0,
+        "critic_full_length": LENGTH + (CONTEXT_TOKEN_BUDGET if context_enabled else 0),
+        "reference_offload": False, "checkpoint_writes": verify_optimizer_handoff,
     })
     for directory in (output / "engine", output / "name_resolve"):
         directory.mkdir()
@@ -342,6 +405,17 @@ def run(
                 "critic_only_warmup": step < critic_warmup_rounds,
                 "critic_optimizer_steps": critic_updates_per_round,
             })
+        if verify_optimizer_handoff:
+            from areal.api import SaveLoadMeta
+            for name, engine in (("actor", actor), ("critic", critic)):
+                meta = SaveLoadMeta(path=str(output / "handoff" / name),
+                                    weight_format="dcp", with_optim=True)
+                engine.save(meta=meta)
+                engine.load(meta=meta)
+            write_json(output / "HANDOFF_PASSED.json", {
+                "status": "passed", "rank_fingerprints_checked": 8,
+                "native_dcp_save_and_load": True,
+            })
     except BaseException:
         write_json(output / "result.json", {"status": "failed", "traceback": traceback.format_exc()})
         raise
@@ -354,7 +428,7 @@ def run(
                 break
             time.sleep(1)
         write_json(output / "gpu-after.json", after)
-        if after["foreign_gpu_pids"] or not after["filler_unit_active"]:
+        if not research_resources_released(after):
             write_json(output / "result.json", {
                 "status": "failed", "reason": "GPU release/filler audit failed", "audit": after,
             })
@@ -365,7 +439,8 @@ def run(
         "critic_steps": rounds * critic_updates_per_round,
         "critic_updates_per_round": critic_updates_per_round,
         "critic_only_warmup_rounds": critic_warmup_rounds,
-        "node3_released": True, "filler_preserved": True,
+        "node": socket.gethostname(), "gpu_release_verified": True,
+        "node3_released": socket.gethostname() == "dev-NDH200-025", "filler_preserved": True,
     })
 
 
@@ -376,11 +451,18 @@ def main():
     parser.add_argument("--actor-rounds", type=int, default=2)
     parser.add_argument("--critic-updates-per-round", type=int, default=1)
     parser.add_argument("--critic-warmup-rounds", type=int, default=0)
+    parser.add_argument("--reference-storage-dtype", choices=("bfloat16", "float32"))
+    parser.add_argument("--verify-optimizer-handoff", action="store_true")
+    parser.add_argument("--component-ablation", choices=("full", "without_context", "without_value_norm"),
+                        default="full")
     args = parser.parse_args()
     run(
         args.output.resolve(), model_role=args.model_role, actor_rounds=args.actor_rounds,
         critic_updates_per_round=args.critic_updates_per_round,
         critic_warmup_rounds=args.critic_warmup_rounds,
+        reference_storage_dtype=args.reference_storage_dtype,
+        verify_optimizer_handoff=args.verify_optimizer_handoff,
+        component_ablation=args.component_ablation,
     )
 
 

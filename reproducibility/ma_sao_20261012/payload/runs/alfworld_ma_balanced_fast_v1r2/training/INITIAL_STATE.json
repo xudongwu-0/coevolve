@@ -1,0 +1,15 @@
+{
+  "engineer": "/mnt/3fs/xudong/coevolve/assets/Harness-R1/harness-r1",
+  "engineer_critic": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/critic/epoch0epochstep63globalstep63",
+  "solver": "/mnt/3fs/xudong/coevolve/runs/alfworld_solver_fast_v4_s42/training/optimizer/engine/checkpoints/chengboliu/alfworld_solver_fast_v4_s42/w1/actor/epoch0epochstep79globalstep79",
+  "solver_critic": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/solver/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/solver/critic/epoch0epochstep63globalstep63",
+  "solver_version": "init-study-w1",
+  "solver_epoch_version": 0,
+  "engineer_version": 0,
+  "harness": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/initial/patches/-1-proposal01.json",
+  "packets": "/mnt/3fs/xudong/coevolve/assets/alfworld_engineer_fast_v1/packets.json",
+  "packets_sha256": "c4d858eb53407178d7f97f3acdf98e8cabb9af6674476b86c7fb0bf24144e315",
+  "initialization": "w1 Solver Actor; common H0 Engineer and MA64 critics; fresh Adam",
+  "original_sao_config_sha256": "d989dea112134470b26eb12228a97b46ed0cb8f8b6dda0c8c17340cacaa22386",
+  "parent_ma_root": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1"
+}

@@ -1,0 +1,82 @@
+{
+  "saver": {
+    "epoch": {
+      "frequence_seconds": null,
+      "frequency_steps": null,
+      "start_time": 1791613460.176366,
+      "steps": 0,
+      "last_time": 1791613460.176367,
+      "last_steps": 0,
+      "interval_steps": null,
+      "interval_seconds": null,
+      "initial_value": false
+    },
+    "step": {
+      "frequence_seconds": null,
+      "frequency_steps": 48,
+      "start_time": 1791613460.176368,
+      "steps": 0,
+      "last_time": 1791613460.176368,
+      "last_steps": 0,
+      "interval_steps": null,
+      "interval_seconds": null,
+      "initial_value": false
+    },
+    "time": {
+      "frequence_seconds": null,
+      "frequency_steps": null,
+      "start_time": 1791613460.176369,
+      "steps": 0,
+      "last_time": 1791613460.17637,
+      "last_steps": 0,
+      "interval_steps": null,
+      "interval_seconds": null,
+      "initial_value": false
+    }
+  },
+  "evaluator": {
+    "epoch": {
+      "frequence_seconds": null,
+      "frequency_steps": null,
+      "start_time": 1791613460.176331,
+      "steps": 0,
+      "last_time": 1791613460.176334,
+      "last_steps": 0,
+      "interval_steps": null,
+      "interval_seconds": null,
+      "initial_value": false
+    },
+    "step": {
+      "frequence_seconds": null,
+      "frequency_steps": null,
+      "start_time": 1791613460.17634,
+      "steps": 0,
+      "last_time": 1791613460.176341,
+      "last_steps": 0,
+      "interval_steps": null,
+      "interval_seconds": null,
+      "initial_value": false
+    },
+    "time": {
+      "frequence_seconds": null,
+      "frequency_steps": null,
+      "start_time": 1791613460.176346,
+      "steps": 0,
+      "last_time": 1791613460.176346,
+      "last_steps": 0,
+      "interval_steps": null,
+      "interval_seconds": null,
+      "initial_value": false
+    }
+  },
+  "stats_logger": {
+    "last_commit_step": 71
+  },
+  "schedule": {
+    "round": 72,
+    "actor_steps": 45,
+    "critic_steps": 96
+  },
+  "committed_sample_cursor": 576,
+  "queued_uncommitted_rollouts_restored": false
+}

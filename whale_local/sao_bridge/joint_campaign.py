@@ -480,13 +480,25 @@ def select_pair(reports: dict, *, incumbent_min_gain: float | None = None) -> tu
     return step, label
 
 
-def evaluate(root: Path, label: str) -> dict:
-    if label not in ("initial", "matched", "best"):
+def evaluate(root: Path, label: str, *, checkpoint_rounds: int | None = None,
+             incumbent_harness: str | None = None) -> dict:
+    curve_endpoint = checkpoint_rounds is not None
+    if curve_endpoint and (
+        type(checkpoint_rounds) is not int or checkpoint_rounds < 1
+        or label != f"round{checkpoint_rounds:04d}"
+    ):
+        raise ValueError("Curve endpoint requires a positive round and its exact label")
+    if not curve_endpoint and (label not in ("initial", "matched", "best") or incumbent_harness is not None):
         raise ValueError("Unknown joint reporting arm")
     output = root / label
     launch = None
     try:
         protocol = read_json(root / "protocol.json")
+        if curve_endpoint:
+            if checkpoint_rounds not in protocol.get("curve_rounds", []):
+                raise ValueError("Curve checkpoint was not declared in the frozen protocol")
+            if incumbent_harness is not None:
+                protocol = {**protocol, "incumbent_harness": incumbent_harness}
         state = read_json(Path(protocol["initial_state"]))
         if label == "initial":
             if protocol.get("starting_point") not in ("h0_w0", "ma64_h0"):
@@ -502,7 +514,8 @@ def evaluate(root: Path, label: str) -> dict:
         else:
             pairs, training = available_pairs(root)
         matched_rounds = protocol["budget"].get("matched_rounds", 12)
-        steps = [str(matched_rounds - 1)] if label == "matched" else list(pairs)[-3:]
+        steps = [str(checkpoint_rounds - 1)] if curve_endpoint else (
+            [str(matched_rounds - 1)] if label == "matched" else list(pairs)[-3:])
         if any(step not in pairs for step in steps):
             result = {"status": "unavailable", "reason": f"Stopped before the matched round{matched_rounds} checkpoint",
                       "training": training}

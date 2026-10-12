@@ -124,7 +124,11 @@ async def run_episode(row: dict, spec: dict, generate, total_tokens=4096, seed=4
             "stop_reason": reason,
         }
 
-    async with httpx.AsyncClient(timeout=timeout, trust_env=False) as client:
+    async with httpx.AsyncClient(
+        timeout=timeout, trust_env=False,
+        # Match controller->worker transport: avoid a close race between slow policy turns.
+        limits=httpx.Limits(max_connections=100, max_keepalive_connections=0),
+    ) as client:
         try:
             response = await client.post(
                 base + "/start_sample", json={"name": task_name, "index": task_id},
@@ -143,7 +147,12 @@ async def run_episode(row: dict, spec: dict, generate, total_tokens=4096, seed=4
                     return failed_episode("token_limit", truncated=True)
                 completion = await generate(messages, tools, remaining, seed + turns)
                 choice = completion["choices"][0]
-                assistant = choice["message"]
+                assistant = dict(choice["message"])
+                # OpenAI permits null tool_calls for a text-only response, while
+                # AgentRL's AgentOutput requires an iterable when it is present.
+                # Preserve the action and let the environment judge it normally.
+                if assistant.get("tool_calls") is None:
+                    assistant.pop("tool_calls", None)
                 used = int((completion.get("usage") or {}).get("completion_tokens") or 0)
                 if used <= 0:
                     raise RuntimeError("ALFWorld solver response omitted token accounting")

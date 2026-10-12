@@ -1,0 +1,13 @@
+{
+  "status": "diagnosed_and_fixed",
+  "prior_attempt": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/without_peer/attempts/attempt-0002",
+  "prior_failure_sha256": "25fad940576a6ea722938995deb361d86fb60497269985951c1b8ec2fdd010b1",
+  "prior_exit_receipt_sha256": "a367e4e95eab2553a57c0418f774e83ac76969eacbe588b38011ef73270c0a5e",
+  "prior_cost_sha256": "5e6851f0124c85ec88e6cee0da1a5ad175b7b4657510322b17dd91c07e3f10fd",
+  "cause": "The snapshot omitted four native patch files required by verify_upstreams.",
+  "fix": "Preserve and hash all non-cache runtime files; validate native patch checks before admission.",
+  "external_kill_evidence": false,
+  "new_training_rounds_in_failed_attempt": 0,
+  "user_authorized_self_failure_recovery_at_utc": "2026-10-12T04:44:53.248000+00:00",
+  "at_unix": 1791781560.1440074
+}

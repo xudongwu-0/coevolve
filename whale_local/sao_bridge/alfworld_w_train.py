@@ -102,6 +102,11 @@ def training_spec(config: dict, run: Path) -> dict:
             "critic_gradient_checkpointing", True
         ),
         "gdn_prefill_backend": "triton",
+        **{key: config[key] for key in (
+            "training_kernel_overlay", "training_kernel_versions",
+            "training_kernel_validation", "pinned_files", "rollout_setup_timeout",
+            "kl_ctl", "reference_model", "reference_storage_dtype",
+        ) if key in config},
     }
 
 

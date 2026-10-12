@@ -6,6 +6,77 @@
 
 ## 当前任务与主要结论
 
+### 2026-10-12：可离线复算的代码与数据交接
+
+新agent先读[接手入口](AGENTS.md)及[复现与checkpoint上传计划](docs/REPRODUCE_MA_SAO.md)，
+执行`python3 -B scripts/reproduce_ma_progress.py`即可在无GPU、无API key的情况下
+验证4225份证据文件、重建固定训练输入、重算Full96/144，并确认without_peer为
+76轮metrics、72轮完整恢复元数据。大权重不在Git里，HF/W&B目前只做凭据验证。
+**selection48全部包含在main200内，93%是复用开发集成绩，不是独立测试成绩。**
+实验仍暂停；离线核验和代码发布不授予训练/推理启动权限。
+
+### 2026-10-12 14:32 北京时间：全部实验暂停，不再准备或启动
+
+用户最新要求暂停实验，并停止Full144延长方案的准备。
+当前和旧自动训练入口均持久取消，原授权检查已验证拒绝启动。
+without_peer最后记录76轮，完整可恢复checkpoint为72轮；
+Full144的186/200保持不变。当前无我们的GPU训练进程。
+node3八卡空闲，node4仅GPU0由其他用户的O-Voxel Stage3进程占用，
+两节点维持程序仍停用。独立5分钟只读GPU历史记录继续运行。
+以下旧训练计划不是当前授权；详见[最新项目状态](docs/PROJECT_STATE.md)。
+
+### 2026-10-12 12:45 北京时间：恢复串行消融，外部kill后不重启
+
+用户重新授权直接续训：先完成without_peer24→144，再依次运行without_context、
+without_value_norm、always_joint；full144的186/200保留，不重跑。
+每次只运行一个实验，node3使用8卡，node4仅GPU1–7，保留其他用户的GPU0进程。
+两节点利用率维持程序已核验并暂停。两边各4卡训练，rollout分别4/3卡；
+终点评测改在空出的node3上执行，仍保持原8副本，不缩减候选或评测预算。
+采样布局变化不承诺逐token等价，结论需保留与原Full运行布局不同的限制。
+
+预计剩余训练及评测共14–20小时，尚待15卡实际速度校正。
+外部kill后停止，不自动恢复；自身故障先诊断修复，再决定是否从完整原生断点续训。
+详见[完整计划与当前状态](docs/PROJECT_STATE.md)、
+[执行控制目录](runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/serial15_20261012_self_fix01/)。
+首个续训attempt在新采样前因快照遗漏运行时patch文件退出，已保留失败并补全新快照；
+此为已定位的自身启动故障，不是外部kill，按用户授权从原24轮状态重新恢复。
+13:37:52北京时间已核验：双角色原生恢复成功并完成36轮，新第36轮配对checkpoint
+已经发布且校验通过；没有重置Adam或重复warmup。见
+[首次新配对核验](runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/serial15_20261012_self_fix01/FIRST_NEW_CHECKPOINT_VERIFIED.json)。
+实际训练T0为13:14:30，预计四项全部完成窗口为次日03:14–09:14，仍属估计；
+当前尚无新的消融终点评分，不能把训练进度当作实验结论。
+旧两小时等待器继续保持取消；独立5分钟GPU记录器继续只读记录。
+
+### 2026-10-12 11:32 北京时间：改为独立只读GPU历史记录
+
+用户将当前工作切换为**不依赖对话的5分钟GPU记录**，旧自动开训等待器已暂停，
+本次不启动训练。记录node3/node4每张卡的利用率、显存、功率、温度，
+以及PID、UID、程序/模块名和每进程显存；不记录完整命令参数、环境变量或密钥。
+所有可读时间使用`Asia/Shanghai`（北京时间，`+08:00`），按北京时间日期保存。
+程序：[gpu_history.py](whale_local/sao_bridge/gpu_history.py)；
+运行状态：[STATUS.json](runs/gpu_history_node3_node4/STATUS.json)；
+最近样本：[LATEST.json](runs/gpu_history_node3_node4/LATEST.json)。
+历史查询及停止方法见[项目状态](docs/PROJECT_STATE.md)。
+后台记录独立于会话存活，不是训练授权，也不是开机自启服务。
+
+### 2026-10-12：新授权的双节点两小时空闲监控
+
+用户重新授权后续H200消融训练，但**不立即启动**：每10分钟检查node3/node4，
+至少13次有效采样跨越2小时，均为空闲或身份已核验的利用率维持程序，才允许续训。
+先从without_peer第24轮完整原生断点继续，再完成另外三项固定144轮消融；full144不重跑。
+其他作业、检测失败或漏检重置等待；未知训练错误停止，不盲目重启。
+新入口及暂停方法见[项目状态](docs/PROJECT_STATE.md)；
+以[监控状态](runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/idle2h_20261012/STATUS.json)为准。
+本次授权不包含远端上传。以下10月10日暂停记录继续保留，但不再禁止这个新授权入口。
+
+### 2026-10-10：停止H200训练，保存结果与本地交接
+
+**当时禁止H200训练，所有旧自动恢复入口仍保持取消。下面旧日期的启动/队列描述不是当前授权。**
+共同初始化full144主终点为186/200（93.0%），同一Solver空Harness为179/200（89.5%）；
+without_peer停在24轮，原生状态有效，尚未得到最终评测。其他三项消融未启动。
+用户要求保存完整代码、实验结果、数据及checkpoint；本地交接不等于GitHub或HF远端备份。
+见[交接说明](docs/MA_SAO_HANDOFF_2026-10-10.md)和[最新状态](docs/PROJECT_STATE.md)。
+
 ### H0/W0独立MA结果已完成（2026-10-03 08:12 UTC）
 
 **没有超过历史W1+h2的92%。** 同1024条训练消费点为87.5%，后期按预定快测规则

@@ -1,0 +1,24 @@
+{
+  "roles": [
+    {
+      "name": "target",
+      "model": "/mnt/3fs/xudong/coevolve/runs/searchqa_chess_campaign_20260929_v2/node3/searchqa/ma_sao/blocks/0004/w4/engine/checkpoints/chengboliu/searchqa_chess_campaign_20260929_v2-searchqa-ma_sao-0004/w4/actor/epoch0epochstep39globalstep39",
+      "model_file_sha256": "9d68d073de2fd689b6d9258c145dd4611c13f5ab3afd15605d6e7cb18d1328c3",
+      "gpus": "0,1,2,3",
+      "port": 18901,
+      "context": 16384,
+      "prefix_caching": false
+    },
+    {
+      "name": "engineer",
+      "model": "/mnt/3fs/xudong/coevolve/assets/Qwen3-4B-Instruct-2507",
+      "model_receipt": "/mnt/3fs/xudong/coevolve/assets/Qwen3-4B-Instruct-2507/provenance.json",
+      "model_receipt_sha256": "d260f1ccb31bf321a758a880503776fb41abeeaf1bb0da21b0a999b243716495",
+      "gpus": "4,5,6,7",
+      "port": 19001,
+      "context": 32768,
+      "prefix_caching": true,
+      "engineer_think_prefill": true
+    }
+  ]
+}

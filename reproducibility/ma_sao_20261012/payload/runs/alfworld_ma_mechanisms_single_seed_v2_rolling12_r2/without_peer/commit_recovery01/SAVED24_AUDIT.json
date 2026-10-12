@@ -1,0 +1,52 @@
+{
+  "status": "passed",
+  "checkpoint": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/without_peer/recovery/round-0024-attempt-0001/COMMITTED.json",
+  "checkpoint_sha256": "663b66c43b17d194983da4bfc77512ab86a90748710a10b174d91b934ed56bc3",
+  "completed_rounds": 24,
+  "committed_shared_episodes": 192,
+  "roles": {
+    "editor": {
+      "saved_science_sha256": "651f644575c7b29ff34fed583a1ee76be8b120e979e5d5e23aaba44e1659caf5",
+      "committed_rounds": 24,
+      "expected_update_counts": {
+        "active_rounds": 16,
+        "inactive_rounds": 8,
+        "critic_only_warmup_steps": 3,
+        "actor_steps": 13,
+        "critic_steps": 32
+      },
+      "source_run": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/without_peer/attempts/attempt-0001/without_peer/editor/optimizer",
+      "saved_role_sha256": "e720d7e5fdcb0b77c1a557d5ecc2b37aa18f19bf4113dfcd41258a0723cddf18"
+    },
+    "solver": {
+      "saved_science_sha256": "971a0a7855a5a7a2f1b4bbf155609544a7008991c8853d967c5881edf5aeca0d",
+      "committed_rounds": 24,
+      "expected_update_counts": {
+        "active_rounds": 24,
+        "inactive_rounds": 0,
+        "critic_only_warmup_steps": 3,
+        "actor_steps": 21,
+        "critic_steps": 48
+      },
+      "source_run": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/without_peer/attempts/attempt-0001/without_peer/solver/optimizer",
+      "saved_role_sha256": "d0149a03dea7672263836fe018f91813e0c4ad6625c423aab28e88e1b4c6dd4f"
+    }
+  },
+  "attempt_cost": {
+    "resume_round": 0,
+    "new_persisted_outcomes": 199,
+    "new_generated_role_receipts": {
+      "editor": 199,
+      "solver": 199
+    },
+    "new_committed_role_rounds": {
+      "editor": 24,
+      "solver": 24
+    },
+    "unpersisted_inflight_work_unknown": true
+  },
+  "attempt_cost_sha256": "d91eb5bc34f7abed9a8d855bac162bfa789019797d892c27e9585e2894416124",
+  "failure_sha256": "ea6cf2a11fe09576447d907cbcb6315063f152088e38c634a1e37e2145f78d07",
+  "native_validation_scope": "All shard sizes, small-file hashes, Adam counters, sampled fingerprints, ValueNorm, schedule and committed data/metric cursors; not full large-tensor hashes",
+  "at_unix": 1791615715.9455724
+}

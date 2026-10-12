@@ -198,9 +198,12 @@ def checked_gpu_release(value: dict) -> None:
         raise RuntimeError("SAO requires released GPUs and active identity-checked filler")
 
 
-def backend_wiring_audit(config: dict) -> dict:
+def backend_wiring_audit(config: dict, *, role: str | None = None) -> dict:
     """Check the single-role path, not merely the joint trainer's flag."""
-    role = "solver" if config["phase"] == "w1" else "editor"
+    if role is None:
+        role = "solver" if config["phase"] == "w1" else "editor"
+    if role not in {"solver", "editor"}:
+        raise ValueError("Ordinary SAO backend role must be solver or editor")
     spec = w_spec(config, Path(config["run"])) if role == "solver" else h_spec(
         config, Path(config["run"]), "http://127.0.0.1:28600",
     )

@@ -1,0 +1,76 @@
+{
+  "status": "passed",
+  "cpu_only": true,
+  "synthetic_checkpoint_payloads": true,
+  "not_a_gpu_training_or_performance_result": true,
+  "actual_two_host_publication_and_retention_verified": true,
+  "acknowledgements": {
+    "12": {
+      "editor": {
+        "role": "editor",
+        "completed_rounds": 12,
+        "checkpoint_sha256": "6cb2e542e5ff07b8c870702fdbbe005e6bdd4bcb590bb5a824a8574f1de3b17e",
+        "hostname": "dev-NDH200-025",
+        "pid": 1757094,
+        "uid": 1009,
+        "gid": 1008,
+        "source_manifest_sha256": "67ca8e36e64fa02d2ff478e7d69a9158a7037427d604a9b12c39034209b7df7e",
+        "at_unix": 1791615877.8969924
+      },
+      "solver": {
+        "role": "solver",
+        "completed_rounds": 12,
+        "checkpoint_sha256": "6cb2e542e5ff07b8c870702fdbbe005e6bdd4bcb590bb5a824a8574f1de3b17e",
+        "hostname": "dev-NDH200-026",
+        "pid": 4098672,
+        "uid": 1008,
+        "gid": 1008,
+        "source_manifest_sha256": "67ca8e36e64fa02d2ff478e7d69a9158a7037427d604a9b12c39034209b7df7e",
+        "at_unix": 1791615872.9582198
+      }
+    },
+    "24": {
+      "editor": {
+        "role": "editor",
+        "completed_rounds": 24,
+        "checkpoint_sha256": "35981b74cea0da02dd61f45db578efca0a6473c6f58e319a9b83cd200ffc224d",
+        "hostname": "dev-NDH200-025",
+        "pid": 1757094,
+        "uid": 1009,
+        "gid": 1008,
+        "source_manifest_sha256": "67ca8e36e64fa02d2ff478e7d69a9158a7037427d604a9b12c39034209b7df7e",
+        "at_unix": 1791615908.7955968
+      },
+      "solver": {
+        "role": "solver",
+        "completed_rounds": 24,
+        "checkpoint_sha256": "35981b74cea0da02dd61f45db578efca0a6473c6f58e319a9b83cd200ffc224d",
+        "hostname": "dev-NDH200-026",
+        "pid": 4098672,
+        "uid": 1008,
+        "gid": 1008,
+        "source_manifest_sha256": "67ca8e36e64fa02d2ff478e7d69a9158a7037427d604a9b12c39034209b7df7e",
+        "at_unix": 1791615884.1144545
+      }
+    }
+  },
+  "retirement": {
+    "previous_generation": "round-0012-attempt-0001",
+    "previous_commit_sha256": "6cb2e542e5ff07b8c870702fdbbe005e6bdd4bcb590bb5a824a8574f1de3b17e",
+    "replacement_generation": "round-0024-attempt-0001",
+    "replacement_commit_sha256": "35981b74cea0da02dd61f45db578efca0a6473c6f58e319a9b83cd200ffc224d",
+    "deletion_target": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/without_peer/commit_recovery01/two-node-cpu/execution/recovery/round-0012-attempt-0001",
+    "at_unix": 1791615883.7708263,
+    "owner": {
+      "schema": "paired-native-recovery-v1",
+      "root": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/without_peer/commit_recovery01/two-node-cpu/execution/recovery",
+      "generation": "round-0012-attempt-0001",
+      "completed_rounds": 12
+    },
+    "status": "deleted"
+  },
+  "checkpoint_sha256": "35981b74cea0da02dd61f45db578efca0a6473c6f58e319a9b83cd200ffc224d",
+  "source_manifest_sha256": "67ca8e36e64fa02d2ff478e7d69a9158a7037427d604a9b12c39034209b7df7e",
+  "probe_script_sha256": "4c60ff66adb8f26dd33a64d923cc5bf5f721b0ba2315e1cf774d154230445a1e",
+  "at_unix": 1791615911.3383262
+}

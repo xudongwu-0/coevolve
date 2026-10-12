@@ -1,0 +1,201 @@
+{
+  "status": "requested_core_table_complete",
+  "question_count": 24,
+  "samples_per_question": 2,
+  "temperature": 1.0,
+  "total_completion_tokens": 4096,
+  "seed": 6000045,
+  "scores": {
+    "w0": {
+      "accuracy": 0.6875,
+      "successes": 33.0,
+      "episodes": 48
+    },
+    "w0_h1": {
+      "accuracy": 0.75,
+      "successes": 36.0,
+      "episodes": 48
+    },
+    "w1": {
+      "accuracy": 0.875,
+      "successes": 42.0,
+      "episodes": 48
+    },
+    "w1_h1": {
+      "accuracy": 0.9166666666666666,
+      "successes": 44.0,
+      "episodes": 48
+    },
+    "w1_h2": {
+      "accuracy": 0.9791666666666666,
+      "successes": 47.0,
+      "episodes": 48
+    },
+    "w0_official_r1": {
+      "accuracy": 0.8541666666666666,
+      "successes": 41.0,
+      "episodes": 48
+    }
+  },
+  "sources": {
+    "w0": {
+      "path": "/mnt/3fs/xudong/coevolve/runs/alfworld_core_quick_20261002_v1/w0/reports/53a56c2f9537da0d78e856bb36436af24573acff4b627a60c758d87618c2d794.json",
+      "sha256": "54d3f17476220aa01e0187d0070e0131b6c82e821e32c55c3febd5329c5c9fc3",
+      "harness_sha256": "53a56c2f9537da0d78e856bb36436af24573acff4b627a60c758d87618c2d794",
+      "solver_model": "/mnt/3fs/xudong/coevolve/assets/Harness-R1/target-agent-sft"
+    },
+    "w0_h1": {
+      "path": "/mnt/3fs/xudong/coevolve/runs/alfworld_core_quick_20261002_v1/w0/reports/fde47534f5d627ca97a39a2bd53bfaa66bedc6579ad47f924c30f788071d7c65.json",
+      "sha256": "f2aabcc55a762989c3fb59701954d9d288bcb5d554a29f443dae20822494f67c",
+      "harness_sha256": "fde47534f5d627ca97a39a2bd53bfaa66bedc6579ad47f924c30f788071d7c65",
+      "solver_model": "/mnt/3fs/xudong/coevolve/assets/Harness-R1/target-agent-sft"
+    },
+    "w1": {
+      "path": "/mnt/3fs/xudong/coevolve/runs/alfworld_core_quick_20261002_v1/w1/reports/53a56c2f9537da0d78e856bb36436af24573acff4b627a60c758d87618c2d794.json",
+      "sha256": "2931c06b3a54833be14b297b5220e56765b82c0bf8446864a025ed02d8206d06",
+      "harness_sha256": "53a56c2f9537da0d78e856bb36436af24573acff4b627a60c758d87618c2d794",
+      "solver_model": "/mnt/3fs/xudong/coevolve/runs/alfworld_solver_fast_v4_s42/training/optimizer/engine/checkpoints/chengboliu/alfworld_solver_fast_v4_s42/w1/actor/epoch0epochstep79globalstep79"
+    },
+    "w1_h1": {
+      "path": "/mnt/3fs/xudong/coevolve/runs/alfworld_core_quick_20261002_v1/w1/reports/fde47534f5d627ca97a39a2bd53bfaa66bedc6579ad47f924c30f788071d7c65.json",
+      "sha256": "24826f18d9c9f65abe4837c4368c09e718faf124eb6ec5ee04dee68255f8d50a",
+      "harness_sha256": "fde47534f5d627ca97a39a2bd53bfaa66bedc6579ad47f924c30f788071d7c65",
+      "solver_model": "/mnt/3fs/xudong/coevolve/runs/alfworld_solver_fast_v4_s42/training/optimizer/engine/checkpoints/chengboliu/alfworld_solver_fast_v4_s42/w1/actor/epoch0epochstep79globalstep79"
+    },
+    "w1_h2": {
+      "path": "/mnt/3fs/xudong/coevolve/runs/alfworld_core_quick_20261002_v1/w1/reports/4b7f50de842f638d862e81deae70566c71deb2a5c1a090a54e22fe825c11e174.json",
+      "sha256": "3c549ca804bc33a78e5d37750f2bdf40a557bcf756b4e9b87a455fbfdc7a4ae4",
+      "harness_sha256": "4b7f50de842f638d862e81deae70566c71deb2a5c1a090a54e22fe825c11e174",
+      "solver_model": "/mnt/3fs/xudong/coevolve/runs/alfworld_solver_fast_v4_s42/training/optimizer/engine/checkpoints/chengboliu/alfworld_solver_fast_v4_s42/w1/actor/epoch0epochstep79globalstep79"
+    },
+    "w0_official_r1": {
+      "path": "/mnt/3fs/xudong/coevolve/runs/alfworld_core_quick_20261002_v1/official/matrix/attempt-01/reports/326f11916db8598f5a2b816a7b13ec93c6d1f1cbac3dc88cb3cf37a44491a22a.json",
+      "sha256": "afb5a974a77438b77b1b12376ea81478d1f8feec9fc49f8485415f914b946872"
+    }
+  },
+  "paired_comparisons": {
+    "w0_h1_minus_w0": {
+      "question_count": 24,
+      "metric": "mean@2",
+      "control_accuracy": 0.6875,
+      "candidate_accuracy": 0.75,
+      "candidate_minus_control": 0.0625,
+      "paired_question_bootstrap_95pct": [
+        0.0,
+        0.125
+      ],
+      "improved_questions": 3,
+      "regressed_questions": 0,
+      "bootstrap_draws": 10000,
+      "bootstrap_seed": 9000045,
+      "limitation": "Question-level uncertainty only; not training-seed robustness. Development selection scores are exploratory, not confirmatory."
+    },
+    "w1_minus_w0": {
+      "question_count": 24,
+      "metric": "mean@2",
+      "control_accuracy": 0.6875,
+      "candidate_accuracy": 0.875,
+      "candidate_minus_control": 0.1875,
+      "paired_question_bootstrap_95pct": [
+        0.041666666666666664,
+        0.3541666666666667
+      ],
+      "improved_questions": 7,
+      "regressed_questions": 1,
+      "bootstrap_draws": 10000,
+      "bootstrap_seed": 9000045,
+      "limitation": "Question-level uncertainty only; not training-seed robustness. Development selection scores are exploratory, not confirmatory."
+    },
+    "w1_h1_minus_w1": {
+      "question_count": 24,
+      "metric": "mean@2",
+      "control_accuracy": 0.875,
+      "candidate_accuracy": 0.9166666666666666,
+      "candidate_minus_control": 0.041666666666666664,
+      "paired_question_bootstrap_95pct": [
+        0.0,
+        0.10416666666666667
+      ],
+      "improved_questions": 2,
+      "regressed_questions": 0,
+      "bootstrap_draws": 10000,
+      "bootstrap_seed": 9000045,
+      "limitation": "Question-level uncertainty only; not training-seed robustness. Development selection scores are exploratory, not confirmatory."
+    },
+    "w1_h2_minus_w1": {
+      "question_count": 24,
+      "metric": "mean@2",
+      "control_accuracy": 0.875,
+      "candidate_accuracy": 0.9791666666666666,
+      "candidate_minus_control": 0.10416666666666667,
+      "paired_question_bootstrap_95pct": [
+        0.020833333333333332,
+        0.1875
+      ],
+      "improved_questions": 5,
+      "regressed_questions": 0,
+      "bootstrap_draws": 10000,
+      "bootstrap_seed": 9000045,
+      "limitation": "Question-level uncertainty only; not training-seed robustness. Development selection scores are exploratory, not confirmatory."
+    },
+    "w1_h2_minus_w1_h1": {
+      "question_count": 24,
+      "metric": "mean@2",
+      "control_accuracy": 0.9166666666666666,
+      "candidate_accuracy": 0.9791666666666666,
+      "candidate_minus_control": 0.0625,
+      "paired_question_bootstrap_95pct": [
+        0.0,
+        0.125
+      ],
+      "improved_questions": 3,
+      "regressed_questions": 0,
+      "bootstrap_draws": 10000,
+      "bootstrap_seed": 9000045,
+      "limitation": "Question-level uncertainty only; not training-seed robustness. Development selection scores are exploratory, not confirmatory."
+    },
+    "w1_h2_minus_w0_official_r1": {
+      "question_count": 24,
+      "metric": "mean@2",
+      "control_accuracy": 0.8541666666666666,
+      "candidate_accuracy": 0.9791666666666666,
+      "candidate_minus_control": 0.125,
+      "paired_question_bootstrap_95pct": [
+        0.020833333333333332,
+        0.25
+      ],
+      "improved_questions": 4,
+      "regressed_questions": 0,
+      "bootstrap_draws": 10000,
+      "bootstrap_seed": 9000045,
+      "limitation": "Question-level uncertainty only; not training-seed robustness. Development selection scores are exploratory, not confirmatory."
+    }
+  },
+  "official_proposal_mean_accuracy": 0.8020833333333334,
+  "official_best_of_eight": "official_target_specific-05",
+  "official_paper_500": {
+    "raw": 0.406,
+    "raw_plus_harness_r1": 0.532,
+    "agent_sft": 0.712,
+    "agent_sft_plus_target_specific_harness_r1": 0.84
+  },
+  "four_b_math_512_mean2": {
+    "seed42": {
+      "initial": 0.4150390625,
+      "trained": 0.5654296875
+    },
+    "seed43": {
+      "initial": 0.3818359375,
+      "trained": 0.515625
+    },
+    "paired_gate": "/mnt/3fs/xudong/coevolve/runs/dev_solver_only_v3_pair_gate_result.json"
+  },
+  "finished_at_unix": 1790953489.6223636,
+  "limitations": [
+    "Reused24-task selection-development cohort, not independent500-task confirmation.",
+    "H1 is the identical frozen W1-selected harness here applied to W0 and W1; it is not newly selected onW0.",
+    "Official best-of-eight and proposal mean are distinct; all eight official proposals were valid.",
+    "Same input/decode budgets do not equate historical model training and search budgets.",
+    "Additional matched E15 proposal diagnostics may continue after every requested core row is complete."
+  ]
+}

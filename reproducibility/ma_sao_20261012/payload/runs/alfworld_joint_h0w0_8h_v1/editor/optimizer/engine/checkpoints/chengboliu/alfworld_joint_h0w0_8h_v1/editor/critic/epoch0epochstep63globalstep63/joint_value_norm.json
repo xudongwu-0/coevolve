@@ -1,0 +1,14 @@
+{
+  "updates": 128,
+  "tensors": {
+    "running_mean": [
+      0.0008360708598047495
+    ],
+    "running_mean_sq": [
+      0.0008318215841427445
+    ],
+    "debiasing_term": 0.0012791859917342663
+  },
+  "behavior_mean": 0.651798665523529,
+  "behavior_std": 0.47299298644065857
+}

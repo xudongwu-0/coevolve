@@ -14,7 +14,7 @@ import httpx
 import psutil
 
 from .common import ROOT, write_json
-from .resources import require_research_node, stop_known
+from .resources import physical_gpu_string, require_research_node, stop_known
 
 
 class Launcher:
@@ -69,7 +69,7 @@ class Launcher:
         while not self._stop_watchdog.wait(20):
             try:
                 self.check()
-            except (OSError, RuntimeError, TimeoutError, subprocess.SubprocessError) as exc:
+            except (OSError, ValueError, RuntimeError, TimeoutError, subprocess.SubprocessError) as exc:
                 self._watchdog_error = exc
                 write_json(self.root / "watchdog_error.json", {
                     "error": repr(exc), "traceback": traceback.format_exc(),
@@ -132,6 +132,7 @@ class Launcher:
 
     def start(self, command: list[str], *, gpus: str, name: str,
               env_overrides: dict[str, str] | None = None):
+        gpus = physical_gpu_string(gpus)
         self.check()
         # Serialize Popen + ownership registration with GPU audits. Otherwise a new
         # worker can appear in nvidia-smi before its root is registered.

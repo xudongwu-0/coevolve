@@ -1,0 +1,47 @@
+{
+  "run": "/mnt/3fs/xudong/coevolve/runs/qwen35_9b_editor_probe_20260929_node4_retry1",
+  "resume_from": "/mnt/3fs/xudong/coevolve/runs/qwen35_9b_editor_probe_20260929_node4",
+  "frozen_run": "/mnt/3fs/xudong/coevolve/runs/sft1152_hwh_ma_node3_20260929/hwh",
+  "solver": "/mnt/3fs/xudong/coevolve/runs/sft1152_hwh_ma_node3_20260929/hwh/w1/engine/checkpoints/chengboliu/hwh/w1/actor/epoch0epochstep39globalstep39",
+  "incumbent": "/mnt/3fs/xudong/coevolve/runs/sft1152_hwh_ma_node3_20260929/hwh/h2.py",
+  "data": "/mnt/3fs/xudong/coevolve/assets/dapo_aime_protocol",
+  "new_model_provenance": "/mnt/3fs/xudong/coevolve/assets/Qwen3.5-9B/download_receipt.json",
+  "seed": 42,
+  "proposal_seed": 1142,
+  "proposals": 8,
+  "editor_temperature": 0.5,
+  "solver_tokens": 2048,
+  "select_questions": 128,
+  "select_samples": 2,
+  "report_questions": 128,
+  "report_train_tail": 384,
+  "report_samples": 8,
+  "arms": [
+    {
+      "name": "original_4b",
+      "model": "/mnt/3fs/xudong/coevolve/assets/Qwen3-4B-Instruct-2507",
+      "thinking": false,
+      "tokens": 768
+    },
+    {
+      "name": "current_editor_4b",
+      "model": "/mnt/3fs/xudong/coevolve/runs/sft1152_hwh_ma_node3_20260929/hwh/h2/engine/checkpoints/chengboliu/hwh/h2/actor/epoch0epochstep2globalstep2",
+      "thinking": false,
+      "tokens": 768
+    },
+    {
+      "name": "qwen35_9b_direct",
+      "model": "/mnt/3fs/xudong/coevolve/assets/Qwen3.5-9B",
+      "thinking": false,
+      "tokens": 768,
+      "server_args": ["--reasoning-parser", "qwen3", "--language-model-only", "--gdn-prefill-backend", "triton"]
+    },
+    {
+      "name": "qwen35_9b_thinking",
+      "model": "/mnt/3fs/xudong/coevolve/assets/Qwen3.5-9B",
+      "thinking": true,
+      "tokens": 4096,
+      "server_args": ["--reasoning-parser", "qwen3", "--language-model-only", "--gdn-prefill-backend", "triton"]
+    }
+  ]
+}

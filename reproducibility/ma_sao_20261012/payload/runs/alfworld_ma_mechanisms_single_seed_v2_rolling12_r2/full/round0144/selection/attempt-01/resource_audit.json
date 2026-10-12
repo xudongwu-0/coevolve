@@ -1,0 +1,16 @@
+{
+  "host": "dev-NDH200-026",
+  "time": 1791557867.5719824,
+  "unit": {
+    "MainPID": "0",
+    "User": "bruli",
+    "ActiveState": "inactive"
+  },
+  "supervisor": null,
+  "processes": [],
+  "filler_kind": null,
+  "vanished_gpu_pids": [],
+  "verified_unit": false,
+  "stopped": false,
+  "cooperative": false
+}

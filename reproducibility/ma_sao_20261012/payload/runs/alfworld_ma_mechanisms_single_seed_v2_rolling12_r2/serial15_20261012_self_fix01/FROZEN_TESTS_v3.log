@@ -1,0 +1,52 @@
+........................................................................ [ 20%]
+........................................................................ [ 41%]
+........................................................................ [ 62%]
+........................................................... [ 79%]
+........................................................................ [ 99%]
+.                                                                        [100%]
+=============================== warnings summary ===============================
+../../../../../../../dev/shm/sao-venv-ppo/lib/python3.12/site-packages/torchao/dtypes/uintx/__init__.py:1
+  /dev/shm/sao-venv-ppo/lib/python3.12/site-packages/torchao/dtypes/uintx/__init__.py:1: DeprecationWarning: Importing from torchao.dtypes.uintx.dyn_int8_act_int4_wei_cpu_layout is deprecated. Please use 'from torchao.prototype.dtypes import Int8DynamicActInt4WeightCPULayout' instead. This import path will be removed in a future release of torchao. See https://github.com/pytorch/ao/issues/2752 for more details.
+    from .dyn_int8_act_int4_wei_cpu_layout import (
+
+../../../../../../../dev/shm/sao-venv-ppo/lib/python3.12/site-packages/torchao/dtypes/uintx/__init__.py:22
+  /dev/shm/sao-venv-ppo/lib/python3.12/site-packages/torchao/dtypes/uintx/__init__.py:22: DeprecationWarning: Importing from torchao.dtypes.uintx.uintx_layout is deprecated. Please use 'from torchao.prototype.dtypes import UintxLayout, UintxTensor' instead. This import path will be removed in a future release of torchao. See https://github.com/pytorch/ao/issues/2752 for more details.
+    from .uintx_layout import (
+
+../../../../../../../dev/shm/sao-venv-ppo/lib/python3.12/site-packages/torchao/dtypes/__init__.py:23
+  /dev/shm/sao-venv-ppo/lib/python3.12/site-packages/torchao/dtypes/__init__.py:23: DeprecationWarning: Importing BlockSparseLayout from torchao.dtypes is deprecated. Please use 'from torchao.prototype.dtypes import BlockSparseLayout' instead. This import path will be removed in a future torchao release. Please check issue: https://github.com/pytorch/ao/issues/2752 for more details. 
+    from .uintx.block_sparse_layout import BlockSparseLayout
+
+../../../../../../../dev/shm/sao-venv-ppo/lib/python3.12/site-packages/uvloop/__init__.py:31
+  /dev/shm/sao-venv-ppo/lib/python3.12/site-packages/uvloop/__init__.py:31: DeprecationWarning: uvloop.install() is deprecated in favor of uvloop.run() starting with Python 3.12.
+    _warnings.warn(
+
+../../../../../../../dev/shm/sao-venv-ppo/lib/python3.12/site-packages/swanlab/toolkit/models/data.py:137
+  /dev/shm/sao-venv-ppo/lib/python3.12/site-packages/swanlab/toolkit/models/data.py:137: DeprecationWarning: In 3.13 classes created inside an enum will not become a member.  Use the `member` decorator to keep the current behavior.
+    class ChartItem:
+
+../../../../../../../dev/shm/sao-venv-ppo/lib/python3.12/site-packages/trackio/ui.py:334
+  /dev/shm/sao-venv-ppo/lib/python3.12/site-packages/trackio/ui.py:334: UserWarning: The parameters have been moved from the Blocks constructor to the launch() method in Gradio 6.0: theme, css. Please pass these parameters to launch() instead.
+    with gr.Blocks(theme="citrus", title="Trackio Dashboard", css=css) as demo:
+
+../../../../../../../dev/shm/sao-venv-ppo/lib/python3.12/site-packages/torch/jit/_script.py:362: 14 warnings
+  /dev/shm/sao-venv-ppo/lib/python3.12/site-packages/torch/jit/_script.py:362: DeprecationWarning: `torch.jit.script_method` is deprecated. Please switch to `torch.compile` or `torch.export`.
+    warnings.warn(
+
+<frozen importlib._bootstrap>:488
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyPacked has no __module__ attribute
+
+<frozen importlib._bootstrap>:488
+  <frozen importlib._bootstrap>:488: DeprecationWarning: builtin type SwigPyObject has no __module__ attribute
+
+third_party/sao/vendor/AReaL/areal/engine/fsdp_utils/grad.py:37
+  /mnt/3fs/xudong/coevolve/runs/source-snapshots/alfworld-ma-mechanisms-serial15-v3/third_party/sao/vendor/AReaL/areal/engine/fsdp_utils/grad.py:37: UserWarning: Transformer Engine and Apex are not installed. Falling back to local implementations of multi_tensor_applier, multi_tensor_l2norm, and multi_tensor_scale
+    warnings.warn(
+
+tests/test_joint_recovery.py::test_native_dcp_adam_rng_and_next_update_survive_round_trip
+  /dev/shm/sao-venv-ppo/lib/python3.12/site-packages/torch/distributed/checkpoint/filesystem.py:133: UserWarning: TypedStorage is deprecated. It will be removed in the future and UntypedStorage will be the only storage class. This should only matter to you if you are using storages directly.  To access UntypedStorage directly, use tensor.untyped_storage() instead of tensor.storage()
+    if tensor.storage().size() != tensor.numel():
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+348 passed, 24 warnings, 13 subtests passed in 32.24s
+sys:1: DeprecationWarning: builtin type swigvarlink has no __module__ attribute

@@ -7,6 +7,11 @@ __pycache__/
 .env.*
 !.env.example
 .private_secrets/
+/api_keys/
+/huggingface/
+/wandb/
+api_key.txt
+*_api_key.txt
 *.pem
 *.key
 *.log

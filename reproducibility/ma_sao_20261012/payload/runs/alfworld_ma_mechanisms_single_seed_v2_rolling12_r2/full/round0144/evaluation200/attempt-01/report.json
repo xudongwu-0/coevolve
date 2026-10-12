@@ -1,0 +1,22 @@
+{
+  "metric": "paired fixed-harness matrix",
+  "unique_harnesses": 2,
+  "logical_harnesses": 2,
+  "samples_per_question": 1,
+  "question_count": 200,
+  "variants": {
+    "no_patch": {
+      "accuracy": 0.895,
+      "report": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0144/evaluation200/attempt-01/reports/53a56c2f9537da0d78e856bb36436af24573acff4b627a60c758d87618c2d794.json",
+      "harness_sha256": "53a56c2f9537da0d78e856bb36436af24573acff4b627a60c758d87618c2d794",
+      "source_path": "/mnt/3fs/xudong/coevolve/runs/source-snapshots/alfworld-ma-mechanisms-single-seed-v2/examples/alfworld_no_patch.json"
+    },
+    "selected": {
+      "accuracy": 0.93,
+      "report": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0144/evaluation200/attempt-01/reports/0c872538137d647b0af3df3e9c2c306cf4392758925e8d44d31fecf867092169.json",
+      "harness_sha256": "0c872538137d647b0af3df3e9c2c306cf4392758925e8d44d31fecf867092169",
+      "source_path": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0144/patches/candidate-proposal01.json"
+    }
+  },
+  "duplicate_policy": "Identical canonical patches share a rollout report; all labels remain. Task/sample decode seeds are identical across distinct harnesses."
+}

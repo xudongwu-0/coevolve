@@ -348,8 +348,11 @@ def test_absent_inactive_and_active_warmup_gradients_are_not_collapse(tmp_path):
         validate_metric_row(spec, missing)
 
 
-def test_checkpoint_pair_requires_both_roles_actor_updates_and_honest_counts(tmp_path):
+@pytest.mark.parametrize("initial_updates", [0, 128])
+def test_checkpoint_pair_requires_both_roles_actor_updates_and_honest_counts(tmp_path, initial_updates):
     spec = spec_for(tmp_path)
+    if initial_updates:
+        write_json(Path(spec["critic_model"]) / "joint_value_norm.json", {"updates": initial_updates})
     assert not checkpoint_eligible(spec, 20)
     assert checkpoint_eligible(spec, 22)
     for role in ("actor", "critic"):
@@ -360,12 +363,18 @@ def test_checkpoint_pair_requires_both_roles_actor_updates_and_honest_counts(tmp
             write_json(path / "joint_schedule.json", checkpoint_metadata(spec, step + 1))
             if role == "critic":
                 write_json(path / "joint_value_norm.json", {
-                    "updates": update_counts(spec, step + 1)["critic_steps"],
+                    "updates": initial_updates + update_counts(spec, step + 1)["critic_steps"],
                 })
     with patch("sao_bridge.joint_health.ensure_model_runtime_metadata"):
         rows = [metric_row(spec, i) for i in range(26)]
         history = recover_checkpoints(spec, rows)
         assert list(history) == ["23"]
+        norm = Path(history["23"]["critic"]) / "joint_value_norm.json"
+        expected = read_json(norm)
+        write_json(norm, {"updates": expected["updates"] + 2})
+        with pytest.raises(ValueError, match="ValueNorm count"):
+            recover_checkpoints(spec, rows)
+        write_json(norm, expected)
         (Path(history["23"]["actor"]) / "joint_schedule.json").unlink()
         with pytest.raises(ValueError, match="update-count metadata"):
             recover_checkpoints(spec, rows)
@@ -487,3 +496,49 @@ def test_failure_recovery_counts_only_active_committed_consumption(tmp_path):
     assert result["uncommitted_generated_policy_trajectories"] == 8
     assert result["failed_training_not_relabelled_completed"]
     assert read_json(optimizer / "consumed_rows.json")["source_sample_indices"] == list(range(64))
+
+
+@pytest.mark.parametrize("role", ["editor", "solver"])
+def test_anchor_schedule_preserves_inactive_state_and_exact_counts(tmp_path, role):
+    from sao_bridge.joint_anchor import SCHEDULE
+    spec = {**spec_for(tmp_path, role), "schedule": SCHEDULE, "steps": 48,
+            "critic_warmup_steps": 3, "anchor_mode": "fixed_anchor",
+            "schedule_source_data": str(tmp_path / "source.json")}
+    write_json(Path(spec["schedule_source_data"]), original_rows()[:256])
+    rows = scheduled_rows(original_rows()[:256], spec)
+    validate_schedule(spec, rows)
+    from sao_bridge.common import file_sha
+    anchor = tmp_path / 'anchor.json'
+    write_json(anchor, {'benchmark': 'alfworld', 'actions': []})
+    spec.update(anchor_harness=str(anchor), anchor_harness_sha256=file_sha(anchor))
+    spec['pinned_files'] = {str(p): file_sha(p) for p in
+                            (anchor, Path(spec['schedule_source_data']))}
+    write_json(Path(spec['data']), rows)
+    validate_spec(spec)
+    unpinned = copy.deepcopy(spec)
+    unpinned['pinned_files'].pop(str(anchor))
+    with pytest.raises(ValueError, match='not pinned'):
+        validate_spec(unpinned)
+    with pytest.raises(ValueError, match='matching update schedule'):
+        validate_spec({**spec, 'schedule': 'simultaneous'})
+    trainer = fake_trainer()
+    state = install_schedule(trainer, spec)
+    for step in range(48):
+        actor_before, critic_before = trainer.actor.snapshot(), trainer.critic.snapshot()
+        native_round(trainer, step)
+        if not actor_updates(spec, step):
+            assert trainer.actor.snapshot() == actor_before
+        if not role_active(spec, step):
+            assert trainer.critic.snapshot() == critic_before
+        trainer.stats_logger.commit(0, step, step, metric_row(spec, step)["metrics"])
+    active = 32 if role == "editor" else 48
+    assert state == {"round": 48, "actor_steps": active - 3, "critic_steps": 2 * active}
+    assert trainer.critic.normalizer.updates == 2 * active
+    assert trainer.critic.calls["values"] == trainer.critic.calls["scheduler"] == active
+    assert trainer.actor.calls["scheduler"] == active - 3
+    assert accounting(spec, 48)["consumed_policy_trajectories"] == active * 8
+    assert total_consumed(spec, 48) == 640
+    tampered = copy.deepcopy(rows)
+    tampered[16]["anchor_round"] = False
+    with pytest.raises(ValueError, match="pinned source"):
+        validate_schedule(spec, tampered)

@@ -1,0 +1,53 @@
+{
+  "checkpoints": {
+    "actor": "/mnt/3fs/xudong/coevolve/runs/alfworld_solver_fast_v4_s42/training/optimizer/engine/checkpoints/chengboliu/alfworld_solver_fast_v4_s42/w1/actor/epoch0epochstep79globalstep79",
+    "critic": "/mnt/3fs/xudong/coevolve/runs/alfworld_solver_fast_v4_s42/training/optimizer/engine/checkpoints/chengboliu/alfworld_solver_fast_v4_s42/w1/critic/epoch0epochstep79globalstep79"
+  },
+  "actor_steps": 75,
+  "critic_only_warmup_steps": 5,
+  "critic_steps": 80,
+  "critic_mode": "learned",
+  "terminal_episodes": true,
+  "critic_updates_per_step": 1,
+  "actor_gradient_checkpointing": true,
+  "critic_gradient_checkpointing": true,
+  "solver_trajectory_style": "concat",
+  "training_active_started_at_unix": 1790873890.1072407,
+  "training_active_finished_at_unix": 1790879701.213753,
+  "elapsed_seconds": 6079.226432714146,
+  "upstream": {
+    "sao": "ac2728149041b5f15ceb75413f467ce0659179cf",
+    "areal": "3cf0dfbd2b0fbeabd6977184980e189d1567747a",
+    "sao_patch_sha256": "2cd1be09a5831f2c3881fe7bffff9dfdb1814d0e3cd67a6409778a5dd7f2b66a",
+    "areal_local_network_sha256": "e0a642ca0c5e83ff0ea1be32754043a0900dfc5f6d3233da2560654f8fe3d173",
+    "areal_packed_sdpa_sha256": "48a2a59b0efd8b2c2a2d6799efc0fc2eaee894c709212a03d7cb645d97f6b694",
+    "areal_assistant_prefill_sha256": "15c2a54d6c5d99daf19bdbdb470159a1af0745f6cb7df4b9d4495fe10fdbb684",
+    "areal_qwen35_critic_sha256": "7c61d62bbb484fb478620507705a99f2b07566fa70891afdac1d9d60376a2bac"
+  },
+  "role": "solver",
+  "phase": "w1",
+  "central_critic": false,
+  "stage_optimizer_reset": true,
+  "checkpoint_history": {
+    "actor": [
+      {
+        "global_step": 39,
+        "path": "/mnt/3fs/xudong/coevolve/runs/alfworld_solver_fast_v4_s42/training/optimizer/engine/checkpoints/chengboliu/alfworld_solver_fast_v4_s42/w1/actor/epoch0epochstep39globalstep39"
+      },
+      {
+        "global_step": 79,
+        "path": "/mnt/3fs/xudong/coevolve/runs/alfworld_solver_fast_v4_s42/training/optimizer/engine/checkpoints/chengboliu/alfworld_solver_fast_v4_s42/w1/actor/epoch0epochstep79globalstep79"
+      }
+    ],
+    "critic": [
+      {
+        "global_step": 39,
+        "path": "/mnt/3fs/xudong/coevolve/runs/alfworld_solver_fast_v4_s42/training/optimizer/engine/checkpoints/chengboliu/alfworld_solver_fast_v4_s42/w1/critic/epoch0epochstep39globalstep39"
+      },
+      {
+        "global_step": 79,
+        "path": "/mnt/3fs/xudong/coevolve/runs/alfworld_solver_fast_v4_s42/training/optimizer/engine/checkpoints/chengboliu/alfworld_solver_fast_v4_s42/w1/critic/epoch0epochstep79globalstep79"
+      }
+    ]
+  }
+}

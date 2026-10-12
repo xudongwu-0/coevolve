@@ -45,3 +45,17 @@ Released model weights and benchmark assets are downloaded separately and are
 not redistributed by this repository. See the
 [current project state](docs/PROJECT_STATE.md) for model-role distinctions and
 reproduction limitations.
+
+## Frozen MA-SAO reproduction evidence
+
+The dated reproduction bundle includes the original executing Coevolve source
+snapshots, generated research inputs/results, and metadata identifying model and
+dataset dependencies. It does not contain model tensors or redistribute the
+complete ALFWorld game archive.
+
+The AReaL working-tree patch reconstructs the locally modified Apache-2.0
+upstream at the pinned revision. Its original license is included at
+[AReaL-LICENSE](reproducibility/ma_sao_20261012/upstream/AReaL-LICENSE).
+It supplements, rather than replaces, the attribution and licenses of the
+upstream submodules. Generated task evidence and task-path catalogues do not
+provide new rights to underlying benchmark assets or model weights.

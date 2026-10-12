@@ -1,0 +1,10 @@
+{
+  "status": "passed",
+  "base_revision": "3cf0dfbd2b0fbeabd6977184980e189d1567747a",
+  "patch_sha256": "0758c8e52d9ab13a3c54573fe35536fce9bcf63e9be5e747270b8883fb9e6cec",
+  "reconstructed_files": 1180,
+  "all_file_sizes_and_sha256_checked": true,
+  "pristine_revision_from_local_git_objects": true,
+  "network_used": false,
+  "gpu_used": false
+}

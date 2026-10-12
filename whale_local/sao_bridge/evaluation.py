@@ -12,6 +12,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel
 
 from .common import read_json, write_json
+from .budget import contract_digest
 from .domain_api import DOMAIN_MODULES, get_domain
 from .retool import ContextExhausted
 
@@ -24,7 +25,10 @@ class Sampler:
         self.record_tokens = record_tokens
         self.chat_template_kwargs = chat_template_kwargs
         self.semaphore = asyncio.Semaphore(concurrency)
-        self.client = httpx.AsyncClient(timeout=request_timeout, trust_env=False)
+        self.client = httpx.AsyncClient(
+            timeout=request_timeout, trust_env=False,
+            limits=httpx.Limits(max_connections=100, max_keepalive_connections=0),
+        )
         self.generated_tokens = 0
         self.requests = 0
         self.context_clipped = 0
@@ -105,6 +109,7 @@ async def evaluate(
     seed=42,
     domain="math",
     episode_concurrency: int | None = None,
+    episode_journal: Path | None = None,
 ):
     if not rows or samples < 1:
         raise ValueError("Evaluation requires nonempty questions and samples")
@@ -123,25 +128,58 @@ async def evaluate(
         )
         for row in rows for sample in range(samples)
     ]
+    if episode_journal is not None:
+        from .alfworld_train_data import _immutable_json
+        if len({row["id"] for row in rows}) != len(rows):
+            raise ValueError("Episode journaling requires distinct sample IDs")
+        episode_journal = Path(episode_journal)
+        _immutable_json(episode_journal / "REQUEST.json", {
+            "rows": rows, "source_sha256": hashlib.sha256(source.encode()).hexdigest(),
+            "tokens": tokens, "samples": samples, "seed": seed, "domain": domain,
+        })
     semaphore = asyncio.Semaphore(episode_concurrency or len(task_specs))
 
-    async def run_episode(row, rollout_seed):
+    async def run_episode(index, row, sample, rollout_seed):
+        destination = episode_journal / f"episode-{index:06d}.json" if episode_journal is not None else None
+        identity = {"id": row["id"], "sample_index": sample, "rollout_seed": rollout_seed}
+        if destination is not None and destination.exists():
+            cached = read_json(destination)
+            if (cached["identity"] != identity
+                    or any(cached["result"].get(key) != value for key, value in identity.items())
+                    or contract_digest(cached["result"]) != cached["result_sha256"]):
+                raise ValueError("A completed episode journal changed identity or content")
+            return cached["result"]
         async with semaphore:
-            return await task.run_episode(
+            if destination is not None:
+                attempt_path = destination.with_suffix(".attempts.json")
+                attempts = read_json(attempt_path) if attempt_path.exists() else []
+                write_json(attempt_path, [*attempts, {"identity": identity, "started_at_unix": time.time()}])
+            result = await task.run_episode(
                 row,
                 spec,
                 sampler,
                 total_tokens=tokens,
                 seed=rollout_seed,
             )
+            result.update(sample_index=sample, rollout_seed=rollout_seed)
+            if result["id"] != row["id"]:
+                raise ValueError("The environment returned a different episode identity")
+            if destination is not None:
+                _immutable_json(destination, {
+                    "identity": identity, "result": result, "result_sha256": contract_digest(result),
+                    "completed_at_unix": time.time(),
+                })
+            return result
 
-    results = await asyncio.gather(*(
-        run_episode(row, rollout_seed)
-        for row, _, rollout_seed in task_specs
-    ))
-    for result, (_, sample, rollout_seed) in zip(results, task_specs):
-        result["sample_index"] = sample
-        result["rollout_seed"] = rollout_seed
+    tasks = [asyncio.create_task(run_episode(index, row, sample, rollout_seed))
+             for index, (row, sample, rollout_seed) in enumerate(task_specs)]
+    try:
+        results = await asyncio.gather(*tasks)
+    finally:
+        for pending in tasks:
+            if not pending.done():
+                pending.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
     result = {
         "accuracy": sum(r["reward"] for r in results) / len(results),
         "question_count": len(rows), "samples_per_question": samples,

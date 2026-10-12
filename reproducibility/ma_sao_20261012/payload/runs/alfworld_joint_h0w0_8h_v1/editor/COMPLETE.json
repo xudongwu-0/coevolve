@@ -1,0 +1,137 @@
+{
+  "status": "stopped_with_checkpoints",
+  "role": "editor",
+  "steps": 115,
+  "actor_updates": 110,
+  "critic_updates": 230,
+  "metrics_sha256": "a1b6c7e5e08f06d664872ea1610fe0e7190604ee550ae6846f04a865c545f844",
+  "checkpoints": {
+    "actor": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/actor/epoch0epochstep111globalstep111",
+    "critic": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/critic/epoch0epochstep111globalstep111"
+  },
+  "elapsed_seconds": 19422.5562210083,
+  "joint_rounds": 115,
+  "optimizer_resets_between_rounds": false,
+  "finished_at_unix": 1791011476.3243806,
+  "checkpoint_history": {
+    "7": {
+      "actor": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/actor/epoch0epochstep7globalstep7",
+      "critic": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/critic/epoch0epochstep7globalstep7"
+    },
+    "11": {
+      "actor": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/actor/epoch0epochstep11globalstep11",
+      "critic": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/critic/epoch0epochstep11globalstep11"
+    },
+    "15": {
+      "actor": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/actor/epoch0epochstep15globalstep15",
+      "critic": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/critic/epoch0epochstep15globalstep15"
+    },
+    "19": {
+      "actor": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/actor/epoch0epochstep19globalstep19",
+      "critic": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/critic/epoch0epochstep19globalstep19"
+    },
+    "23": {
+      "actor": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/actor/epoch0epochstep23globalstep23",
+      "critic": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/critic/epoch0epochstep23globalstep23"
+    },
+    "27": {
+      "actor": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/actor/epoch0epochstep27globalstep27",
+      "critic": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/critic/epoch0epochstep27globalstep27"
+    },
+    "31": {
+      "actor": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/actor/epoch0epochstep31globalstep31",
+      "critic": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/critic/epoch0epochstep31globalstep31"
+    },
+    "35": {
+      "actor": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/actor/epoch0epochstep35globalstep35",
+      "critic": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/critic/epoch0epochstep35globalstep35"
+    },
+    "39": {
+      "actor": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/actor/epoch0epochstep39globalstep39",
+      "critic": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/critic/epoch0epochstep39globalstep39"
+    },
+    "43": {
+      "actor": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/actor/epoch0epochstep43globalstep43",
+      "critic": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/critic/epoch0epochstep43globalstep43"
+    },
+    "47": {
+      "actor": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/actor/epoch0epochstep47globalstep47",
+      "critic": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/critic/epoch0epochstep47globalstep47"
+    },
+    "51": {
+      "actor": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/actor/epoch0epochstep51globalstep51",
+      "critic": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/critic/epoch0epochstep51globalstep51"
+    },
+    "55": {
+      "actor": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/actor/epoch0epochstep55globalstep55",
+      "critic": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/critic/epoch0epochstep55globalstep55"
+    },
+    "59": {
+      "actor": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/actor/epoch0epochstep59globalstep59",
+      "critic": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/critic/epoch0epochstep59globalstep59"
+    },
+    "63": {
+      "actor": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/actor/epoch0epochstep63globalstep63",
+      "critic": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/critic/epoch0epochstep63globalstep63"
+    },
+    "67": {
+      "actor": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/actor/epoch0epochstep67globalstep67",
+      "critic": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/critic/epoch0epochstep67globalstep67"
+    },
+    "71": {
+      "actor": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/actor/epoch0epochstep71globalstep71",
+      "critic": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/critic/epoch0epochstep71globalstep71"
+    },
+    "75": {
+      "actor": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/actor/epoch0epochstep75globalstep75",
+      "critic": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/critic/epoch0epochstep75globalstep75"
+    },
+    "79": {
+      "actor": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/actor/epoch0epochstep79globalstep79",
+      "critic": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/critic/epoch0epochstep79globalstep79"
+    },
+    "83": {
+      "actor": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/actor/epoch0epochstep83globalstep83",
+      "critic": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/critic/epoch0epochstep83globalstep83"
+    },
+    "87": {
+      "actor": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/actor/epoch0epochstep87globalstep87",
+      "critic": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/critic/epoch0epochstep87globalstep87"
+    },
+    "91": {
+      "actor": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/actor/epoch0epochstep91globalstep91",
+      "critic": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/critic/epoch0epochstep91globalstep91"
+    },
+    "95": {
+      "actor": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/actor/epoch0epochstep95globalstep95",
+      "critic": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/critic/epoch0epochstep95globalstep95"
+    },
+    "99": {
+      "actor": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/actor/epoch0epochstep99globalstep99",
+      "critic": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/critic/epoch0epochstep99globalstep99"
+    },
+    "103": {
+      "actor": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/actor/epoch0epochstep103globalstep103",
+      "critic": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/critic/epoch0epochstep103globalstep103"
+    },
+    "107": {
+      "actor": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/actor/epoch0epochstep107globalstep107",
+      "critic": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/critic/epoch0epochstep107globalstep107"
+    },
+    "111": {
+      "actor": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/actor/epoch0epochstep111globalstep111",
+      "critic": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/editor/optimizer/engine/checkpoints/chengboliu/alfworld_joint_h0w0_8h_v1/editor/critic/epoch0epochstep111globalstep111"
+    }
+  },
+  "stop": {
+    "reason": "reserve_approximately_100_minutes_for_three_checkpoint_harness_selection_and_all200",
+    "matched_round64_already_saved": true,
+    "original_latest_training_deadline_utc": "2026-10-03T07:49:31Z",
+    "adjusted_stop_utc": "2026-10-03T07:10:00Z",
+    "decision_uses_post_training_scores": false,
+    "at_unix": 1791011400.4642093
+  },
+  "consumed_policy_trajectories": 920,
+  "generated_policy_trajectories": 936,
+  "sampled_engineer_actions": 936
+}

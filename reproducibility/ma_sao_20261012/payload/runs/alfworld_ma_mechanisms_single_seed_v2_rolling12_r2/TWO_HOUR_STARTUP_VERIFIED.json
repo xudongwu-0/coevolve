@@ -1,0 +1,25 @@
+{
+  "status": "verified_waiting",
+  "pid": 3543367,
+  "shell_id": "ma-two-hour-delayed-resume",
+  "attached": true,
+  "at_utc": "2026-10-09T08:50:52.749891+00:00",
+  "at_unix": 1791535852.7499022,
+  "resume_not_before_utc": "2026-10-09T10:34:57.344000+00:00",
+  "not_before_unix": 1791542097.344,
+  "heartbeat": {
+    "status": "paused_until_not_before",
+    "pid": 3543367,
+    "not_before_unix": 1791542097.344,
+    "remaining_seconds": 6279.10569357872,
+    "at_unix": 1791535818.2383065,
+    "gpu_work_started": false
+  },
+  "owned_native_children": [],
+  "prior_attempt_unchanged": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/rolling-canary/full/attempts/attempt-0001",
+  "formal_training_started": false,
+  "authority_sha256": "12926ac01e536b794030e5e3272affbcc23a04b40d203197305b4ac32fe51ceb",
+  "driver_sha256": "20bb349b81c21d07051dd4bd9e7c4446b84332d0b6eafc0674259aab056c8786",
+  "cpu_validation_sha256": "71232d6dd8f61398e04f9a0c57197d0ded34a22ed78e3b62165bbf703d1cc671",
+  "deadline_unix": 1791627044.3798063
+}

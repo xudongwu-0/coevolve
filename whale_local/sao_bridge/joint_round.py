@@ -91,7 +91,7 @@ def checked_behavior(calls: list[dict], version: int, max_lag: int = 0) -> None:
             raise ValueError("Joint trajectory crossed policy versions or lost behavior probabilities")
 
 
-def install_version_publication(trainer, root: Path, role: str) -> None:
+def install_version_publication(trainer, root: Path, role: str, *, initial_version: int = 0) -> None:
     check_role(role)
     original = trainer.rollout.set_version
 
@@ -100,4 +100,4 @@ def install_version_publication(trainer, root: Path, role: str) -> None:
         publish_version(root, role, version)
 
     trainer.rollout.set_version = set_version
-    publish_version(root, role, 0)
+    publish_version(root, role, initial_version)

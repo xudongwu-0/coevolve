@@ -1,0 +1,51 @@
+{
+  "experiment": "alfworld-ma-convergence-v1",
+  "parent": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_balanced_fast_v1r2/training",
+  "source": "/mnt/3fs/xudong/coevolve/runs/source-snapshots/alfworld-ma-convergence-v1r4",
+  "overlay": "/mnt/3fs/xudong/coevolve/assets/tools/training-acceleration-fla052-triton371",
+  "unit_suffix": "convergence-v1r4",
+  "question": "How high and how stable is the observed long-training MA-SAO development curve, without requiring a matched short rollout budget?",
+  "training_seed": 1000043,
+  "rounds_per_block": 96,
+  "evaluation_every_rounds": 48,
+  "maximum_blocks": 8,
+  "wall_limit_hours": 24,
+  "initial_rounds": 48,
+  "initial_accuracy": 0.935,
+  "initial_optimizer": "Parent saved HF weights and ValueNorm but no Adam. One disclosed fresh-Adam boundary at total round48, no new critic warmup.",
+  "later_optimizer": "Native DCP saves and reloads both learners' Adam steps/moments and parameters; per-rank fingerprints checked. Critic ValueNorm preserved; original H0/W1 fixed references retained.",
+  "serving_boundary": "Serving processes restart per96-round block. Training seed remains1000043; not bitwise RNG/rollout continuation.",
+  "unchanged": "H/W LR5e-7, critic LR2.5e-6, KL0.02, K2, joint_joint_anchor sampled_control, lag1, batch8,32768 context and4096 action budget, FLA0.5.2/Triton3.7.1/BF16 fixed-reference storage.",
+  "data": "Deterministic continuation of the parent source-row stream, train IDs0..239 only, new sample IDs and freshly generated episodes; never replay saved trajectories.",
+  "evaluation": "Each48-round checkpoint:8 fresh Engineer proposals; selection48; promote only if at least2/48 above the carried incumbent. Start with parent automatic proposal06. Evaluate selected+empty on original200 tasks, seed6000045, temperature1,4096 completion tokens. All endpoints reported.",
+  "incumbent_selection": "Carry harness only using selection48; never use all200 to choose a harness. All200 is used for the explicitly exploratory training plateau rule.",
+  "plateau": "At least192 additional rounds. Last4 consecutive48-round observations have range<=2pp, and no new all-time accuracy record of at least0.5pp in3 intervals. Label operational development plateau, not mathematical convergence.",
+  "budget_stop": "If maximum768 additional rounds or24h expires without the plateau rule, report budget exhausted and convergence unestablished, not converged. Numerical/resource failures stop explicitly.",
+  "report": "Full curve, best observed checkpoint (exploratory selected maximum), last endpoint, last4 range, paired comparisons versus historical92% and parent93.5%; no confirmatory significance from repeated checkpoint search.",
+  "scope": "No new SAO training, no independent training seeds, no component ablations; long-run absolute-performance study, not equal-rollout evidence.",
+  "monitoring": "30s service/metric checks; verify native optimizer handoff before first research launch; audit each full block before evaluation; release node3/node4 between blocks.",
+  "recovery": {
+    "predecessor": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_convergence_v1",
+    "research_trajectories": 0,
+    "reason": "Native combined DCP load rejected absent Adam state for unused visual parameters",
+    "fix": "Native FP32 model-only DCP plus exact native rank Adam shards; strict fingerprint validation; no strict=False or fabricated moments",
+    "interrupted_h0_validation": "Stopped after W0 established the same format incompatibility; not a passed test"
+  },
+  "existing_native": {
+    "w0": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_convergence_v1r2/native-w0",
+    "h0": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_convergence_v1r3/native-h0"
+  },
+  "controller_recovery": {
+    "predecessor": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_convergence_v1r2",
+    "diagnosis": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_convergence_v1r2/H0_STARTUP_DIAGNOSIS.json",
+    "research_trajectories": 0,
+    "fix": "Synthetic controller loopback matches worker loopback; no algorithm or budget change"
+  },
+  "transport_recovery": {
+    "predecessor": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_convergence_v1r3",
+    "failed_cost": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_convergence_v1r3/FAILED_COST.json",
+    "reason": "Solver->controller POST interact ReadError at round30; worker itself alive",
+    "fix": "Disable keepalive as already done controller->worker; no ambiguous POST retries, no model-failure rewards",
+    "restart": "Same parent round48, same seed/config/data; failed400 consumed role trajectories remain charged, not merged into successful optimizer lineage"
+  }
+}

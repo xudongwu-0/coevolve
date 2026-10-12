@@ -7,11 +7,12 @@ import hashlib
 import os
 from pathlib import Path
 import re
+import shutil
 import threading
 import time
 
 from .alfworld_domain import INITIAL_SOURCE, harness_spec
-from .common import read_json, write_json
+from .common import file_sha, read_json, write_json
 from .evaluation import Sampler, evaluate
 from .gpu_telemetry import monitor, summarize
 from .launch import Launcher
@@ -72,6 +73,15 @@ def validate_config(config: dict, *, harness_matrix: bool = False) -> dict:
             or normalized["matrix_concurrency"] < 1
         ):
             raise ValueError("matrix_concurrency must be a positive integer")
+    if type(normalized.get("episode_checkpointing", False)) is not bool:
+        raise ValueError("Episode checkpointing must be explicitly boolean")
+    if normalized.get("resume_matrix") and (not harness_matrix or not normalized.get("episode_checkpointing")):
+        raise ValueError("Partial matrix recovery requires explicit per-episode checkpointing")
+    priority = normalized.get("priority_harness_labels", [])
+    if (not isinstance(priority, list) or any(not isinstance(label, str) for label in priority)
+            or len(priority) != len(set(priority))
+            or set(priority) - {"no_patch", *normalized.get("harnesses", {})}):
+        raise ValueError("Primary-first evaluation can only prioritize existing unique Harness labels")
     for key in (
         "seed", "samples", "solver_tokens", "eval_concurrency",
         "environment_concurrency",
@@ -108,12 +118,94 @@ def matrix_harnesses(config: dict) -> tuple[dict, dict]:
     return unique, aliases
 
 
+def reuse_completed_reports(config: dict, root: Path, assignments: list[dict]) -> dict:
+    if not config.get("resume_matrix"):
+        return {}
+    from .alfworld_strong_phase import checked_native_report, checked_release
+
+    manifest = read_json(Path(config["resume_matrix"]))
+    previous = Path(manifest["previous_attempt"])
+    if file_sha(previous / "config.json") != manifest["previous_config_sha256"]:
+        raise ValueError("Matrix recovery changed the previous evaluation inputs")
+    if manifest["reason"] == "inference-http-read-error":
+        if (file_sha(previous / "FAILED.json") != manifest["previous_failure_sha256"]
+                or "ReadError" not in read_json(previous / "FAILED.json")["error"]):
+            raise ValueError("Matrix recovery needs the preserved input-bound transport failure")
+    elif manifest["reason"] == "observed-controller-loss":
+        audit_path = Path(manifest["interruption_audit"])
+        audit = read_json(audit_path)
+        if (
+            file_sha(audit_path) != manifest["interruption_audit_sha256"]
+            or audit["status"] != "observed_controller_loss"
+            or Path(audit["previous_attempt"]).resolve() != previous.resolve()
+            or audit["previous_config_sha256"] != manifest["previous_config_sha256"]
+            or audit["controller_alive"] is not False or audit["evaluator_alive"] is not False
+            or type(audit["controller_exit_code"]) is not int or audit["controller_exit_code"] == 0
+            or audit["release_sha256"] != file_sha(previous / "RELEASED.json")
+            or audit["repeat_completed_episodes"] is not False
+            or any((previous / name).exists() for name in ("COMPLETE.json", "FAILED.json", "report.json"))
+        ):
+            raise ValueError("Matrix recovery lacks a verified post-exit input-bound audit")
+    else:
+        raise ValueError("Matrix recovery has an unsupported interruption reason")
+    checked_release(previous)
+    old = read_json(previous / "config.json")
+    execution_only = {"run", "evaluation_mode", "episode_checkpointing", "resume_matrix"}
+    if {key: value for key, value in old.items() if key not in execution_only} != {
+        key: value for key, value in config.items() if key not in execution_only
+    }:
+        raise ValueError("Partial matrix recovery changed the original evaluation inputs")
+    complete = manifest["complete_reports"]
+    actual = {path.stem for path in (previous / "reports").glob("*.json")}
+    known = {row["harness_sha256"] for row in assignments}
+    if set(complete) != actual or set(complete) - known:
+        raise ValueError("Recovery omitted a completed report or changed its Harness identity")
+    reused = {}
+    for identity, metadata in complete.items():
+        path = Path(metadata["path"])
+        if (path.resolve() != (previous / "reports" / f"{identity}.json").resolve()
+                or file_sha(path) != metadata["sha256"]):
+            raise ValueError("A previously completed policy report changed")
+        report = checked_native_report(read_json(path), config["task_ids"], config)
+        destination = root / "reports" / path.name
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        if destination.exists() and file_sha(destination) != metadata["sha256"]:
+            raise ValueError("Recovery tried to replace a different complete report")
+        if not destination.exists():
+            shutil.copyfile(path, destination)
+        reused[identity] = report
+    journals = manifest.get("episode_journal_files", {})
+    old_journals = previous / "episode_journals"
+    actual_journals = {str(path.relative_to(old_journals)) for path in old_journals.glob("*/*.json")}
+    if set(journals) != actual_journals:
+        raise ValueError("Recovery omitted committed episode journal evidence")
+    for relative, expected in journals.items():
+        origin = old_journals / relative
+        if (not origin.resolve().is_relative_to(old_journals.resolve())
+                or file_sha(origin) != expected):
+            raise ValueError("A source episode journal changed or escaped its attempt")
+        destination = root / "episode_journals" / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        if destination.exists() and file_sha(destination) != expected:
+            raise ValueError("Recovery tried to overwrite newer episode evidence")
+        if not destination.exists():
+            shutil.copyfile(origin, destination)
+    write_json(root / "REUSED_REPORTS.json", {
+        "source_manifest": config["resume_matrix"], "complete_reports": complete,
+        "reused_complete_episodes": len(complete) * len(config["task_ids"]) * config["samples"],
+        "episode_journal_files": journals,
+        "rule": "Keep every complete report; no score-based retry or candidate replacement.",
+    })
+    return reused
+
+
 async def evaluate_harnesses(
     urls: str, config: dict, assignments: list[dict], root: Path,
     aliases: dict | None = None,
 ) -> dict:
     if not assignments or (aliases is None and len(assignments) != 1):
         raise ValueError("Multiple harness evaluations require explicit matrix aliases")
+    reused = reuse_completed_reports(config, root, assignments)
     sampler = Sampler(
         urls,
         concurrency=config["eval_concurrency"],
@@ -131,19 +223,28 @@ async def evaluate_harnesses(
                 "task_id": task_id,
                 "task_name": assignment["name"],
             } for task_id in config["task_ids"]]
-            report = await evaluate(
-                sampler, rows,
-                Path(assignment["harness"]).read_text() if aliases is not None else INITIAL_SOURCE,
-                tokens=config["solver_tokens"],
-                samples=config["samples"],
-                seed=config["seed"],
-                domain="alfworld",
-                episode_concurrency=config["environment_concurrency"],
-            )
+            identity = assignment.get("harness_sha256", "no_patch")
+            if identity in reused:
+                report = reused[identity]
+            else:
+                journal = {}
+                if config.get("episode_checkpointing"):
+                    journal["episode_journal"] = root / "episode_journals" / identity
+                report = await evaluate(
+                    sampler, rows,
+                    Path(assignment["harness"]).read_text() if aliases is not None else INITIAL_SOURCE,
+                    tokens=config["solver_tokens"],
+                    samples=config["samples"],
+                    seed=config["seed"],
+                    domain="alfworld",
+                    episode_concurrency=config["environment_concurrency"],
+                    **journal,
+                )
             if aliases is not None:
                 identity = assignment["harness_sha256"]
                 path = root / "reports" / f"{identity}.json"
-                write_json(path, report)
+                if identity not in reused:
+                    write_json(path, report)
                 reports[identity] = {
                     "accuracy": report["accuracy"], "report": str(path),
                     "harness_sha256": identity,
@@ -155,7 +256,9 @@ async def evaluate_harnesses(
                 })
             return report
 
-    tasks = [asyncio.create_task(evaluate_assignment(assignment)) for assignment in assignments]
+    priority = {aliases[label]["sha256"] for label in config.get("priority_harness_labels", [])} if aliases else set()
+    ordered = sorted(assignments, key=lambda assignment: assignment.get("harness_sha256") not in priority)
+    tasks = [asyncio.create_task(evaluate_assignment(assignment)) for assignment in ordered]
     try:
         results = await asyncio.gather(*tasks)
     finally:

@@ -12,6 +12,7 @@ import time
 
 from .common import read_json, verify_upstreams, write_json
 from .joint_schedule import ALTERNATING, accounting, validate_schedule
+from .resources import SCOPE_ENV, runtime_gpu_counts
 from .train import make_config, upstream_trainer
 
 
@@ -125,9 +126,10 @@ def training_capacity_audit(spec: dict, rows: list[dict]) -> dict:
 
 
 class MetricsRecorder:
-    def __init__(self, delegate, path: Path):
+    def __init__(self, delegate, path: Path, after_commit=None):
         self.delegate = delegate
         self.path = path
+        self.after_commit = after_commit
 
     def __getattr__(self, name):
         return getattr(self.delegate, name)
@@ -140,6 +142,8 @@ class MetricsRecorder:
                 "recorded_at_unix": time.time(),
                 "metrics": data,
             }, default=float) + "\n")
+        if self.after_commit is not None:
+            self.after_commit(global_step + 1)
 
 
 def configure(spec: dict, run: Path) -> dict:
@@ -169,7 +173,7 @@ def configure(spec: dict, run: Path) -> dict:
     cfg["trial_name"] = spec["phase"]
     cfg["experiment_name"] = spec["experiment"]
     cfg["seed"] = spec["seed"]
-    actor_gpus, rollout_gpus = spec.get("actor_gpus", 2), spec.get("rollout_gpus", 2)
+    actor_gpus, rollout_gpus = runtime_gpu_counts(spec)
     if spec["batch_size"] < actor_gpus:
         raise ValueError(
             f"Training batch size ({spec['batch_size']}) must be at least the "
@@ -187,11 +191,21 @@ def configure(spec: dict, run: Path) -> dict:
         "actor_gradient_checkpointing", True
     )
     cfg["rollout"]["backend"] = f"vllm:d{rollout_gpus}p1t1"
+    if "rollout_setup_timeout" in spec:
+        timeout = spec["rollout_setup_timeout"]
+        if type(timeout) is not int or timeout <= 0:
+            raise ValueError("Rollout setup timeout must be a positive integer")
+        cfg["rollout"]["setup_timeout"] = timeout
     cfg["actor"]["optimizer"]["lr"] = spec["lr"]
     kl_ctl = spec.get("kl_ctl", 0.0)
     if type(kl_ctl) not in (int, float) or not 0 <= kl_ctl <= 1:
         raise ValueError("Fixed-reference KL coefficient must be finite and in [0, 1]")
     cfg["actor"]["kl_ctl"] = kl_ctl
+    reference_storage = spec.get("reference_storage_dtype")
+    if reference_storage not in (None, "bfloat16", "float32"):
+        raise ValueError("Reference storage dtype must be bfloat16 or float32")
+    if reference_storage is not None and not kl_ctl:
+        raise ValueError("Reference storage override requires a fixed KL reference")
     if kl_ctl:
         cfg["ref"] = {
             "backend": cfg["actor"]["backend"],
@@ -204,6 +218,8 @@ def configure(spec: dict, run: Path) -> dict:
             "scheduling_strategy": {"type": "colocation", "target": "actor"},
             "scheduling_spec": cfg["actor"]["scheduling_spec"],
         }
+        if reference_storage is not None:
+            cfg["ref"]["optimizer_dtype"] = reference_storage
     if spec.get("joint_root"):
         cfg["actor"].update(eps_clip=0.2, eps_clip_higher=0.2)
     if critic_mode == "learned":
@@ -258,10 +274,17 @@ def configure(spec: dict, run: Path) -> dict:
                  "PYTORCH_ALLOC_CONF",
                  "SAO_SEARCHQA_RETRIEVAL_URL", "SAO_ALFWORLD_CONTROLLER_URL",
                  "SAO_ALFWORLD_TASK_NAME", "SAO_ALFWORLD_HTTP_TIMEOUT",
-                 "MA_SAO_JOINT_EPISODES", "MA_SAO_VALUE_NORM",
-                 "MA_SAO_ASYNC_JOINT_ROOT", "MA_SAO_JOINT_ROLE"):
+                 "MA_SAO_JOINT_EPISODES", "MA_SAO_VALUE_NORM", "MA_SAO_COOPERATIVE_CONTEXT",
+                 "MA_SAO_ASYNC_JOINT_ROOT", "MA_SAO_JOINT_ROLE", "MA_SAO_PEER_WEIGHT_MODE",
+                 "MA_SAO_ANCHOR_SCHEDULE", *SCOPE_ENV):
         if name in os.environ:
             env[name] = os.environ[name]
+    if spec.get("joint_root"):
+        context_enabled = spec.get("critic_cooperative_context", True)
+        if type(context_enabled) is not bool:
+            raise ValueError("Critic cooperative context must be a boolean")
+        env["MA_SAO_COOPERATIVE_CONTEXT"] = str(int(context_enabled))
+        env["MA_SAO_VALUE_NORM"] = str(int(spec.get("value_normalization", False)))
     context = spec.get("central_context")
     if context:
         env["MA_SAO_CONTEXT_FILE"] = str(Path(context).resolve())
@@ -278,7 +301,12 @@ def main():
     args = parser.parse_args()
     spec = read_json(args.spec)
     validate_schedule(spec)
-    scheduled = spec.get("schedule") == ALTERNATING
+    scheduled = spec.get("schedule", "simultaneous") != "simultaneous"
+    from .joint_anchor import SCHEDULE as ANCHOR_SCHEDULE
+    if spec.get("schedule") == ANCHOR_SCHEDULE:
+        os.environ["MA_SAO_ANCHOR_SCHEDULE"] = "1"
+    else:
+        os.environ.pop("MA_SAO_ANCHOR_SCHEDULE", None)
     run = Path(spec["run"]).resolve()
     run.mkdir(parents=True, exist_ok=True)
     provenance = verify_upstreams()
@@ -294,6 +322,10 @@ def main():
     if critic_mode == "none" and warmup:
         raise ValueError("Critic-free training cannot use critic warm-up")
     os.environ["MA_SAO_CRITIC_WARMUP_STEPS"] = str(warmup)
+    if spec.get("rolling_recovery"):
+        os.environ["MA_SAO_ROLLING_RECOVERY"] = "1"
+    else:
+        os.environ.pop("MA_SAO_ROLLING_RECOVERY", None)
     if spec.get("central_context"):
         os.environ["MA_SAO_CONTEXT_FILE"] = str(Path(spec["central_context"]).resolve())
     else:
@@ -302,21 +334,32 @@ def main():
         if spec.get("central_context") or not spec.get("terminal_episodes"):
             raise ValueError("Joint episodes require dynamic context and complete terminal trajectories")
         os.environ["MA_SAO_JOINT_EPISODES"] = "1"
+        context_enabled = spec.get("critic_cooperative_context", True)
+        if type(context_enabled) is not bool:
+            raise ValueError("Critic cooperative context must be a boolean")
+        os.environ["MA_SAO_COOPERATIVE_CONTEXT"] = str(int(context_enabled))
         if spec.get("joint_max_lag", 0) == 1:
             os.environ["MA_SAO_ASYNC_JOINT_ROOT"] = str(Path(spec["joint_root"]).resolve())
             os.environ["MA_SAO_JOINT_ROLE"] = spec["role"]
+            weight_mode = spec.get("peer_weight_mode", "bounded")
+            if weight_mode not in ("bounded", "unit"):
+                raise ValueError("Unknown teammate importance weight mode")
+            os.environ["MA_SAO_PEER_WEIGHT_MODE"] = weight_mode
         else:
             os.environ.pop("MA_SAO_ASYNC_JOINT_ROOT", None)
             os.environ.pop("MA_SAO_JOINT_ROLE", None)
+            os.environ.pop("MA_SAO_PEER_WEIGHT_MODE", None)
         if spec.get("value_normalization", False):
             os.environ["MA_SAO_VALUE_NORM"] = "1"
         else:
             os.environ.pop("MA_SAO_VALUE_NORM", None)
     else:
         os.environ.pop("MA_SAO_JOINT_EPISODES", None)
+        os.environ.pop("MA_SAO_COOPERATIVE_CONTEXT", None)
         os.environ.pop("MA_SAO_VALUE_NORM", None)
         os.environ.pop("MA_SAO_ASYNC_JOINT_ROOT", None)
         os.environ.pop("MA_SAO_JOINT_ROLE", None)
+        os.environ.pop("MA_SAO_PEER_WEIGHT_MODE", None)
     rows = read_json(Path(spec["data"]))
     validate_training_rows(spec, rows)
     ledger_name = "planned_rows.json" if spec.get("joint_root") else "consumed_rows.json"
@@ -347,7 +390,16 @@ def main():
         terminal_episodes=spec.get("terminal_episodes", False),
         schedule_spec=spec if scheduled else None,
     ) as trainer:
-        trainer.stats_logger = MetricsRecorder(trainer.stats_logger, run / "metrics.jsonl")
+        recovery = None
+        if spec.get("rolling_recovery"):
+            from .joint_recovery import PairedRecovery
+            recovery = PairedRecovery(trainer, spec)
+        trainer.stats_logger = MetricsRecorder(
+            trainer.stats_logger, run / "metrics.jsonl",
+            after_commit=recovery.after_commit if recovery is not None else None,
+        )
+        from .joint_continuation import handoff
+        handoff(trainer, spec, run, loading=True)
         active_started_at = time.time()
         write_json(run / "training_active.json", {
             "status": "running",
@@ -369,7 +421,14 @@ def main():
             }
             if spec.get("joint_root"):
                 from .joint_round import install_version_publication
-                install_version_publication(trainer, Path(spec["joint_root"]), spec["role"])
+                from .joint_rollout_budget import install_joint_rollout_budget
+                start_round = spec.get("recovery_start_round", 0)
+                install_joint_rollout_budget(
+                    trainer.rollout, (spec["steps"] - start_round) * spec["batch_size"],
+                )
+                install_version_publication(
+                    trainer, Path(spec["joint_root"]), spec["role"], initial_version=start_round,
+                )
                 workflow = "sao_bridge.joint_workflow.JointWorkflow"
                 workflow_kwargs = {
                     "role": spec["role"], "tokenizer": spec["model"],
@@ -377,10 +436,18 @@ def main():
                     "total_tokens": spec["tokens"],
                     "context_tokens": spec["context_tokens"],
                     "max_lag": spec.get("joint_max_lag", 0),
+                    "editor_reward_mode": spec.get("editor_reward_mode", "team"),
+                    "peer_weight_mode": spec.get("peer_weight_mode", "bounded"),
                 }
+                if spec.get("schedule") == ANCHOR_SCHEDULE:
+                    workflow_kwargs.update({key: spec[key] for key in
+                                            ("anchor_mode", "anchor_harness", "anchor_harness_sha256")})
+                if spec.get("editor_update_every_round", False):
+                    workflow_kwargs["editor_update_every_round"] = True
             trainer.train(
                 workflow=workflow, workflow_kwargs=workflow_kwargs,
             )
+            handoff(trainer, spec, run, loading=False)
         except BaseException as exc:
             active_finished_at = time.time()
             write_json(run / "training_active.json", {
@@ -440,9 +507,16 @@ def main():
         "training_active_finished_at_unix": active_finished_at,
         "elapsed_seconds": time.monotonic() - started,
         "upstream": provenance, "role": spec["role"], "phase": spec["phase"],
-        "central_critic": bool(spec.get("central_context") or spec.get("joint_root")),
+        "central_critic": bool(spec.get("central_context") or (
+            spec.get("joint_root") and spec.get("critic_cooperative_context", True))),
+        "component_ablation": spec.get("component_ablation"),
+        "editor_update_every_round": spec.get("editor_update_every_round", False),
+        "value_normalization": bool(spec.get("joint_root") and spec.get("value_normalization", False)),
         "joint_root": spec.get("joint_root"),
-        "stage_optimizer_reset": True, "checkpoint_history": checkpoint_history,
+        "stage_optimizer_reset": not bool(spec.get("recovery_start_round", 0)),
+        "checkpoint_history": checkpoint_history,
+        **({"recovery_start_round": spec.get("recovery_start_round", 0),
+            "rolling_recovery": spec["rolling_recovery"]} if spec.get("rolling_recovery") else {}),
         **(accounting(spec, spec["steps"]) if scheduled else {}),
     })
 

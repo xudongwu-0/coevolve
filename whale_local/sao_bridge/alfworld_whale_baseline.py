@@ -286,6 +286,19 @@ def training_episode_rows(rows: list[dict], indices: list[int]) -> list[dict]:
              "source_record_index": index} for index in indices]
 
 
+def rsft_batch_layout(config: dict) -> list[list[int]]:
+    default = [[config["episodes_per_batch"]] * config["rsft_batches_per_cycle"]
+               for _ in range(config["cycles"])]
+    layout = config.get("cycle_batch_episode_counts", default)
+    target = config["episodes_per_batch"] * config["rsft_batches_per_cycle"]
+    if (not isinstance(layout, list) or len(layout) != config["cycles"]
+            or any(not isinstance(cycle, list) or len(cycle) < 2
+                   or any(type(size) is not int or size < 1 for size in cycle)
+                   or sum(cycle) != target for cycle in layout)):
+        raise ValueError("Online RSFT batching must preserve each cycle's declared episode budget")
+    return layout
+
+
 def validate_config(config: dict) -> None:
     expected = {
         "protocol": "alfworld-whale-local-rsft-mh-v1", "score_threshold": 0.5,
@@ -311,9 +324,65 @@ def validate_config(config: dict) -> None:
             raise ValueError(f"{key} must be a positive integer")
     if config["cycles"] < 2 or config["rsft_batches_per_cycle"] < 2:
         raise ValueError("This baseline must exercise online refresh and alternating cycles")
+    rsft_batch_layout(config)
     if (not 0 < config["learning_rate"] < 1 or config["weight_decay"] < 0
             or config["proposer_tokens"] >= config["max_context_tokens"]):
         raise ValueError("Invalid optimization/token budget")
+    if type(config.get("reuse_solver_for_search", False)) is not bool:
+        raise ValueError("reuse_solver_for_search must be boolean")
+    if type(config.get("persistent_search_services", False)) is not bool:
+        raise ValueError("persistent_search_services must be boolean")
+    for key in ("parallel_rsft_samples", "parallel_checkpoint_hashing", "defer_reload_to_use"):
+        if type(config.get(key, False)) is not bool:
+            raise ValueError(f"{key} must be boolean")
+    if config.get("parallel_rsft_samples") and config["sft_mini_batch_size"] % config["world_size"]:
+        raise ValueError("The global RSFT minibatch must divide evenly across native ranks")
+    if "native_prefix" in config and not isinstance(config["native_prefix"], dict):
+        raise ValueError("native_prefix must be an explicit frozen authorization")
+    concurrency = config.get("proposal_concurrency", 1)
+    if type(concurrency) is not int or not 1 <= concurrency <= config["proposals_per_iteration"]:
+        raise ValueError("Invalid proposal concurrency")
+    scoring_concurrency = config.get("search_evaluation_concurrency", 1)
+    if (type(scoring_concurrency) is not int or not 1 <= scoring_concurrency <= 8
+            or (scoring_concurrency > 1 and not config.get("reuse_solver_for_search", False))):
+        raise ValueError("Parallel search scoring requires one shared Solver and concurrency in1..8")
+    drop = config.get("early_stop_development_drop")
+    if drop is not None and (type(drop) not in (int, float) or not 0 < drop <= 1):
+        raise ValueError("Development early-stop drop must be in (0, 1]")
+    for key in ("training_deadline_unix", "search_deadline_unix", "user_report_deadline_unix"):
+        if key in config and (type(config[key]) not in (int, float)
+                              or not math.isfinite(config[key]) or config[key] <= 0):
+            raise ValueError(f"{key} must be a finite positive timestamp")
+    if ("training_deadline_unix" in config and "user_report_deadline_unix" in config
+            and config["training_deadline_unix"] >= config["user_report_deadline_unix"]):
+        raise ValueError("The training cutoff must reserve time before the reporting deadline")
+    if ("search_deadline_unix" in config and "user_report_deadline_unix" in config
+            and config["search_deadline_unix"] >= config["user_report_deadline_unix"]):
+        raise ValueError("The search cutoff must reserve time before the reporting deadline")
+
+
+def native_environment(config: dict, launch) -> dict[str, str]:
+    from .training_acceleration import overlay_path
+    overlay = overlay_path(config)
+    if overlay is None:
+        return {}
+    return {"PYTHONPATH": f"{overlay}:{launch.env['PYTHONPATH']}"}
+
+
+def development_regressed(initial: float, current: float, minimum_drop: float) -> bool:
+    if any(not math.isfinite(value) or not 0 <= value <= 1 for value in (initial, current, minimum_drop)):
+        raise ValueError("Development accuracy/drop is outside [0, 1]")
+    return initial - current >= minimum_drop or math.isclose(initial - current, minimum_drop, abs_tol=1e-12)
+
+
+def training_time_exhausted(config: dict) -> bool:
+    return "training_deadline_unix" in config and time.time() >= config["training_deadline_unix"]
+
+
+def search_time_exhausted(config: dict) -> bool:
+    if "search_deadline_unix" in config:
+        return time.time() >= config["search_deadline_unix"]
+    return training_time_exhausted(config)
 
 
 def inherited_cost(config: dict) -> dict:
@@ -351,6 +420,8 @@ def preparation(config_path: Path, *, verify_weights: bool = True) -> dict:
     relative_config = config_path.relative_to(ROOT.resolve()).as_posix()
     config = read_json(config_path)
     validate_config(config)
+    from .training_acceleration import overlay_path
+    overlay = overlay_path(config)
     for relative, expected in config["pinned_files"].items():
         if file_sha(ROOT / relative) != expected:
             raise ValueError(f"Frozen source/input changed: {relative}")
@@ -428,6 +499,7 @@ def preparation(config_path: Path, *, verify_weights: bool = True) -> dict:
             "forward_input_tokens": 32768, "response_mask_tokens": 4096,
             "updates_before_export": 2, "updates_after_exact_restore": 1,
             "timeout_seconds": 7200, "short_smoke_can_authorize_training": False,
+            "sample_sharded_rsft": bool(config.get("parallel_rsft_samples")),
         },
         "source_dependency_sha256": local_source_manifest(),
         "config_sha256": file_sha(config_path), "plan": plan,
@@ -444,7 +516,9 @@ def preparation(config_path: Path, *, verify_weights: bool = True) -> dict:
                              "strict197": protocol["strict_goal_disjoint_task_ids"],
                              "seed": protocol["seed"], "samples": 1},
         "proposer": "fixed original RL H0; local replacement of official Claude Opus 4.7",
-        "rsft_data_parallelism": "replicated singleton calls across FSDP ranks, exact token mean",
+        "rsft_data_parallelism": "sample-sharded singleton calls; global response-token mean; masked tail padding"
+        if config.get("parallel_rsft_samples") else "replicated singleton calls across FSDP ranks, exact token mean",
+        "training_kernel_overlay": str(overlay) if overlay else None,
     }
 
 
@@ -463,7 +537,7 @@ def validate_episodes(records: list[dict], rows: list[dict], seed: int, tokens: 
                 or type(record.get("tokens")) is not int or not 0 < record["tokens"] <= tokens):
             raise ValueError("ALFWorld episode identity/seed/reward/token mismatch")
         status = str(record.get("status", "")).rsplit(".", 1)[-1].upper().replace(" ", "_")
-        if status not in {"COMPLETED", "TASK_LIMIT_REACHED", "AGENT_VALIDATION_FAILED",
+        if status not in {"COMPLETED", "TASK_LIMIT_REACHED", "AGENT_VALIDATION_FAILED", "AGENT_INVALID_ACTION",
                           "TOKEN_LIMIT", "INVALID_TOOL_ARGUMENTS"}:
             raise RuntimeError(f"ALFWorld infrastructure/unknown terminal status: {status}")
         if record["reward"] and (status != "COMPLETED" or record.get("truncated")):
@@ -488,7 +562,7 @@ def accepted_calls(records: list[dict], threshold: float = 0.5) -> list[dict]:
 
 
 async def collect(urls: str, rows: list[dict], harness: Path, config: dict,
-                  seed: int, *, training: bool) -> dict:
+                  seed: int, *, training: bool, report_path: Path | None = None) -> dict:
     from . import alfworld_domain
     from .evaluation import Sampler, stable_id_seed_offset
     sampler = Sampler(loopback_urls(urls), concurrency=config["episode_concurrency"],
@@ -519,27 +593,39 @@ async def collect(urls: str, rows: list[dict], harness: Path, config: dict,
         results = await asyncio.gather(*(episode(row) for row in rows))
     finally:
         await sampler.close()
+    report = {"accuracy": sum(r["reward"] for r in results) / len(results),
+              "mean_turn_count": sum(r["turns"] for r in results) / len(results),
+              "question_count": len(rows), "samples_per_question": 1, "metric": "mean@1",
+              "tokens": sum(r["tokens"] for r in results), "results": results}
+    if report_path is not None:
+        write_json(report_path, report)
     validate_episodes(results, rows, seed, config["solver_tokens"], exact_tokens=training)
-    return {"accuracy": sum(r["reward"] for r in results) / len(results),
-            "mean_turn_count": sum(r["turns"] for r in results) / len(results),
-            "question_count": len(rows), "samples_per_question": 1, "metric": "mean@1",
-            "tokens": sum(r["tokens"] for r in results), "results": results}
+    return report
 
 
 @contextmanager
-def environment(launch, root: Path, harness: Path, rows: list[dict], config: dict):
+def environment_matrix(launch, root: Path, harnesses: dict[str, Path],
+                       rows: list[dict], config: dict):
     from .alfworld_solver_eval import bind_environment
-    assignment = {"name": "whale-alfworld", "harness": str(harness),
-                  "task_ids": sorted({row["task_id"] for row in rows})}
-    if rows[0].get("task_split", "test_set") != "test_set":
-        assignment.update(split=rows[0]["task_split"], catalogue=rows[0]["task_catalogue"],
-                          catalogue_sha256=rows[0]["task_catalogue_sha256"])
-    write_json(root / "assignments.json", [assignment])
-    process = launch.module("sao_bridge.alfworld_env_service", [
+    if not harnesses or not rows:
+        raise ValueError("ALFWorld scoring requires nonempty harnesses and task rows")
+    assignments = []
+    for name, harness in harnesses.items():
+        assignment = {"name": name, "harness": str(harness),
+                      "task_ids": sorted({row["task_id"] for row in rows})}
+        if rows[0].get("task_split", "test_set") != "test_set":
+            assignment.update(split=rows[0]["task_split"], catalogue=rows[0]["task_catalogue"],
+                              catalogue_sha256=rows[0]["task_catalogue_sha256"])
+        assignments.append(assignment)
+    write_json(root / "assignments.json", assignments)
+    args = [
         "--run", root / "environment", "--assignments", root / "assignments.json",
         "--controller-port", "28600", "--worker-port", "28610",
         "--concurrency", config["episode_concurrency"], "--async-controller",
-    ], gpus="", name=f"environment-{root.name}")
+    ]
+    if len(assignments) > 1:
+        args.append("--harness-matrix")
+    process = launch.module("sao_bridge.alfworld_env_service", args, gpus="", name=f"environment-{root.name}")
     try:
         controller = "http://127.0.0.1:28600/api"
         launch.ready(process, controller + "/list_workers")
@@ -550,31 +636,72 @@ def environment(launch, root: Path, harness: Path, rows: list[dict], config: dic
                 raise RuntimeError("ALFWorld worker readiness failed")
             time.sleep(1)
         ready = read_json(root / "environment/READY.json")
-        if sorted(ready["health"]["indices"]["whale-alfworld"]) != sorted(assignment["task_ids"]):
-            raise RuntimeError("Official worker exposed the wrong task cohort")
+        for assignment in assignments:
+            if sorted(ready["health"]["indices"][assignment["name"]]) != assignment["task_ids"]:
+                raise RuntimeError("Official worker exposed the wrong task cohort")
         bind_environment(launch, controller, 900)
-        yield [dict(row, task_name="whale-alfworld") for row in rows]
+        yield {name: [dict(row, task_name=name) for row in rows] for name in harnesses}
     finally:
         launch.stop(process)
 
 
 @contextmanager
-def serving(launch, model: Path, name: str):
+def environment(launch, root: Path, harness: Path, rows: list[dict], config: dict):
+    with environment_matrix(launch, root, {"whale-alfworld": harness}, rows, config) as assigned:
+        yield assigned["whale-alfworld"]
+
+
+@contextmanager
+def serving(launch, model: Path, name: str, *, port: int = 19701, memory_fraction: float | None = None):
+    args = ["--enable-prefix-caching"]
+    if memory_fraction is not None:
+        if not 0 < memory_fraction <= .4:
+            raise ValueError("Co-resident search servers reserve at most40% of each GPU each")
+        args += ["--gpu-memory-utilization", str(memory_fraction)]
     with launch.vllm(
-        str(model), port=19701, gpus=GPUS, name=name, data_parallel=8,
+        str(model), port=port, gpus=GPUS, name=name, data_parallel=8,
         max_model_len=32768, tool_call_parser="qwen3_xml", gdn_prefill_backend="triton",
-        language_model_only=True, max_num_seqs=8, server_args=["--enable-prefix-caching"],
+        language_model_only=True, max_num_seqs=8, server_args=args,
     ) as urls:
         yield loopback_urls(urls)
 
 
 def score(launch, model: Path, harness: Path, rows: list[dict], root: Path,
-          config: dict, seed: int, *, training: bool = False) -> dict:
+          config: dict, seed: int, *, training: bool = False, urls: str | None = None) -> dict:
     with environment(launch, root, harness, rows, config) as assigned:
-        with serving(launch, model, f"solver-{root.name}") as urls:
-            report = asyncio.run(collect(urls, assigned, harness, config, seed, training=training))
-    write_json(root / "report.json", report)
+        if urls is None:
+            with serving(launch, model, f"solver-{root.name}") as local_urls:
+                report = asyncio.run(collect(
+                    local_urls, assigned, harness, config, seed, training=training,
+                    report_path=root / "report.json"))
+        else:
+            report = asyncio.run(collect(
+                loopback_urls(urls), assigned, harness, config, seed, training=training,
+                report_path=root / "report.json"))
     return report
+
+
+def score_search_candidates(launch, urls: str, harnesses: dict[str, Path],
+                            rows: list[dict], root: Path, config: dict) -> dict:
+    if not harnesses:
+        raise ValueError("Search scoring requires at least one valid candidate")
+    work = root / f"matrix-{root.name}-{next(iter(harnesses))}"
+    with environment_matrix(launch, work, harnesses, rows, config) as assigned:
+        async def evaluate():
+            semaphore = asyncio.Semaphore(config["search_evaluation_concurrency"])
+
+            async def candidate(name, harness):
+                async with semaphore:
+                    return await collect(
+                        urls, assigned[name], harness, config, config["development_seed"],
+                        training=False, report_path=root / name / "report.json")
+
+            async with asyncio.TaskGroup() as group:
+                tasks = {name: group.create_task(candidate(name, harness))
+                         for name, harness in harnesses.items()}
+            return {name: task.result() for name, task in tasks.items()}
+
+        return asyncio.run(evaluate())
 
 
 def proposal_messages(config: dict, incumbent: Path, archive: list[dict],
@@ -631,63 +758,123 @@ async def propose(urls: str, messages: list[dict], config: dict, seed: int) -> d
 
 def harness_search(launch, model: Path, incumbent: Path, rows: list[dict],
                    root: Path, config: dict, cycle: int) -> Path:
+    if config.get("persistent_search_services", False):
+        with serving(launch, ROOT / config["fixed_proposer"], f"persistent-h0-{cycle}",
+                     port=19801, memory_fraction=.4) as proposer_urls:
+            with serving(launch, model, f"persistent-solver-{cycle}",
+                         port=19701, memory_fraction=.4) as solver_urls:
+                return _harness_search(launch, model, incumbent, rows, root, config, cycle,
+                                       proposer_urls=proposer_urls, solver_urls=solver_urls)
+    return _harness_search(launch, model, incumbent, rows, root, config, cycle)
+
+
+def _harness_search(launch, model: Path, incumbent: Path, rows: list[dict],
+                    root: Path, config: dict, cycle: int, *, proposer_urls=None, solver_urls=None) -> Path:
+    from contextlib import nullcontext
+
     h0 = root / "harnesses/h0/harness.py"
     immutable(h0, read_json(incumbent))
     incumbent = h0
-    report = score(launch, model, h0, rows, root / "h0", config, config["development_seed"])
+    score_options = {"urls": solver_urls} if solver_urls is not None else {}
+    report = score(launch, model, h0, rows, root / "h0", config, config["development_seed"], **score_options)
     points = [("h0", report["accuracy"], report["mean_turn_count"])]
     reports = {"h0": report}
     archive = [{"name": "h0", "success_rate": report["accuracy"], "turns": report["mean_turn_count"]}]
     next_name = 1
     for iteration in range(config["mh_iterations"]):
-        outputs = []
-        with serving(launch, ROOT / config["fixed_proposer"], f"h0-c{cycle}-i{iteration}") as urls:
-            for slot in range(config["proposals_per_iteration"]):
+        if search_time_exhausted(config):
+            write_json(root / "BUDGET_STOP.json", {
+                "reason": "reporting_reserve_not_performance", "iterations_completed": iteration,
+                "generated_proposals": next_name - 1, "at_unix": time.time(),
+            })
+            break
+        async def generate_iteration(urls):
+            semaphore = asyncio.Semaphore(config.get("proposal_concurrency", 1))
+
+            async def generate_slot(slot):
                 messages = proposal_messages(config, incumbent, archive, report, slot)
-                output = asyncio.run(propose(
-                    urls, messages, config,
-                    config["proposer_seed"] + cycle * 10000 + iteration * 100 + slot))
+                async with semaphore:
+                    output = await propose(
+                        urls, messages, config,
+                        config["proposer_seed"] + cycle * 10000 + iteration * 100 + slot)
+                return dict(output, messages=messages)
+
+            return await asyncio.gather(*(generate_slot(slot) for slot in range(config["proposals_per_iteration"])))
+
+        proposal_service = nullcontext(proposer_urls) if proposer_urls is not None else serving(
+            launch, ROOT / config["fixed_proposer"], f"h0-c{cycle}-i{iteration}")
+        with proposal_service as urls:
+            outputs = asyncio.run(generate_iteration(urls))
+            for output in outputs:
                 output["name"] = f"h{next_name}"
                 next_name += 1
-                write_json(root / "proposals" / f"{output['name']}.json",
-                           dict(output, messages=messages))
-                outputs.append(output)
-        for output in outputs:
-            name = output["name"]
-            if not output["valid"]:
-                archive.append({"name": name, "valid": False, "error": output["error"]})
-                continue
-            candidate = root / "harnesses" / name / "harness.py"
-            immutable(candidate, output["patch"])
-            result = score(launch, model, candidate, rows, root / name, config,
-                           config["development_seed"])
-            reports[name] = result
-            points.append((name, result["accuracy"], result["mean_turn_count"]))
-            archive.append({"name": name, "valid": True, "success_rate": result["accuracy"],
-                            "turns": result["mean_turn_count"], "description": output["patch"].get("description", "")})
+                write_json(root / "proposals" / f"{output['name']}.json", output)
+
+        def evaluate_outputs(urls=None):
+            candidates = {}
+            for output in outputs:
+                if output["valid"]:
+                    path = root / "harnesses" / output["name"] / "harness.py"
+                    immutable(path, output["patch"])
+                    candidates[output["name"]] = path
+            parallel = {}
+            if config.get("search_evaluation_concurrency", 1) > 1 and candidates:
+                if urls is None:
+                    raise ValueError("Parallel search evaluation requires the shared Solver service")
+                parallel = score_search_candidates(launch, urls, candidates, rows, root, config)
+            for output in outputs:
+                name = output["name"]
+                if not output["valid"]:
+                    archive.append({"name": name, "valid": False, "error": output["error"]})
+                    continue
+                if parallel:
+                    result = parallel[name]
+                else:
+                    kwargs = {"urls": urls} if urls is not None else {}
+                    result = score(launch, model, candidates[name], rows, root / name, config,
+                                   config["development_seed"], **kwargs)
+                reports[name] = result
+                points.append((name, result["accuracy"], result["mean_turn_count"]))
+                archive.append({"name": name, "valid": True, "success_rate": result["accuracy"],
+                                "turns": result["mean_turn_count"],
+                                "description": output["patch"].get("description", "")})
+
+        if solver_urls is not None:
+            evaluate_outputs(solver_urls)
+        elif config.get("reuse_solver_for_search", False) and any(output["valid"] for output in outputs):
+            with serving(launch, model, f"search-solver-c{cycle}-i{iteration}") as urls:
+                evaluate_outputs(urls)
+        else:
+            evaluate_outputs()
         accepted, frontier = select_harness(points, root)
         incumbent = root / "harnesses" / accepted / "harness.py"
         report = reports[accepted]
         write_json(root / f"iteration-{iteration:02d}.json",
                    {"accepted": accepted, "frontier": frontier, "archive": archive})
-    write_json(root / "SELECTED.json", {"harness": str(incumbent), "sha256": file_sha(incumbent),
-                                       "model": str(model), "development_only": True})
+    write_json(root / "SELECTED.json", {
+        "harness": str(incumbent), "sha256": file_sha(incumbent), "model": str(model),
+        "development_only": True, "accuracy": report["accuracy"],
+        "report": str(root / incumbent.parent.name / "report.json"),
+    })
     return incumbent
 
 
-def native_batch(calls: list[dict], pad: int, mini_batch: int):
+def native_batch(calls: list[dict], pad: int, mini_batch: int, active: list[bool] | None = None):
     import torch
     from verl import DataProto
     pmax, rmax = max(len(c["prompt_ids"]) for c in calls), max(len(c["response_ids"]) for c in calls)
     ids = torch.full((len(calls), pmax + rmax), pad, dtype=torch.long)
     attention = torch.zeros_like(ids)
     response_mask = torch.zeros((len(calls), rmax), dtype=torch.long)
+    if active is not None and (len(active) != len(calls) or any(type(value) is not bool for value in active)):
+        raise ValueError("Native sample-padding flags must bind every local call")
     for index, call in enumerate(calls):
         prompt, response = call["prompt_ids"], call["response_ids"]
         ids[index, pmax-len(prompt):pmax] = torch.tensor(prompt)
         ids[index, pmax:pmax+len(response)] = torch.tensor(response)
         attention[index, pmax-len(prompt):pmax+len(response)] = 1
-        response_mask[index, :len(response)] = 1
+        if active is None or active[index]:
+            response_mask[index, :len(response)] = 1
     return DataProto.from_dict(tensors={
         "input_ids": ids, "attention_mask": attention,
         "position_ids": (attention.cumsum(-1) - 1).clamp(min=0),
@@ -816,10 +1003,13 @@ def cost_report(root: Path, config: dict) -> dict:
     updates = [read_json(path) for path in root.glob("cycle-*/optimizer/COMMITTED.json")]
     calls = sum(value["accepted_calls"] for value in updates)
     tokens = sum(value["response_tokens"] for value in updates)
+    multipliers = {value.get("replicated_data_across_ranks", config["world_size"]) for value in updates}
     return {
         "actual_solver_episodes": sum(len(value["results"]) for value in reports.values()),
         "training_rollout_episodes": sum(len(v["results"]) for p, v in reports.items() if p.startswith("cycle-")),
         "development_reward_episodes": sum(len(v["results"]) for p, v in reports.items() if p.startswith("mh-")),
+        "initial_development_episodes": sum(len(v["results"]) for p, v in reports.items()
+                                            if p.startswith("initial-development/")),
         "final_report_episodes": sum(len(v["results"]) for p, v in reports.items() if p.startswith("final200/")),
         "actual_solver_generated_tokens": sum(value["tokens"] for value in reports.values()),
         "proposer_completions": len(proposals),
@@ -828,10 +1018,16 @@ def cost_report(root: Path, config: dict) -> dict:
         "invalid_proposals": sum(not value["valid"] for value in proposals),
         "logical_rsft_forward_calls": calls,
         "logical_rsft_response_tokens": tokens,
-        "rank_replicated_rsft_forward_calls": calls * config["world_size"],
-        "rank_replicated_rsft_response_token_positions": tokens * config["world_size"],
+        "rank_replicated_rsft_forward_calls": sum(value.get(
+            "physical_rsft_forward_calls", value["accepted_calls"] * config["world_size"]) for value in updates),
+        "rank_replicated_rsft_response_token_positions": sum(value.get(
+            "physical_rsft_response_token_positions", value["response_tokens"] * config["world_size"])
+            for value in updates),
         "logical_optimizer_steps": sum(value["metrics"]["actor/sft_updates"] for value in updates),
-        "replicated_rank_multiplier": config["world_size"],
+        "replicated_rank_multiplier": next(iter(multipliers)) if len(multipliers) == 1 else (
+            None if multipliers else (1 if config.get("parallel_rsft_samples") else config["world_size"])),
+        "mixed_native_execution_modes": len(multipliers) > 1,
+        "masked_native_padding_calls": sum(value.get("masked_padding_calls", 0) for value in updates),
         "frozen_preparation_h0_proposals_inherited_not_in_incremental_cost": 8,
         "inherited_initialization_cost": "Shared H0 selection/evidence and historical baseline reports "
                                        "are not free; their original receipts are separate, not reexecuted.",
@@ -841,8 +1037,93 @@ def cost_report(root: Path, config: dict) -> dict:
     }
 
 
+def checked_prefix(config: dict) -> tuple[Path, dict]:
+    prefix = config.get("native_prefix")
+    if not isinstance(prefix, dict):
+        raise ValueError("Cross-configuration native continuation requires a frozen prefix authorization")
+    root = Path(prefix["root"])
+    if (file_sha(root / "FROZEN.json") != prefix["frozen_sha256"]
+            or file_sha(root / "THROUGHPUT_PAUSED.json") != prefix["pause_sha256"]):
+        raise ValueError("Native prefix source/pause evidence changed")
+    original = read_json(root / "FROZEN.json")["config"]
+    allowed = {"native_prefix", "parallel_rsft_samples", "parallel_checkpoint_hashing", "defer_reload_to_use",
+               "cycle_batch_episode_counts", "persistent_search_services", "episode_concurrency",
+               "search_deadline_unix"}
+    changed = {key for key in original.keys() | config.keys() if original.get(key) != config.get(key)}
+    if changed - allowed:
+        raise ValueError(f"Native prefix cannot authorize changed learning/data settings: {changed - allowed}")
+    count = prefix["batches"]
+    paused = read_json(root / "THROUGHPUT_PAUSED.json")
+    if (type(count) is not int or not 0 < count < config["rsft_batches_per_cycle"]
+            or paused["status"] != "coordinator_paused_after_native_commit"
+            or paused["training_episodes"] != count * config["episodes_per_batch"]):
+        raise ValueError("Native prefix must end at the declared complete batch boundary")
+    last = root / "execution" / f"cycle-00-rsft-{count-1:02d}/optimizer/COMMITTED.json"
+    if paused["native_commit_sha256"] != file_sha(last):
+        raise ValueError("Native prefix no longer matches the exact paused checkpoint")
+    for name, digest_value in prefix["pins"].items():
+        if file_sha(root / name) != digest_value:
+            raise ValueError(f"Native prefix artifact changed: {name}")
+    return root, original
+
+
+def adopt_prefix(root: Path, config: dict, rows: list[dict]):
+    import shutil
+
+    origin, original = checked_prefix(config)
+    prefix = config["native_prefix"]
+    updates, consumed = [], 0
+    allowed_configs = [original]
+    ancestor = original
+    seen = {str(origin)}
+    while ancestor.get("native_prefix") is not None:
+        ancestor_root, ancestor = checked_prefix(ancestor)
+        if str(ancestor_root) in seen:
+            raise ValueError("Native prefix provenance contains a cycle")
+        seen.add(str(ancestor_root))
+        allowed_configs.append(ancestor)
+    for step in range(prefix["batches"]):
+        name = f"cycle-00-rsft-{step:02d}"
+        old, work = origin / "execution" / name, root / name
+        request = read_json(old / "request.json")
+        batch = rows[consumed:consumed + config["episodes_per_batch"]]
+        report = read_json(old / "report.json")
+        if (request["rows"] != batch or request["seed"] != config["training_seed"] + consumed * 1009
+                or request["config"] not in allowed_configs
+                or request["report_sha256"] != file_sha(old / "report.json")):
+            raise ValueError("Native prefix rollout/configuration identity changed")
+        validate_episodes(report["results"], batch, request["seed"], config["solver_tokens"], exact_tokens=True)
+        receipt = read_json(old / "optimizer/COMMITTED.json")
+        if (receipt["config_sha256"] != digest(request["config"]) or receipt["purpose"] != "research_rsft"
+                or receipt["accepted_calls"] != len(accepted_calls(report["results"]))):
+            raise ValueError("Native prefix update does not bind its actual successful calls")
+        (work / "optimizer").mkdir(parents=True)
+        for filename in ("report.json", "request.json", "optimizer/COMMITTED.json"):
+            shutil.copyfile(old / filename, work / filename)
+        for rank in range(config["world_size"]):
+            (work / "optimizer" / f"rank-{rank:04d}.pt").symlink_to(
+                old / "optimizer" / f"rank-{rank:04d}.pt")
+        consumed += len(batch)
+        verified = (old / "RELOAD_VERIFIED.json").exists()
+        if verified:
+            shutil.copyfile(old / "RELOAD_VERIFIED.json", work / "RELOAD_VERIFIED.json")
+        updates.append({"consumed": consumed, "updated": True, "optimizer": str(work / "optimizer"),
+                        "rollout_reload_verified": verified, "inherited_native_prefix": True})
+    initial_path = origin / "execution/initial-development/report.json"
+    if file_sha(initial_path) != prefix["initial_development_sha256"]:
+        raise ValueError("The training-before-development reference changed")
+    initial = read_json(initial_path)
+    write_json(root / "initial-development/report.json", initial)
+    write_json(root / "PREFIX_ADOPTED.json", {
+        "status": "passed", "source": str(origin), "batches": prefix["batches"],
+        "training_episodes": consumed, "resampled_episodes": 0, "optimizer_resets": 0,
+        "logical_cost_includes_reused_prefix_once": True,
+    })
+    return Path(receipt["checkpoint"]), work / "optimizer", updates, consumed, initial
+
+
 def train_native(request_path: Path) -> None:
-    """Exact upstream token-mean RSFT; identical singleton inputs on each FSDP rank."""
+    """Global token-mean RSFT with replicated or equivalent sample-sharded inputs."""
     started = time.monotonic()
     import torch
     import torch.distributed as dist
@@ -851,12 +1132,20 @@ def train_native(request_path: Path) -> None:
     from harness_r1_searchqa.grpo_train import _load_fsdp, _logprobs, _export_actor, _rank_zero
     from .common import ensure_model_runtime_metadata
     from .resources import require_research_node
+    from .whale_parallel_sft import parallel_sft_update, rank_state_hashes, shard_calls
 
     execution_source_audit()
     require_research_node()
     request = read_json(request_path)
     config = request["config"]
     validate_config(config)
+    if config.get("training_kernel_overlay"):
+        import importlib.metadata
+        from .training_acceleration import overlay_path
+        overlay_path(config)
+        actual = {name: importlib.metadata.version(name) for name in config["training_kernel_versions"]}
+        if actual != config["training_kernel_versions"]:
+            raise RuntimeError(f"Native WHALE kernel environment differs from its freeze: {actual}")
     if file_sha(Path(__file__)) != request["adapter_sha256"]:
         raise ValueError("Adapter source changed before native RSFT")
     for name, expected in config["pinned_files"].items():
@@ -900,12 +1189,20 @@ def train_native(request_path: Path) -> None:
         tokenizer = AutoTokenizer.from_pretrained(request["model"], local_files_only=True)
         if smoke:
             calls = smoke_calls(tokenizer)
+            if config.get("parallel_rsft_samples"):
+                calls = calls * (world // len(calls))
         restored_exactly = False
         if request.get("resume"):
             previous = Path(request["resume"])
             receipt = read_json(previous / "COMMITTED.json")
             saved_path = previous / f"rank-{rank:04d}.pt"
-            if (receipt["config_sha256"] != digest(config)
+            expected_config = config
+            if receipt["config_sha256"] != digest(config):
+                origin, expected_config = checked_prefix(config)
+                last = origin / "execution" / f"cycle-00-rsft-{config['native_prefix']['batches']-1:02d}"
+                if file_sha(previous / "COMMITTED.json") != file_sha(last / "optimizer/COMMITTED.json"):
+                    raise ValueError("Only the exact last authorized native prefix can change execution modes")
+            if (receipt["config_sha256"] != digest(expected_config)
                     or file_sha(saved_path) != receipt["rank_state_sha256"][str(rank)]
                     or Path(receipt["checkpoint"]).resolve() != Path(request["model"]).resolve()):
                 raise ValueError("Native optimizer continuation identity mismatch")
@@ -932,7 +1229,7 @@ def train_native(request_path: Path) -> None:
                 prompt_width = batch["input_ids"].shape[1] - width
                 prompt = batch["input_ids"][0, :prompt_width][
                     batch["attention_mask"][0, :prompt_width].bool()].tolist()
-                response = batch["responses"][0][batch["response_mask"][0].bool()].tolist()
+                response = batch["responses"][0][batch["attention_mask"][0, prompt_width:].bool()].tolist()
                 call = {"prompt_ids": prompt, "response_ids": response}
                 if smoke:
                     lp = full_context_logprobs(self.actor_module, call, device, temperature)
@@ -958,8 +1255,13 @@ def train_native(request_path: Path) -> None:
         before = [p.detach().clone() for p in model.parameters()]
         steps_before = optimizer_steps(optimizer)
         updates = 2 if smoke and not request.get("resume") else 1
-        batch = native_batch(calls, tokenizer.pad_token_id, config["sft_mini_batch_size"])
-        update_metrics = [actor.update_sft_policy(batch) for _ in range(updates)]
+        if config.get("parallel_rsft_samples"):
+            local_calls, active = shard_calls(calls, rank, world)
+            batch = native_batch(local_calls, tokenizer.pad_token_id, config["sft_mini_batch_size"] // world, active)
+            update_metrics = [parallel_sft_update(actor, batch, device) for _ in range(updates)]
+        else:
+            batch = native_batch(calls, tokenizer.pad_token_id, config["sft_mini_batch_size"])
+            update_metrics = [actor.update_sft_policy(batch) for _ in range(updates)]
         metrics = update_metrics[0] if not smoke else {
             "actor/sft_updates": sum(value["actor/sft_updates"] for value in update_metrics),
             "actor/sft_token_count": sum(value["actor/sft_token_count"] for value in update_metrics),
@@ -998,6 +1300,16 @@ def train_native(request_path: Path) -> None:
                 "peak_gpu_reserved_bytes": torch.cuda.max_memory_reserved(device),
             })
         dist.barrier()
+        hashes = None
+        if rank == 0:
+            hashes = rank_state_hashes(output, world) if config.get("parallel_checkpoint_hashing") else {
+                str(i): file_sha(output / f"rank-{i:04d}.pt") for i in range(world)}
+        padding_count = (-len(calls)) % world if config.get("parallel_rsft_samples") else 0
+        shortest = min(calls, key=lambda call: len(call["prompt_ids"]) + len(call["response_ids"]))
+        physical_calls = len(calls) + padding_count if config.get("parallel_rsft_samples") else len(calls) * world
+        physical_tokens = (sum(len(call["response_ids"]) for call in calls)
+                           + padding_count * len(shortest["response_ids"])) if config.get("parallel_rsft_samples") else (
+                               world * sum(len(call["response_ids"]) for call in calls))
         _rank_zero(lambda: write_json(output / "COMMITTED.json", {
             "checkpoint": str(checkpoint), "config_sha256": digest(config),
             "identity": identity, "metrics": metrics, "accepted_calls": 0 if smoke else len(calls),
@@ -1008,9 +1320,18 @@ def train_native(request_path: Path) -> None:
             "synthetic_calls": len(calls) * updates if smoke else 0,
             "smoke_proofs": smoke_proofs if smoke else None,
             "response_tokens": updates * sum(len(c["response_ids"]) for c in calls),
-            "rank_state_sha256": {str(i): file_sha(output / f"rank-{i:04d}.pt") for i in range(world)},
-            "native_rsft": True, "replicated_data_across_ranks": world, "weight_shards_changed": True,
+            "rank_state_sha256": hashes,
+            "native_rsft": True,
+            "replicated_data_across_ranks": 1 if config.get("parallel_rsft_samples") else world,
+            "sample_sharded_rsft": bool(config.get("parallel_rsft_samples")),
+            "global_minibatch_size": config["sft_mini_batch_size"],
+            "masked_padding_calls": padding_count * updates,
+            "physical_rsft_forward_calls": physical_calls * updates,
+            "physical_rsft_response_token_positions": physical_tokens * updates,
+            "optimizer_steps_before": steps_before, "optimizer_steps_after": optimizer_steps(optimizer),
+            "weight_shards_changed": True,
             "rollout_reload_verified": False,
+            "training_kernel_versions": config.get("training_kernel_versions"),
         }), rank)
     finally:
         dist.destroy_process_group()
@@ -1051,11 +1372,13 @@ def run_gpu_smoke(frozen_path: Path, assigned_node: str, output: Path) -> dict:
                 sys.executable, "-B", "-m", "torch.distributed.run", "--standalone",
                 "--local-addr=127.0.0.1", "--nproc-per-node=8", "--max-restarts=0",
                 "-m", "sao_bridge.alfworld_whale_baseline", "train-native", "--request", str(path),
-            ], gpus=GPUS, name=f"smoke-{stage}")
+            ], gpus=GPUS, name=f"smoke-{stage}", env_overrides=native_environment(frozen["config"], launch))
             launch.wait(child, "real W0 RSFT GPU smoke", timeout=3000)
             receipt = read_json(Path(request["output"]) / "COMMITTED.json")
             expected_before = [] if stage == 0 else [2]
-            expected_calls = 4 if stage == 0 else 2
+            sharded = frozen["config"].get("parallel_rsft_samples", False)
+            logical_batch = 8 if sharded else 2
+            expected_calls = logical_batch * (2 if stage == 0 else 1)
             if (receipt["purpose"] != "synthetic_gpu_smoke" or receipt["accepted_episodes"] != 0
                     or receipt["synthetic_calls"] != expected_calls or len(receipt["smoke_proofs"]) != 8
                     or {proof.get("rank") for proof in receipt["smoke_proofs"]} != set(range(8))
@@ -1066,8 +1389,9 @@ def run_gpu_smoke(frozen_path: Path, assigned_node: str, output: Path) -> dict:
                 raise RuntimeError("GPU smoke native proof incomplete")
             for proof in receipt["smoke_proofs"]:
                 evidence = proof.get("forward_evidence", [])
-                expected_steps = [[], [], [1], [1]] if stage == 0 else [[2], [2]]
-                if (len(evidence) != expected_calls
+                expected_steps = ([[], [1]] if stage == 0 else [[2]]) if sharded else (
+                    [[], [], [1], [1]] if stage == 0 else [[2], [2]])
+                if (len(evidence) != len(expected_steps)
                         or any(row.get("input_tokens") != 32768 or row.get("response_mask_tokens") != 4096
                                for row in evidence)
                         or [row.get("optimizer_steps") for row in evidence] != expected_steps):
@@ -1081,12 +1405,15 @@ def run_gpu_smoke(frozen_path: Path, assigned_node: str, output: Path) -> dict:
             "frozen_sha256": file_sha(frozen_path), "adapter_sha256": frozen["adapter_sha256"],
             "initial_model": str(ROOT / frozen["config"]["initial_solver"]),
             "forward_backward_export": True, "exact_fp32_and_adam_restore": True,
-            "vllm_export_load_verified": True, "research_episodes": 0, "synthetic_calls": 6,
-            "logical_optimizer_steps": 3, "rank_replicated_forward_calls": 48,
+            "vllm_export_load_verified": True, "research_episodes": 0,
+            "synthetic_calls": sum(row["synthetic_calls"] for row in stages),
+            "logical_optimizer_steps": 3,
+            "rank_replicated_forward_calls": sum(row["physical_rsft_forward_calls"] for row in stages),
+            "sample_sharded_rsft": bool(frozen["config"].get("parallel_rsft_samples")),
             "full_context_tokens": 32768, "response_mask_tokens": 4096,
             "optimizer_steps_before_restore": 2, "full_context_memory_validated": True,
             "logical_synthetic_response_tokens": sum(r["response_tokens"] for r in stages),
-            "rank_replicated_synthetic_response_positions": 8 * sum(r["response_tokens"] for r in stages),
+            "rank_replicated_synthetic_response_positions": sum(r["physical_rsft_response_token_positions"] for r in stages),
             "elapsed_seconds": time.monotonic() - started,
             "limitation": "Synthetic full-context memory/restore validation only, not ALFWorld performance.",
             "stage_receipts": [str(output / f"stage-{i:02d}/COMMITTED.json") for i in range(2)],
@@ -1238,7 +1565,12 @@ def run(frozen_path: Path, assigned_node: str, *, wait_for_joint: Path | None = 
     root = frozen_path.parent / "execution"
     root.mkdir(exist_ok=False)
     started = time.monotonic()
-    launch = create_launcher(root / "supervision", budget=WallBudget(config["wall_budget_seconds"]))
+    wall_seconds = config["wall_budget_seconds"]
+    if "user_report_deadline_unix" in config:
+        wall_seconds = min(wall_seconds, config["user_report_deadline_unix"] - time.time() - 300)
+    if wall_seconds <= 0:
+        raise TimeoutError("No time remains before the user reporting deadline")
+    launch = create_launcher(root / "supervision", budget=WallBudget(wall_seconds))
     write_json(root / "resource_audit.json", release)
     all_rows = read_json(ROOT / config["training_rows"])
     rows = training_episode_rows(all_rows, frozen["plan"]["train_record_indices"])
@@ -1247,6 +1579,9 @@ def run(frozen_path: Path, assigned_node: str, *, wait_for_joint: Path | None = 
     model, harness = ROOT / config["initial_solver"], ROOT / config["initial_harness"]
     resume = None
     updates, consumed = [], 0
+    stop_reason = "fixed_budget_completed"
+    initial_development = None
+    cycles_completed = 0
 
     def check_freeze():
         execution_source_audit(frozen)
@@ -1258,13 +1593,27 @@ def run(frozen_path: Path, assigned_node: str, *, wait_for_joint: Path | None = 
                 raise RuntimeError(f"Frozen dependency changed during execution: {name}")
 
     try:
+        if config.get("native_prefix") is not None:
+            model, resume, updates, consumed, initial_development = adopt_prefix(root, config, rows)
+        if config.get("early_stop_development_drop") is not None and initial_development is None:
+            initial_development = score(
+                launch, model, harness, dev, root / "initial-development", config, config["development_seed"])
         for cycle in range(config["cycles"]):
-            for step in range(config["rsft_batches_per_cycle"]):
+            for step, episode_count in enumerate(rsft_batch_layout(config)[cycle]):
+                if cycle == 0 and step < config.get("native_prefix", {}).get("batches", 0):
+                    continue
+                if training_time_exhausted(config):
+                    stop_reason = "reporting_reserve_not_performance"
+                    break
                 check_freeze()
                 work = root / f"cycle-{cycle:02d}-rsft-{step:02d}"
-                batch = rows[consumed:consumed + config["episodes_per_batch"]]
+                batch = rows[consumed:consumed + episode_count]
                 seed = config["training_seed"] + consumed * 1009
                 report = score(launch, model, harness, batch, work, config, seed, training=True)
+                if updates and updates[-1]["updated"] and not updates[-1]["rollout_reload_verified"]:
+                    updates[-1]["rollout_reload_verified"] = True
+                    write_json(Path(updates[-1]["optimizer"]).parent / "RELOAD_VERIFIED.json",
+                               {**updates[-1], "verified_by_actual_rollout": str(work / "report.json")})
                 consumed += len(batch)
                 if not accepted_calls(report["results"]):
                     updates.append({"consumed": consumed, "updated": False, "reason": "no accepted trajectories"})
@@ -1280,35 +1629,73 @@ def run(frozen_path: Path, assigned_node: str, *, wait_for_joint: Path | None = 
                     "--local-addr=127.0.0.1", "--nproc-per-node=8", "--max-restarts=0",
                     "-m", "sao_bridge.alfworld_whale_baseline", "train-native",
                     "--request", str(work / "request.json"),
-                ], gpus=GPUS, name=f"rsft-{cycle}-{step}")
+                ], gpus=GPUS, name=f"rsft-{cycle}-{step}", env_overrides=native_environment(config, launch))
                 launch.wait(child, "native WHALE RSFT", timeout=config["phase_timeout_seconds"])
                 receipt = read_json(work / "optimizer/COMMITTED.json")
                 model, resume = Path(receipt["checkpoint"]), work / "optimizer"
-                # A persisted export is not enough: vLLM must load it before promotion.
-                with serving(launch, model, f"verify-rsft-{cycle}-{step}"):
-                    pass
+                verified = not config.get("defer_reload_to_use", False)
+                if verified:
+                    with serving(launch, model, f"verify-rsft-{cycle}-{step}"):
+                        pass
                 updates.append({"consumed": consumed, "updated": True, "optimizer": str(resume),
-                                "rollout_reload_verified": True})
-                write_json(work / "RELOAD_VERIFIED.json", updates[-1])
+                                "rollout_reload_verified": verified})
+                write_json(work / ("RELOAD_VERIFIED.json" if verified else "RELOAD_PENDING.json"), updates[-1])
+                write_json(root / "PROGRESS.json", {
+                    "phase": "rsft", "cycle": cycle, "batches_completed": step + 1,
+                    "training_episodes": consumed, "model": str(model), "at_unix": time.time(),
+                })
+            if stop_reason == "reporting_reserve_not_performance":
+                break
             harness = harness_search(launch, model, harness, dev, root / f"mh-{cycle:02d}", config, cycle)
-            write_json(root / "PROGRESS.json", {"cycles_completed": cycle + 1, "updates": updates})
-        if consumed != len(rows):
+            if updates and updates[-1]["updated"] and not updates[-1]["rollout_reload_verified"]:
+                updates[-1]["rollout_reload_verified"] = True
+                write_json(Path(updates[-1]["optimizer"]).parent / "RELOAD_VERIFIED.json",
+                           {**updates[-1], "verified_by_actual_rollout": str(root / f"mh-{cycle:02d}/h0/report.json")})
+            if (root / f"mh-{cycle:02d}/BUDGET_STOP.json").exists():
+                stop_reason = "reporting_reserve_not_performance"
+                break
+            cycles_completed = cycle + 1
+            write_json(root / "PROGRESS.json", {"cycles_completed": cycles_completed, "updates": updates})
+            if initial_development is not None and cycle + 1 < config["cycles"]:
+                selected = read_json(root / f"mh-{cycle:02d}/SELECTED.json")
+                if development_regressed(
+                    initial_development["accuracy"], selected["accuracy"], config["early_stop_development_drop"],
+                ):
+                    stop_reason = "predeclared_development_regression"
+                    write_json(root / "EARLY_STOP.json", {
+                        "reason": stop_reason, "initial_accuracy": initial_development["accuracy"],
+                        "current_accuracy": selected["accuracy"],
+                        "minimum_drop": config["early_stop_development_drop"],
+                        "cycles_completed": cycle + 1, "training_episodes": consumed,
+                        "final200_not_used_for_stopping": True,
+                    })
+                    break
+        if consumed != len(rows) and stop_reason == "fixed_budget_completed":
             raise RuntimeError("Incomplete frozen WHALE budget")
         check_freeze()
         immutable(root / "FINAL_SELECTION.json", {
             "model": str(model), "harness": str(harness), "harness_sha256": file_sha(harness),
             "training_episodes": consumed, "updates": updates, "selected_before_final_evaluation": True,
+            "stop_reason": stop_reason, "planned_training_episodes": len(rows),
         })
         evaluation = frozen["final_evaluation"]
         final_rows = [{"id": f"alfworld-{index}", "task_id": index} for index in evaluation["all200"]]
         report = score(launch, model, harness, final_rows, root / "final200", config, evaluation["seed"])
+        if updates and updates[-1]["updated"] and not updates[-1]["rollout_reload_verified"]:
+            updates[-1]["rollout_reload_verified"] = True
+            write_json(Path(updates[-1]["optimizer"]).parent / "RELOAD_VERIFIED.json",
+                       {**updates[-1], "verified_by_actual_rollout": str(root / "final200/report.json")})
         from .alfworld_core_extend import subset_report
         strict = subset_report(report, evaluation["strict197"])
         complete = {"status": "completed", "label": "local WHALE-style ALFWorld adaptation",
                     "all200": report["accuracy"], "strict197": strict["accuracy"],
                     "training_episodes": consumed, "weight_update_batches": sum(x["updated"] for x in updates),
-                    "published_alfworld_baseline": False}
+                    "published_alfworld_baseline": False, "stop_reason": stop_reason,
+                    "planned_training_episodes": len(rows), "cycles_completed": cycles_completed}
         complete["cost"] = cost_report(root, config)
+        complete["planned_proposals"] = config["cycles"] * config["mh_iterations"] * config["proposals_per_iteration"]
+        complete["sample_budget_fully_consumed"] = (
+            consumed == len(rows) and complete["cost"]["proposer_completions"] == complete["planned_proposals"])
         complete["cost"]["inherited_initialization"] = frozen.get("inherited_initialization_cost")
         complete["elapsed_seconds"] = time.monotonic() - started
         write_json(root / "COMPLETE.json", complete)

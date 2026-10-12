@@ -1,0 +1,143 @@
+{
+  "status": "passed",
+  "at_unix": 1791306201.6928852,
+  "native_comparison": {
+    "status": "passed",
+    "initial_output_errors": {
+      "reference": [
+        {
+          "relative_rms": 0.0014077437808737159,
+          "mean_absolute": 0.012935139238834381
+        },
+        {
+          "relative_rms": 0.0013486538082361221,
+          "mean_absolute": 0.012351376935839653
+        },
+        {
+          "relative_rms": 0.0013361404417082667,
+          "mean_absolute": 0.012315580621361732
+        },
+        {
+          "relative_rms": 0.0013400140451267362,
+          "mean_absolute": 0.012269536033272743
+        }
+      ],
+      "proximal": [
+        {
+          "relative_rms": 0.0014077437808737159,
+          "mean_absolute": 0.012935139238834381
+        },
+        {
+          "relative_rms": 0.0013486538082361221,
+          "mean_absolute": 0.012351376935839653
+        },
+        {
+          "relative_rms": 0.0013361404417082667,
+          "mean_absolute": 0.012315580621361732
+        },
+        {
+          "relative_rms": 0.0013400140451267362,
+          "mean_absolute": 0.012269536033272743
+        }
+      ],
+      "values": [
+        {
+          "relative_rms": 0.023373909294605255,
+          "mean_absolute": 0.013824633322656155
+        },
+        {
+          "relative_rms": 0.02183385193347931,
+          "mean_absolute": 0.01363370381295681
+        },
+        {
+          "relative_rms": 0.02229098230600357,
+          "mean_absolute": 0.013915660791099072
+        },
+        {
+          "relative_rms": 0.02527058869600296,
+          "mean_absolute": 0.014568397775292397
+        }
+      ]
+    },
+    "native_update_seconds": {
+      "baseline": {
+        "actor": [
+          114.4153847694397,
+          117.58583331108093
+        ],
+        "critic": [
+          111.15625953674316,
+          109.97571802139282,
+          111.63775062561035,
+          115.1451723575592,
+          117.35755252838135,
+          114.67682123184204
+        ]
+      },
+      "accelerated": {
+        "actor": [
+          57.29153752326965,
+          16.098984956741333
+        ],
+        "critic": [
+          124.20733714103699,
+          11.483369827270508,
+          11.57106876373291,
+          11.504615545272827,
+          12.502740621566772,
+          11.53379487991333
+        ]
+      }
+    },
+    "actor_plus_two_critics_seconds": {
+      "baseline": 346.939475774765,
+      "accelerated": 39.16657471656799
+    },
+    "optimizer_speedup": 8.85804996442553,
+    "new_research_trajectories": 0,
+    "scope": "Full32K synthetic Actor/Critic updates; not a claim of end-to-end rollout speed"
+  },
+  "primary_endpoint": {
+    "no_patch": {
+      "all200": {
+        "accuracy": 0.905,
+        "successes": 181.0
+      },
+      "strict197": {
+        "accuracy": 0.9086294416243654,
+        "successes": 179.0
+      }
+    },
+    "joint_harness": {
+      "all200": {
+        "accuracy": 0.925,
+        "successes": 185.0
+      },
+      "strict197": {
+        "accuracy": 0.9289340101522843,
+        "successes": 183.0
+      }
+    }
+  },
+  "primary_comparison": {
+    "question_count": 200,
+    "metric": "mean@1",
+    "control_accuracy": 0.92,
+    "candidate_accuracy": 0.925,
+    "candidate_minus_control": 0.005,
+    "paired_question_bootstrap_95pct": [
+      -0.03,
+      0.04
+    ],
+    "improved_questions": 8,
+    "regressed_questions": 7,
+    "bootstrap_draws": 10000,
+    "bootstrap_seed": 9000045,
+    "limitation": "Question-level uncertainty only; not training-seed robustness. Development selection scores are exploratory, not confirmatory."
+  },
+  "primary_path": "/mnt/3fs/xudong/coevolve/runs/alfworld_explicit_hint_training_replication_v1/repeat/matched_COMPLETE.json",
+  "new_sao_training": 0,
+  "new_training_seeds": 0,
+  "research_training_scope": "Only the already-running MA-SAO arm; native acceleration tests are synthetic",
+  "manual_extension": "Deferred by user reprioritization; not silently removed from the original design"
+}

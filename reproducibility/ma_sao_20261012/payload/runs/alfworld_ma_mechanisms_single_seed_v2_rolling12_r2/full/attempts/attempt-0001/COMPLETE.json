@@ -1,0 +1,36 @@
+{
+  "status": "completed",
+  "audit": {
+    "status": "passed",
+    "arm": "full",
+    "roles": {
+      "editor": {
+        "active_rounds": 96,
+        "inactive_rounds": 48,
+        "critic_only_warmup_steps": 3,
+        "actor_steps": 93,
+        "critic_steps": 192,
+        "consumed_trajectories": 768,
+        "generated_trajectories": 1152,
+        "recorded_action_tokens": 3067926,
+        "invalid_harness_episode_count": 106,
+        "elapsed_seconds": 10540.583318948746
+      },
+      "solver": {
+        "active_rounds": 144,
+        "inactive_rounds": 0,
+        "critic_only_warmup_steps": 3,
+        "actor_steps": 141,
+        "critic_steps": 288,
+        "consumed_trajectories": 1152,
+        "generated_trajectories": 1152,
+        "recorded_action_tokens": 858029,
+        "invalid_harness_episode_count": 106,
+        "elapsed_seconds": 10527.883791208267
+      }
+    },
+    "shared_environment_episodes": 1152,
+    "at_unix": 1791555754.8622515
+  },
+  "at_unix": 1791555754.888525
+}

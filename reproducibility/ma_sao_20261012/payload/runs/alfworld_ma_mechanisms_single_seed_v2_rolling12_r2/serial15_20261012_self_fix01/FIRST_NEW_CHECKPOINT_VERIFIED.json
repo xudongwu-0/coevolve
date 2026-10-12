@@ -1,0 +1,9 @@
+{
+  "status": "new_paired_native_checkpoint_verified",
+  "checked_at_beijing": "2026-10-12T13:37:52+08:00",
+  "checkpoint": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/without_peer/recovery/round-0036-attempt-0003/COMMITTED.json",
+  "sha256": "4bbe5102598bcc336d8a88f4a5fb2cd3e9589625721671061566b37038681fe1",
+  "completed_rounds": 36,
+  "first_native_gpu_continuation_after_single_publisher_fix": true,
+  "scope": "All shard sizes/small-file hashes and optimizer/ValueNorm/RNG metadata, not full large native tensor hashes."
+}

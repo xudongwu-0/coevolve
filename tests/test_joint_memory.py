@@ -78,6 +78,9 @@ class JointMemoryTests(unittest.TestCase):
         ):
             config = make_config(repo, Path(directory))
             h0 = make_config(repo, Path(directory), model_role="h0", rounds=3)
+            compact = make_config(repo, Path(directory), reference_storage_dtype="bfloat16")
+            no_context = make_config(repo, Path(directory), critic_cooperative_context=False)
+            no_norm = make_config(repo, Path(directory), value_normalization=False)
         self.assertEqual(MemoryActor.__module__, "sao_bridge.joint_memory_check")
         self.assertEqual(config.actor.backend, "fsdp:d4p1t1")
         self.assertEqual(config.actor.mb_spec.n_mbs, 2)
@@ -86,10 +89,15 @@ class JointMemoryTests(unittest.TestCase):
         self.assertTrue(config.ref.scheduling_strategy.fork)
         self.assertFalse(config.critic.scheduling_strategy.fork)
         self.assertFalse(config.enable_offload)
+        self.assertEqual(compact.ref.optimizer_dtype, "bfloat16")
+        self.assertEqual(compact.actor.optimizer_dtype, config.actor.optimizer_dtype)
+        self.assertEqual(compact.critic.optimizer_dtype, config.critic.optimizer_dtype)
+        self.assertIsNone(compact.ref.optimizer)
         self.assertEqual(config.actor.path, str(repo / "assets/Harness-R1/target-agent-sft"))
         self.assertNotIn("MA_SAO_ASYNC_JOINT_ROOT", config.actor.scheduling_spec[0].env_vars)
         for key in ("AREAL_CACHE_DIR", "TRITON_CACHE_DIR", "TORCHINDUCTOR_CACHE_DIR"):
-            self.assertTrue(config.actor.scheduling_spec[0].env_vars[key].startswith(str(repo)))
+            self.assertTrue(Path(config.actor.scheduling_spec[0].env_vars[key]).is_relative_to(
+                Path(directory) / "runtime-cache"))
         self.assertEqual(h0.total_train_steps, 3)
         for role in ("actor", "critic", "ref"):
             selected = getattr(h0, role)
@@ -98,6 +106,12 @@ class JointMemoryTests(unittest.TestCase):
             self.assertEqual(selected.mb_spec.n_mbs, 2)
         self.assertEqual(h0.actor.mb_spec.max_tokens_per_mb, 32768)
         self.assertEqual(h0.critic.mb_spec.max_tokens_per_mb, 34816)
+        for configured, context, norm in ((config, "1", "1"), (no_context, "0", "1"), (no_norm, "1", "0")):
+            env = configured.actor.scheduling_spec[0].env_vars
+            self.assertEqual(env["MA_SAO_COOPERATIVE_CONTEXT"], context)
+            self.assertEqual(env["MA_SAO_VALUE_NORM"], norm)
+            self.assertEqual(configured.actor.mb_spec.max_tokens_per_mb, 32768)
+            self.assertEqual(configured.gconfig.max_new_tokens, config.gconfig.max_new_tokens)
 
 
 if __name__ == "__main__":

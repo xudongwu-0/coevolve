@@ -14,14 +14,46 @@ from .common import ensure_model_runtime_metadata, file_sha, read_json, write_js
 from .gpu_telemetry import monitor, summarize
 from .joint_round import check_failures, record_failure
 from .joint_health import assess, metric_rows, recover_checkpoints, request_stop
+from .alfworld_ma_idle_resume import spec_deadline
 from .joint_schedule import (
-    accounting, consumed_row_ledger, update_counts, validate_metric_row, validate_schedule,
+    accounting, consumed_row_ledger, update_counts, validate_component_ablation,
+    validate_metric_row, validate_schedule,
 )
 from .launch import Launcher
-from .resources import gpu_release_audit, require_research_node
+from .resources import (
+    gpu_release_audit, logical_gpu_string, require_research_node,
+    research_resources_released, runtime_gpu_counts,
+)
 
 
 def validate_spec(spec: dict) -> None:
+    from .joint_recovery import validate_recovery_spec
+    validate_recovery_spec(spec)
+    from .training_acceleration import overlay_path
+    overlay_path(spec)
+    ablation = validate_component_ablation(spec)
+    if type(spec.get("critic_cooperative_context", True)) is not bool:
+        raise ValueError("Critic cooperative context must be a boolean")
+    if not spec.get("critic_cooperative_context", True) and ablation != "without_context":
+        raise ValueError("Removing cooperative context requires its isolated ablation declaration")
+    if type(spec.get("stop_on_diagnostic_thresholds", True)) is not bool:
+        raise ValueError("Diagnostic stopping policy must be a boolean")
+    from .joint_anchor import SCHEDULE as ANCHOR
+    if spec.get('schedule') == ANCHOR:
+        required = ('anchor_harness', 'anchor_harness_sha256', 'schedule_source_data')
+        if any(not spec.get(key) for key in required) or spec.get('joint_max_lag') != 1:
+            raise ValueError('Anchor training requires pinned routing inputs and asynchronous exchange')
+        for key in ('anchor_harness', 'schedule_source_data'):
+            path = Path(spec[key])
+            digest = file_sha(path)
+            if spec.get('pinned_files', {}).get(str(path)) != digest:
+                raise ValueError('Anchor routing/source file is not pinned')
+            if key == 'anchor_harness' and digest != spec['anchor_harness_sha256']:
+                raise ValueError('Anchor harness digest changed')
+    elif spec.get('anchor_mode') is not None:
+        raise ValueError('Anchor routing cannot run without the matching update schedule')
+    if spec.get("peer_weight_mode", "bounded") not in ("bounded", "unit"):
+        raise ValueError("Unknown teammate importance weight mode")
     rows = read_json(Path(spec["data"]))
     validate_schedule(spec, rows)
     asynchronous = spec["protocol"] == "joint-ma-sao-async-v1"
@@ -37,10 +69,11 @@ def validate_spec(spec: dict) -> None:
     ):
         raise ValueError("Invalid joint pilot budget or policy-version protocol")
     if asynchronous and (
-        not spec.get("value_normalization") or not 0 < spec.get("kl_ctl", 0) <= 1
+        (not spec.get("value_normalization") and ablation != "without_value_norm")
+        or not 0 < spec.get("kl_ctl", 0) <= 1
         or not isinstance(spec.get("training_deadline_unix"), (int, float))
     ):
-        raise ValueError("Asynchronous joint training requires normalization, reference KL and deadline")
+        raise ValueError("Joint training requires declared normalization, reference KL and deadline")
     for index, row in enumerate(rows):
         if (
             row["joint_version"] != index // spec["batch_size"]
@@ -68,15 +101,29 @@ def run_role(spec_path: Path) -> dict:
         return read_json(previous)
     if root.exists():
         raise ValueError("Joint optimizers do not silently restart or reuse partial rounds")
+    if spec.get("rolling_recovery"):
+        from .joint_recovery import materialize_prefix
+        materialize_prefix(spec)
     audit = gpu_release_audit()
-    if audit["foreign_gpu_pids"] or not audit["filler_unit_active"]:
-        raise RuntimeError("Joint pilot requires released research GPUs with filler active")
+    if not research_resources_released(audit):
+        raise RuntimeError("Joint pilot requires released research GPUs")
+    if "resource_scope" in audit:
+        actor, rollout = runtime_gpu_counts(spec)
+        write_json(root.parent / "RESOURCE_ALLOCATION.json", {
+            **audit["resource_scope"], "actor_gpus": actor, "rollout_gpus": rollout,
+            "original_actor_gpus": spec["actor_gpus"], "original_rollout_gpus": spec["rollout_gpus"],
+            "learner_rank_count_unchanged": actor == spec["actor_gpus"], "at_unix": time.time(),
+        })
     launch = Launcher(root.parent / "supervision")
+    if spec.get("training_kernel_overlay"):
+        from .training_acceleration import overlay_path
+        launch.env["PYTHONPATH"] = f"{overlay_path(spec)}:{launch.env['PYTHONPATH']}"
     stop = threading.Event()
     samples = root.parent / "gpu_process_samples.jsonl"
     telemetry = threading.Thread(target=monitor, args=(samples, stop, 5), daemon=True)
     telemetry.start()
     started = time.time()
+    process = None
     try:
         if spec["role"] == "solver":
             from .joint_environment import run as run_environment
@@ -89,10 +136,10 @@ def run_role(spec_path: Path) -> dict:
             launch.env["SAO_ALFWORLD_HTTP_TIMEOUT"] = "900"
         process = launch.module(
             "sao_bridge.large_train", ["--spec", spec_path],
-            gpus="0,1,2,3,4,5,6,7", name="joint_native",
+            gpus=logical_gpu_string(), name="joint_native",
         )
         deadline = time.monotonic() + spec.get("phase_timeout_seconds", 10800)
-        last_count, last_progress = 0, time.monotonic()
+        last_count, last_progress = spec.get("recovery_start_round", 0), time.monotonic()
         asynchronous = spec["protocol"] == "joint-ma-sao-async-v1"
         while process.poll() is None:
             launch.check()
@@ -105,7 +152,7 @@ def run_role(spec_path: Path) -> dict:
                     last_count, last_progress = len(rows), time.monotonic()
                     if health["status"] == "stop":
                         request_stop(joint, {"reason": "training_health", "role": spec["role"], "health": health})
-                if time.time() >= spec["training_deadline_unix"]:
+                if time.time() >= spec_deadline(spec):
                     request_stop(joint, {"reason": "evaluation_reserve_deadline", "role": spec["role"]})
                 if time.monotonic() - last_progress > 1800:
                     request_stop(joint, {"reason": "no_optimizer_progress_for_1800s", "role": spec["role"]})
@@ -116,6 +163,9 @@ def run_role(spec_path: Path) -> dict:
                 raise TimeoutError("Joint native learner timed out")
             time.sleep(2)
         stopped = asynchronous and (joint / "STOP.json").exists()
+        write_json(root.parent / "NATIVE_EXIT.json", {
+            "returncode": process.returncode, "stopped_by_shared_request": stopped, "at_unix": time.time(),
+        })
         if process.returncode and not stopped:
             raise RuntimeError(f"Joint native learner failed ({process.returncode}); inspect its log")
         if spec["role"] == "solver" and not stopped:
@@ -175,7 +225,12 @@ def run_role(spec_path: Path) -> dict:
                     **accounting(spec, len(rows), generated=result["generated_policy_trajectories"]),
                 )
     except BaseException as exc:
-        failure = {"error": repr(exc), "role": spec["role"], "failed_at_unix": time.time()}
+        foreign = launch.root / "foreign_workload.json"
+        failure = {
+            "error": repr(exc), "role": spec["role"], "failed_at_unix": time.time(),
+            "native_returncode": process.poll() if process is not None else None,
+            "foreign_workload": read_json(foreign) if foreign.is_file() else None,
+        }
         write_json(root.parent / "FAILED.json", failure)
         record_failure(joint, spec["role"], failure)
         raise

@@ -65,12 +65,13 @@ class AlfworldSolverEvaluationTests(unittest.TestCase):
                     "sao_bridge.alfworld_domain._controller_url",
                     return_value="http://localhost/api",
                 ),
-                patch("sao_bridge.alfworld_domain.httpx.AsyncClient", return_value=client),
+                patch("sao_bridge.alfworld_domain.httpx.AsyncClient", return_value=client) as make_client,
             ):
                 result = await run_episode(
                     {"id": "alfworld-240", "task_id": 240, "task_name": "fixture"},
                     {}, generate, total_tokens=total_tokens,
                 )
+                self.assertEqual(make_client.call_args.kwargs["limits"].max_keepalive_connections, 0)
             self.assertEqual(generate.await_count, 1)
             return result, requests
 
@@ -133,6 +134,29 @@ class AlfworldSolverEvaluationTests(unittest.TestCase):
             ("/api/interact", {"messages": [completion["choices"][0]["message"]]}),
         )
         self.assertEqual(len(requests), 2)
+
+    def test_text_only_completion_omits_null_calls_on_environment_wire(self):
+        for calls in (None, [], "absent"):
+            with self.subTest(calls=calls):
+                completion = self.completion('{}', finish_reason="stop")
+                message = completion["choices"][0]["message"]
+                message["content"] = "I cannot complete this action."
+                if calls == "absent":
+                    del message["tool_calls"]
+                else:
+                    message["tool_calls"] = calls
+                original = dict(message)
+                result, requests = self.episode(completion)
+                sent = requests[-1][1]["messages"][0]
+                self.assertNotEqual(sent.get("tool_calls", []), None)
+                self.assertEqual(sent["content"], original["content"])
+                self.assertEqual(message, original)
+                self.assertEqual(result["tool_calls"], 0)
+                self.assertEqual(result["tool_errors"], 1)
+                self.assertEqual(result["tokens"], 8)
+                # The adapter must retain the worker's reward, not invent one.
+                self.assertEqual(result["reward"], 1.0)
+                self.assertEqual(len(requests), 2)
 
     def test_token_budget_failure_still_cancels_without_another_generation(self):
         result, requests = self.episode(

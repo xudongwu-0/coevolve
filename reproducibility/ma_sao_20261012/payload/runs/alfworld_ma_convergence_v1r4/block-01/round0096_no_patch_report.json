@@ -1,0 +1,1617 @@
+{
+  "accuracy": 0.925,
+  "question_count": 200,
+  "samples_per_question": 1,
+  "metric": "mean@1",
+  "tokens": 110996,
+  "tool_calls": 3525,
+  "tool_errors": 0,
+  "truncated_fraction": 0.0,
+  "boxed_fraction": 1.0,
+  "elapsed_seconds": 672.4851001845673,
+  "results": [
+    {
+      "id": "alfworld-240",
+      "task_id": 240,
+      "sample_index": 0,
+      "rollout_seed": 6919639,
+      "reward": 1.0,
+      "tokens": 168
+    },
+    {
+      "id": "alfworld-247",
+      "task_id": 247,
+      "sample_index": 0,
+      "rollout_seed": 6892919,
+      "reward": 1.0,
+      "tokens": 151
+    },
+    {
+      "id": "alfworld-244",
+      "task_id": 244,
+      "sample_index": 0,
+      "rollout_seed": 6396205,
+      "reward": 1.0,
+      "tokens": 225
+    },
+    {
+      "id": "alfworld-246",
+      "task_id": 246,
+      "sample_index": 0,
+      "rollout_seed": 6747599,
+      "reward": 1.0,
+      "tokens": 423
+    },
+    {
+      "id": "alfworld-242",
+      "task_id": 242,
+      "sample_index": 0,
+      "rollout_seed": 6931817,
+      "reward": 1.0,
+      "tokens": 196
+    },
+    {
+      "id": "alfworld-250",
+      "task_id": 250,
+      "sample_index": 0,
+      "rollout_seed": 6736225,
+      "reward": 1.0,
+      "tokens": 703
+    },
+    {
+      "id": "alfworld-243",
+      "task_id": 243,
+      "sample_index": 0,
+      "rollout_seed": 6522870,
+      "reward": 1.0,
+      "tokens": 323
+    },
+    {
+      "id": "alfworld-284",
+      "task_id": 284,
+      "sample_index": 0,
+      "rollout_seed": 6920198,
+      "reward": 1.0,
+      "tokens": 125
+    },
+    {
+      "id": "alfworld-261",
+      "task_id": 261,
+      "sample_index": 0,
+      "rollout_seed": 6207593,
+      "reward": 1.0,
+      "tokens": 439
+    },
+    {
+      "id": "alfworld-259",
+      "task_id": 259,
+      "sample_index": 0,
+      "rollout_seed": 6007662,
+      "reward": 0.0,
+      "tokens": 1598
+    },
+    {
+      "id": "alfworld-248",
+      "task_id": 248,
+      "sample_index": 0,
+      "rollout_seed": 6754616,
+      "reward": 1.0,
+      "tokens": 498
+    },
+    {
+      "id": "alfworld-251",
+      "task_id": 251,
+      "sample_index": 0,
+      "rollout_seed": 6357037,
+      "reward": 1.0,
+      "tokens": 770
+    },
+    {
+      "id": "alfworld-269",
+      "task_id": 269,
+      "sample_index": 0,
+      "rollout_seed": 6185572,
+      "reward": 1.0,
+      "tokens": 315
+    },
+    {
+      "id": "alfworld-280",
+      "task_id": 280,
+      "sample_index": 0,
+      "rollout_seed": 6252652,
+      "reward": 1.0,
+      "tokens": 225
+    },
+    {
+      "id": "alfworld-267",
+      "task_id": 267,
+      "sample_index": 0,
+      "rollout_seed": 6355311,
+      "reward": 1.0,
+      "tokens": 643
+    },
+    {
+      "id": "alfworld-254",
+      "task_id": 254,
+      "sample_index": 0,
+      "rollout_seed": 6105684,
+      "reward": 1.0,
+      "tokens": 622
+    },
+    {
+      "id": "alfworld-252",
+      "task_id": 252,
+      "sample_index": 0,
+      "rollout_seed": 6307975,
+      "reward": 1.0,
+      "tokens": 605
+    },
+    {
+      "id": "alfworld-274",
+      "task_id": 274,
+      "sample_index": 0,
+      "rollout_seed": 6849016,
+      "reward": 1.0,
+      "tokens": 473
+    },
+    {
+      "id": "alfworld-286",
+      "task_id": 286,
+      "sample_index": 0,
+      "rollout_seed": 6548577,
+      "reward": 1.0,
+      "tokens": 261
+    },
+    {
+      "id": "alfworld-270",
+      "task_id": 270,
+      "sample_index": 0,
+      "rollout_seed": 6830405,
+      "reward": 0.0,
+      "tokens": 1579
+    },
+    {
+      "id": "alfworld-263",
+      "task_id": 263,
+      "sample_index": 0,
+      "rollout_seed": 6051600,
+      "reward": 0.0,
+      "tokens": 1583
+    },
+    {
+      "id": "alfworld-255",
+      "task_id": 255,
+      "sample_index": 0,
+      "rollout_seed": 6234056,
+      "reward": 1.0,
+      "tokens": 420
+    },
+    {
+      "id": "alfworld-275",
+      "task_id": 275,
+      "sample_index": 0,
+      "rollout_seed": 6560640,
+      "reward": 1.0,
+      "tokens": 396
+    },
+    {
+      "id": "alfworld-289",
+      "task_id": 289,
+      "sample_index": 0,
+      "rollout_seed": 6591613,
+      "reward": 1.0,
+      "tokens": 353
+    },
+    {
+      "id": "alfworld-431",
+      "task_id": 431,
+      "sample_index": 0,
+      "rollout_seed": 6311419,
+      "reward": 1.0,
+      "tokens": 780
+    },
+    {
+      "id": "alfworld-291",
+      "task_id": 291,
+      "sample_index": 0,
+      "rollout_seed": 6079593,
+      "reward": 1.0,
+      "tokens": 796
+    },
+    {
+      "id": "alfworld-407",
+      "task_id": 407,
+      "sample_index": 0,
+      "rollout_seed": 6315031,
+      "reward": 1.0,
+      "tokens": 381
+    },
+    {
+      "id": "alfworld-313",
+      "task_id": 313,
+      "sample_index": 0,
+      "rollout_seed": 6655951,
+      "reward": 1.0,
+      "tokens": 540
+    },
+    {
+      "id": "alfworld-367",
+      "task_id": 367,
+      "sample_index": 0,
+      "rollout_seed": 6271945,
+      "reward": 1.0,
+      "tokens": 482
+    },
+    {
+      "id": "alfworld-406",
+      "task_id": 406,
+      "sample_index": 0,
+      "rollout_seed": 6858456,
+      "reward": 1.0,
+      "tokens": 225
+    },
+    {
+      "id": "alfworld-414",
+      "task_id": 414,
+      "sample_index": 0,
+      "rollout_seed": 6282877,
+      "reward": 1.0,
+      "tokens": 500
+    },
+    {
+      "id": "alfworld-312",
+      "task_id": 312,
+      "sample_index": 0,
+      "rollout_seed": 6929045,
+      "reward": 1.0,
+      "tokens": 441
+    },
+    {
+      "id": "alfworld-419",
+      "task_id": 419,
+      "sample_index": 0,
+      "rollout_seed": 6172425,
+      "reward": 0.0,
+      "tokens": 1573
+    },
+    {
+      "id": "alfworld-467",
+      "task_id": 467,
+      "sample_index": 0,
+      "rollout_seed": 6246916,
+      "reward": 0.0,
+      "tokens": 1551
+    },
+    {
+      "id": "alfworld-499",
+      "task_id": 499,
+      "sample_index": 0,
+      "rollout_seed": 6953245,
+      "reward": 1.0,
+      "tokens": 729
+    },
+    {
+      "id": "alfworld-327",
+      "task_id": 327,
+      "sample_index": 0,
+      "rollout_seed": 6990036,
+      "reward": 1.0,
+      "tokens": 271
+    },
+    {
+      "id": "alfworld-489",
+      "task_id": 489,
+      "sample_index": 0,
+      "rollout_seed": 6366581,
+      "reward": 1.0,
+      "tokens": 161
+    },
+    {
+      "id": "alfworld-473",
+      "task_id": 473,
+      "sample_index": 0,
+      "rollout_seed": 6908586,
+      "reward": 1.0,
+      "tokens": 404
+    },
+    {
+      "id": "alfworld-416",
+      "task_id": 416,
+      "sample_index": 0,
+      "rollout_seed": 6607925,
+      "reward": 1.0,
+      "tokens": 270
+    },
+    {
+      "id": "alfworld-425",
+      "task_id": 425,
+      "sample_index": 0,
+      "rollout_seed": 6826029,
+      "reward": 1.0,
+      "tokens": 684
+    },
+    {
+      "id": "alfworld-380",
+      "task_id": 380,
+      "sample_index": 0,
+      "rollout_seed": 6000660,
+      "reward": 1.0,
+      "tokens": 291
+    },
+    {
+      "id": "alfworld-294",
+      "task_id": 294,
+      "sample_index": 0,
+      "rollout_seed": 6097467,
+      "reward": 1.0,
+      "tokens": 939
+    },
+    {
+      "id": "alfworld-337",
+      "task_id": 337,
+      "sample_index": 0,
+      "rollout_seed": 6655976,
+      "reward": 1.0,
+      "tokens": 225
+    },
+    {
+      "id": "alfworld-298",
+      "task_id": 298,
+      "sample_index": 0,
+      "rollout_seed": 6185119,
+      "reward": 1.0,
+      "tokens": 446
+    },
+    {
+      "id": "alfworld-387",
+      "task_id": 387,
+      "sample_index": 0,
+      "rollout_seed": 6118858,
+      "reward": 1.0,
+      "tokens": 320
+    },
+    {
+      "id": "alfworld-338",
+      "task_id": 338,
+      "sample_index": 0,
+      "rollout_seed": 6095254,
+      "reward": 1.0,
+      "tokens": 378
+    },
+    {
+      "id": "alfworld-447",
+      "task_id": 447,
+      "sample_index": 0,
+      "rollout_seed": 6842234,
+      "reward": 1.0,
+      "tokens": 234
+    },
+    {
+      "id": "alfworld-308",
+      "task_id": 308,
+      "sample_index": 0,
+      "rollout_seed": 6998781,
+      "reward": 1.0,
+      "tokens": 270
+    },
+    {
+      "id": "alfworld-415",
+      "task_id": 415,
+      "sample_index": 0,
+      "rollout_seed": 6606476,
+      "reward": 1.0,
+      "tokens": 221
+    },
+    {
+      "id": "alfworld-300",
+      "task_id": 300,
+      "sample_index": 0,
+      "rollout_seed": 6570661,
+      "reward": 1.0,
+      "tokens": 598
+    },
+    {
+      "id": "alfworld-288",
+      "task_id": 288,
+      "sample_index": 0,
+      "rollout_seed": 6073946,
+      "reward": 1.0,
+      "tokens": 442
+    },
+    {
+      "id": "alfworld-448",
+      "task_id": 448,
+      "sample_index": 0,
+      "rollout_seed": 6081522,
+      "reward": 1.0,
+      "tokens": 214
+    },
+    {
+      "id": "alfworld-482",
+      "task_id": 482,
+      "sample_index": 0,
+      "rollout_seed": 6769700,
+      "reward": 1.0,
+      "tokens": 536
+    },
+    {
+      "id": "alfworld-363",
+      "task_id": 363,
+      "sample_index": 0,
+      "rollout_seed": 6225667,
+      "reward": 1.0,
+      "tokens": 860
+    },
+    {
+      "id": "alfworld-458",
+      "task_id": 458,
+      "sample_index": 0,
+      "rollout_seed": 6941631,
+      "reward": 1.0,
+      "tokens": 414
+    },
+    {
+      "id": "alfworld-421",
+      "task_id": 421,
+      "sample_index": 0,
+      "rollout_seed": 6271108,
+      "reward": 1.0,
+      "tokens": 1075
+    },
+    {
+      "id": "alfworld-382",
+      "task_id": 382,
+      "sample_index": 0,
+      "rollout_seed": 6552946,
+      "reward": 1.0,
+      "tokens": 181
+    },
+    {
+      "id": "alfworld-369",
+      "task_id": 369,
+      "sample_index": 0,
+      "rollout_seed": 6963993,
+      "reward": 1.0,
+      "tokens": 536
+    },
+    {
+      "id": "alfworld-485",
+      "task_id": 485,
+      "sample_index": 0,
+      "rollout_seed": 6840165,
+      "reward": 1.0,
+      "tokens": 628
+    },
+    {
+      "id": "alfworld-377",
+      "task_id": 377,
+      "sample_index": 0,
+      "rollout_seed": 6597941,
+      "reward": 1.0,
+      "tokens": 197
+    },
+    {
+      "id": "alfworld-465",
+      "task_id": 465,
+      "sample_index": 0,
+      "rollout_seed": 6250009,
+      "reward": 1.0,
+      "tokens": 554
+    },
+    {
+      "id": "alfworld-420",
+      "task_id": 420,
+      "sample_index": 0,
+      "rollout_seed": 6937040,
+      "reward": 1.0,
+      "tokens": 456
+    },
+    {
+      "id": "alfworld-463",
+      "task_id": 463,
+      "sample_index": 0,
+      "rollout_seed": 6657865,
+      "reward": 1.0,
+      "tokens": 469
+    },
+    {
+      "id": "alfworld-437",
+      "task_id": 437,
+      "sample_index": 0,
+      "rollout_seed": 6534269,
+      "reward": 1.0,
+      "tokens": 150
+    },
+    {
+      "id": "alfworld-331",
+      "task_id": 331,
+      "sample_index": 0,
+      "rollout_seed": 6703234,
+      "reward": 1.0,
+      "tokens": 767
+    },
+    {
+      "id": "alfworld-496",
+      "task_id": 496,
+      "sample_index": 0,
+      "rollout_seed": 6718452,
+      "reward": 1.0,
+      "tokens": 929
+    },
+    {
+      "id": "alfworld-397",
+      "task_id": 397,
+      "sample_index": 0,
+      "rollout_seed": 6997192,
+      "reward": 1.0,
+      "tokens": 419
+    },
+    {
+      "id": "alfworld-351",
+      "task_id": 351,
+      "sample_index": 0,
+      "rollout_seed": 6833850,
+      "reward": 1.0,
+      "tokens": 505
+    },
+    {
+      "id": "alfworld-400",
+      "task_id": 400,
+      "sample_index": 0,
+      "rollout_seed": 6812407,
+      "reward": 1.0,
+      "tokens": 540
+    },
+    {
+      "id": "alfworld-362",
+      "task_id": 362,
+      "sample_index": 0,
+      "rollout_seed": 6797571,
+      "reward": 1.0,
+      "tokens": 424
+    },
+    {
+      "id": "alfworld-464",
+      "task_id": 464,
+      "sample_index": 0,
+      "rollout_seed": 6159619,
+      "reward": 1.0,
+      "tokens": 485
+    },
+    {
+      "id": "alfworld-411",
+      "task_id": 411,
+      "sample_index": 0,
+      "rollout_seed": 6560105,
+      "reward": 1.0,
+      "tokens": 690
+    },
+    {
+      "id": "alfworld-318",
+      "task_id": 318,
+      "sample_index": 0,
+      "rollout_seed": 6155216,
+      "reward": 1.0,
+      "tokens": 375
+    },
+    {
+      "id": "alfworld-494",
+      "task_id": 494,
+      "sample_index": 0,
+      "rollout_seed": 6030263,
+      "reward": 1.0,
+      "tokens": 422
+    },
+    {
+      "id": "alfworld-264",
+      "task_id": 264,
+      "sample_index": 0,
+      "rollout_seed": 6186400,
+      "reward": 1.0,
+      "tokens": 940
+    },
+    {
+      "id": "alfworld-381",
+      "task_id": 381,
+      "sample_index": 0,
+      "rollout_seed": 6401987,
+      "reward": 1.0,
+      "tokens": 154
+    },
+    {
+      "id": "alfworld-497",
+      "task_id": 497,
+      "sample_index": 0,
+      "rollout_seed": 6105406,
+      "reward": 1.0,
+      "tokens": 797
+    },
+    {
+      "id": "alfworld-433",
+      "task_id": 433,
+      "sample_index": 0,
+      "rollout_seed": 6961880,
+      "reward": 1.0,
+      "tokens": 378
+    },
+    {
+      "id": "alfworld-339",
+      "task_id": 339,
+      "sample_index": 0,
+      "rollout_seed": 6753776,
+      "reward": 1.0,
+      "tokens": 502
+    },
+    {
+      "id": "alfworld-307",
+      "task_id": 307,
+      "sample_index": 0,
+      "rollout_seed": 6585671,
+      "reward": 1.0,
+      "tokens": 792
+    },
+    {
+      "id": "alfworld-446",
+      "task_id": 446,
+      "sample_index": 0,
+      "rollout_seed": 6586915,
+      "reward": 1.0,
+      "tokens": 208
+    },
+    {
+      "id": "alfworld-378",
+      "task_id": 378,
+      "sample_index": 0,
+      "rollout_seed": 6509793,
+      "reward": 1.0,
+      "tokens": 489
+    },
+    {
+      "id": "alfworld-477",
+      "task_id": 477,
+      "sample_index": 0,
+      "rollout_seed": 6594104,
+      "reward": 1.0,
+      "tokens": 225
+    },
+    {
+      "id": "alfworld-474",
+      "task_id": 474,
+      "sample_index": 0,
+      "rollout_seed": 6436131,
+      "reward": 1.0,
+      "tokens": 283
+    },
+    {
+      "id": "alfworld-470",
+      "task_id": 470,
+      "sample_index": 0,
+      "rollout_seed": 6608123,
+      "reward": 1.0,
+      "tokens": 307
+    },
+    {
+      "id": "alfworld-412",
+      "task_id": 412,
+      "sample_index": 0,
+      "rollout_seed": 6899210,
+      "reward": 1.0,
+      "tokens": 378
+    },
+    {
+      "id": "alfworld-297",
+      "task_id": 297,
+      "sample_index": 0,
+      "rollout_seed": 6984607,
+      "reward": 1.0,
+      "tokens": 446
+    },
+    {
+      "id": "alfworld-394",
+      "task_id": 394,
+      "sample_index": 0,
+      "rollout_seed": 6854790,
+      "reward": 0.0,
+      "tokens": 1605
+    },
+    {
+      "id": "alfworld-418",
+      "task_id": 418,
+      "sample_index": 0,
+      "rollout_seed": 6111776,
+      "reward": 1.0,
+      "tokens": 137
+    },
+    {
+      "id": "alfworld-408",
+      "task_id": 408,
+      "sample_index": 0,
+      "rollout_seed": 6667337,
+      "reward": 1.0,
+      "tokens": 245
+    },
+    {
+      "id": "alfworld-495",
+      "task_id": 495,
+      "sample_index": 0,
+      "rollout_seed": 6415431,
+      "reward": 1.0,
+      "tokens": 423
+    },
+    {
+      "id": "alfworld-376",
+      "task_id": 376,
+      "sample_index": 0,
+      "rollout_seed": 6770447,
+      "reward": 1.0,
+      "tokens": 990
+    },
+    {
+      "id": "alfworld-333",
+      "task_id": 333,
+      "sample_index": 0,
+      "rollout_seed": 6858747,
+      "reward": 1.0,
+      "tokens": 505
+    },
+    {
+      "id": "alfworld-487",
+      "task_id": 487,
+      "sample_index": 0,
+      "rollout_seed": 6650199,
+      "reward": 1.0,
+      "tokens": 304
+    },
+    {
+      "id": "alfworld-468",
+      "task_id": 468,
+      "sample_index": 0,
+      "rollout_seed": 6514793,
+      "reward": 0.0,
+      "tokens": 552
+    },
+    {
+      "id": "alfworld-498",
+      "task_id": 498,
+      "sample_index": 0,
+      "rollout_seed": 6539928,
+      "reward": 1.0,
+      "tokens": 196
+    },
+    {
+      "id": "alfworld-402",
+      "task_id": 402,
+      "sample_index": 0,
+      "rollout_seed": 6027312,
+      "reward": 1.0,
+      "tokens": 420
+    },
+    {
+      "id": "alfworld-282",
+      "task_id": 282,
+      "sample_index": 0,
+      "rollout_seed": 6852304,
+      "reward": 0.0,
+      "tokens": 1515
+    },
+    {
+      "id": "alfworld-490",
+      "task_id": 490,
+      "sample_index": 0,
+      "rollout_seed": 6648421,
+      "reward": 1.0,
+      "tokens": 347
+    },
+    {
+      "id": "alfworld-434",
+      "task_id": 434,
+      "sample_index": 0,
+      "rollout_seed": 6636067,
+      "reward": 1.0,
+      "tokens": 381
+    },
+    {
+      "id": "alfworld-389",
+      "task_id": 389,
+      "sample_index": 0,
+      "rollout_seed": 6728955,
+      "reward": 1.0,
+      "tokens": 135
+    },
+    {
+      "id": "alfworld-256",
+      "task_id": 256,
+      "sample_index": 0,
+      "rollout_seed": 6566413,
+      "reward": 1.0,
+      "tokens": 448
+    },
+    {
+      "id": "alfworld-409",
+      "task_id": 409,
+      "sample_index": 0,
+      "rollout_seed": 6308529,
+      "reward": 1.0,
+      "tokens": 387
+    },
+    {
+      "id": "alfworld-287",
+      "task_id": 287,
+      "sample_index": 0,
+      "rollout_seed": 6680110,
+      "reward": 1.0,
+      "tokens": 606
+    },
+    {
+      "id": "alfworld-398",
+      "task_id": 398,
+      "sample_index": 0,
+      "rollout_seed": 6135569,
+      "reward": 0.0,
+      "tokens": 1564
+    },
+    {
+      "id": "alfworld-365",
+      "task_id": 365,
+      "sample_index": 0,
+      "rollout_seed": 6116946,
+      "reward": 1.0,
+      "tokens": 428
+    },
+    {
+      "id": "alfworld-479",
+      "task_id": 479,
+      "sample_index": 0,
+      "rollout_seed": 6543077,
+      "reward": 1.0,
+      "tokens": 416
+    },
+    {
+      "id": "alfworld-457",
+      "task_id": 457,
+      "sample_index": 0,
+      "rollout_seed": 6550058,
+      "reward": 1.0,
+      "tokens": 238
+    },
+    {
+      "id": "alfworld-347",
+      "task_id": 347,
+      "sample_index": 0,
+      "rollout_seed": 6086987,
+      "reward": 1.0,
+      "tokens": 291
+    },
+    {
+      "id": "alfworld-319",
+      "task_id": 319,
+      "sample_index": 0,
+      "rollout_seed": 6486011,
+      "reward": 1.0,
+      "tokens": 391
+    },
+    {
+      "id": "alfworld-375",
+      "task_id": 375,
+      "sample_index": 0,
+      "rollout_seed": 6870844,
+      "reward": 1.0,
+      "tokens": 129
+    },
+    {
+      "id": "alfworld-432",
+      "task_id": 432,
+      "sample_index": 0,
+      "rollout_seed": 6864516,
+      "reward": 1.0,
+      "tokens": 225
+    },
+    {
+      "id": "alfworld-395",
+      "task_id": 395,
+      "sample_index": 0,
+      "rollout_seed": 6917228,
+      "reward": 1.0,
+      "tokens": 425
+    },
+    {
+      "id": "alfworld-386",
+      "task_id": 386,
+      "sample_index": 0,
+      "rollout_seed": 6260064,
+      "reward": 1.0,
+      "tokens": 354
+    },
+    {
+      "id": "alfworld-460",
+      "task_id": 460,
+      "sample_index": 0,
+      "rollout_seed": 6993372,
+      "reward": 1.0,
+      "tokens": 129
+    },
+    {
+      "id": "alfworld-480",
+      "task_id": 480,
+      "sample_index": 0,
+      "rollout_seed": 6352040,
+      "reward": 1.0,
+      "tokens": 938
+    },
+    {
+      "id": "alfworld-304",
+      "task_id": 304,
+      "sample_index": 0,
+      "rollout_seed": 6154221,
+      "reward": 1.0,
+      "tokens": 962
+    },
+    {
+      "id": "alfworld-353",
+      "task_id": 353,
+      "sample_index": 0,
+      "rollout_seed": 6580364,
+      "reward": 1.0,
+      "tokens": 715
+    },
+    {
+      "id": "alfworld-268",
+      "task_id": 268,
+      "sample_index": 0,
+      "rollout_seed": 6586770,
+      "reward": 0.0,
+      "tokens": 644
+    },
+    {
+      "id": "alfworld-466",
+      "task_id": 466,
+      "sample_index": 0,
+      "rollout_seed": 6452291,
+      "reward": 1.0,
+      "tokens": 486
+    },
+    {
+      "id": "alfworld-486",
+      "task_id": 486,
+      "sample_index": 0,
+      "rollout_seed": 6399358,
+      "reward": 1.0,
+      "tokens": 160
+    },
+    {
+      "id": "alfworld-336",
+      "task_id": 336,
+      "sample_index": 0,
+      "rollout_seed": 6846927,
+      "reward": 1.0,
+      "tokens": 141
+    },
+    {
+      "id": "alfworld-324",
+      "task_id": 324,
+      "sample_index": 0,
+      "rollout_seed": 6519853,
+      "reward": 1.0,
+      "tokens": 133
+    },
+    {
+      "id": "alfworld-266",
+      "task_id": 266,
+      "sample_index": 0,
+      "rollout_seed": 6237207,
+      "reward": 1.0,
+      "tokens": 416
+    },
+    {
+      "id": "alfworld-311",
+      "task_id": 311,
+      "sample_index": 0,
+      "rollout_seed": 6338151,
+      "reward": 1.0,
+      "tokens": 573
+    },
+    {
+      "id": "alfworld-483",
+      "task_id": 483,
+      "sample_index": 0,
+      "rollout_seed": 6130319,
+      "reward": 1.0,
+      "tokens": 266
+    },
+    {
+      "id": "alfworld-273",
+      "task_id": 273,
+      "sample_index": 0,
+      "rollout_seed": 6647107,
+      "reward": 1.0,
+      "tokens": 1086
+    },
+    {
+      "id": "alfworld-309",
+      "task_id": 309,
+      "sample_index": 0,
+      "rollout_seed": 6432878,
+      "reward": 1.0,
+      "tokens": 352
+    },
+    {
+      "id": "alfworld-335",
+      "task_id": 335,
+      "sample_index": 0,
+      "rollout_seed": 6811189,
+      "reward": 1.0,
+      "tokens": 125
+    },
+    {
+      "id": "alfworld-461",
+      "task_id": 461,
+      "sample_index": 0,
+      "rollout_seed": 6093679,
+      "reward": 1.0,
+      "tokens": 686
+    },
+    {
+      "id": "alfworld-435",
+      "task_id": 435,
+      "sample_index": 0,
+      "rollout_seed": 6038170,
+      "reward": 1.0,
+      "tokens": 832
+    },
+    {
+      "id": "alfworld-488",
+      "task_id": 488,
+      "sample_index": 0,
+      "rollout_seed": 6947980,
+      "reward": 1.0,
+      "tokens": 246
+    },
+    {
+      "id": "alfworld-454",
+      "task_id": 454,
+      "sample_index": 0,
+      "rollout_seed": 6846160,
+      "reward": 1.0,
+      "tokens": 1109
+    },
+    {
+      "id": "alfworld-329",
+      "task_id": 329,
+      "sample_index": 0,
+      "rollout_seed": 6919648,
+      "reward": 1.0,
+      "tokens": 671
+    },
+    {
+      "id": "alfworld-279",
+      "task_id": 279,
+      "sample_index": 0,
+      "rollout_seed": 6617284,
+      "reward": 1.0,
+      "tokens": 385
+    },
+    {
+      "id": "alfworld-459",
+      "task_id": 459,
+      "sample_index": 0,
+      "rollout_seed": 6316472,
+      "reward": 1.0,
+      "tokens": 380
+    },
+    {
+      "id": "alfworld-349",
+      "task_id": 349,
+      "sample_index": 0,
+      "rollout_seed": 6127530,
+      "reward": 1.0,
+      "tokens": 726
+    },
+    {
+      "id": "alfworld-441",
+      "task_id": 441,
+      "sample_index": 0,
+      "rollout_seed": 6250642,
+      "reward": 1.0,
+      "tokens": 263
+    },
+    {
+      "id": "alfworld-403",
+      "task_id": 403,
+      "sample_index": 0,
+      "rollout_seed": 6793113,
+      "reward": 1.0,
+      "tokens": 946
+    },
+    {
+      "id": "alfworld-296",
+      "task_id": 296,
+      "sample_index": 0,
+      "rollout_seed": 6304898,
+      "reward": 1.0,
+      "tokens": 354
+    },
+    {
+      "id": "alfworld-393",
+      "task_id": 393,
+      "sample_index": 0,
+      "rollout_seed": 6749155,
+      "reward": 1.0,
+      "tokens": 127
+    },
+    {
+      "id": "alfworld-428",
+      "task_id": 428,
+      "sample_index": 0,
+      "rollout_seed": 6891923,
+      "reward": 1.0,
+      "tokens": 385
+    },
+    {
+      "id": "alfworld-344",
+      "task_id": 344,
+      "sample_index": 0,
+      "rollout_seed": 6441529,
+      "reward": 1.0,
+      "tokens": 952
+    },
+    {
+      "id": "alfworld-359",
+      "task_id": 359,
+      "sample_index": 0,
+      "rollout_seed": 6225380,
+      "reward": 1.0,
+      "tokens": 478
+    },
+    {
+      "id": "alfworld-302",
+      "task_id": 302,
+      "sample_index": 0,
+      "rollout_seed": 6250764,
+      "reward": 1.0,
+      "tokens": 394
+    },
+    {
+      "id": "alfworld-440",
+      "task_id": 440,
+      "sample_index": 0,
+      "rollout_seed": 6606568,
+      "reward": 0.0,
+      "tokens": 1533
+    },
+    {
+      "id": "alfworld-332",
+      "task_id": 332,
+      "sample_index": 0,
+      "rollout_seed": 6856563,
+      "reward": 1.0,
+      "tokens": 785
+    },
+    {
+      "id": "alfworld-471",
+      "task_id": 471,
+      "sample_index": 0,
+      "rollout_seed": 6947659,
+      "reward": 1.0,
+      "tokens": 1263
+    },
+    {
+      "id": "alfworld-493",
+      "task_id": 493,
+      "sample_index": 0,
+      "rollout_seed": 6559530,
+      "reward": 0.0,
+      "tokens": 1559
+    },
+    {
+      "id": "alfworld-360",
+      "task_id": 360,
+      "sample_index": 0,
+      "rollout_seed": 6304339,
+      "reward": 1.0,
+      "tokens": 354
+    },
+    {
+      "id": "alfworld-417",
+      "task_id": 417,
+      "sample_index": 0,
+      "rollout_seed": 6560896,
+      "reward": 1.0,
+      "tokens": 522
+    },
+    {
+      "id": "alfworld-453",
+      "task_id": 453,
+      "sample_index": 0,
+      "rollout_seed": 6855725,
+      "reward": 0.0,
+      "tokens": 1506
+    },
+    {
+      "id": "alfworld-383",
+      "task_id": 383,
+      "sample_index": 0,
+      "rollout_seed": 6413547,
+      "reward": 1.0,
+      "tokens": 508
+    },
+    {
+      "id": "alfworld-330",
+      "task_id": 330,
+      "sample_index": 0,
+      "rollout_seed": 6257613,
+      "reward": 1.0,
+      "tokens": 667
+    },
+    {
+      "id": "alfworld-450",
+      "task_id": 450,
+      "sample_index": 0,
+      "rollout_seed": 6724274,
+      "reward": 1.0,
+      "tokens": 662
+    },
+    {
+      "id": "alfworld-410",
+      "task_id": 410,
+      "sample_index": 0,
+      "rollout_seed": 6246365,
+      "reward": 1.0,
+      "tokens": 603
+    },
+    {
+      "id": "alfworld-452",
+      "task_id": 452,
+      "sample_index": 0,
+      "rollout_seed": 6014508,
+      "reward": 1.0,
+      "tokens": 411
+    },
+    {
+      "id": "alfworld-366",
+      "task_id": 366,
+      "sample_index": 0,
+      "rollout_seed": 6960092,
+      "reward": 1.0,
+      "tokens": 254
+    },
+    {
+      "id": "alfworld-345",
+      "task_id": 345,
+      "sample_index": 0,
+      "rollout_seed": 6698846,
+      "reward": 1.0,
+      "tokens": 633
+    },
+    {
+      "id": "alfworld-404",
+      "task_id": 404,
+      "sample_index": 0,
+      "rollout_seed": 6786585,
+      "reward": 1.0,
+      "tokens": 186
+    },
+    {
+      "id": "alfworld-271",
+      "task_id": 271,
+      "sample_index": 0,
+      "rollout_seed": 6361356,
+      "reward": 1.0,
+      "tokens": 372
+    },
+    {
+      "id": "alfworld-456",
+      "task_id": 456,
+      "sample_index": 0,
+      "rollout_seed": 6064338,
+      "reward": 1.0,
+      "tokens": 475
+    },
+    {
+      "id": "alfworld-392",
+      "task_id": 392,
+      "sample_index": 0,
+      "rollout_seed": 6875664,
+      "reward": 1.0,
+      "tokens": 881
+    },
+    {
+      "id": "alfworld-422",
+      "task_id": 422,
+      "sample_index": 0,
+      "rollout_seed": 6136623,
+      "reward": 1.0,
+      "tokens": 1545
+    },
+    {
+      "id": "alfworld-449",
+      "task_id": 449,
+      "sample_index": 0,
+      "rollout_seed": 6498504,
+      "reward": 1.0,
+      "tokens": 198
+    },
+    {
+      "id": "alfworld-491",
+      "task_id": 491,
+      "sample_index": 0,
+      "rollout_seed": 6182959,
+      "reward": 1.0,
+      "tokens": 1097
+    },
+    {
+      "id": "alfworld-451",
+      "task_id": 451,
+      "sample_index": 0,
+      "rollout_seed": 6693011,
+      "reward": 0.0,
+      "tokens": 1564
+    },
+    {
+      "id": "alfworld-405",
+      "task_id": 405,
+      "sample_index": 0,
+      "rollout_seed": 6300940,
+      "reward": 1.0,
+      "tokens": 133
+    },
+    {
+      "id": "alfworld-348",
+      "task_id": 348,
+      "sample_index": 0,
+      "rollout_seed": 6833972,
+      "reward": 1.0,
+      "tokens": 363
+    },
+    {
+      "id": "alfworld-356",
+      "task_id": 356,
+      "sample_index": 0,
+      "rollout_seed": 6304364,
+      "reward": 1.0,
+      "tokens": 564
+    },
+    {
+      "id": "alfworld-323",
+      "task_id": 323,
+      "sample_index": 0,
+      "rollout_seed": 6375597,
+      "reward": 1.0,
+      "tokens": 240
+    },
+    {
+      "id": "alfworld-292",
+      "task_id": 292,
+      "sample_index": 0,
+      "rollout_seed": 6238318,
+      "reward": 1.0,
+      "tokens": 378
+    },
+    {
+      "id": "alfworld-423",
+      "task_id": 423,
+      "sample_index": 0,
+      "rollout_seed": 6462532,
+      "reward": 1.0,
+      "tokens": 1215
+    },
+    {
+      "id": "alfworld-342",
+      "task_id": 342,
+      "sample_index": 0,
+      "rollout_seed": 6960655,
+      "reward": 1.0,
+      "tokens": 1527
+    },
+    {
+      "id": "alfworld-430",
+      "task_id": 430,
+      "sample_index": 0,
+      "rollout_seed": 6858326,
+      "reward": 1.0,
+      "tokens": 924
+    },
+    {
+      "id": "alfworld-492",
+      "task_id": 492,
+      "sample_index": 0,
+      "rollout_seed": 6434934,
+      "reward": 1.0,
+      "tokens": 225
+    },
+    {
+      "id": "alfworld-322",
+      "task_id": 322,
+      "sample_index": 0,
+      "rollout_seed": 6201836,
+      "reward": 1.0,
+      "tokens": 672
+    },
+    {
+      "id": "alfworld-320",
+      "task_id": 320,
+      "sample_index": 0,
+      "rollout_seed": 6514742,
+      "reward": 1.0,
+      "tokens": 478
+    },
+    {
+      "id": "alfworld-358",
+      "task_id": 358,
+      "sample_index": 0,
+      "rollout_seed": 6033969,
+      "reward": 1.0,
+      "tokens": 256
+    },
+    {
+      "id": "alfworld-305",
+      "task_id": 305,
+      "sample_index": 0,
+      "rollout_seed": 6326031,
+      "reward": 0.0,
+      "tokens": 1554
+    },
+    {
+      "id": "alfworld-478",
+      "task_id": 478,
+      "sample_index": 0,
+      "rollout_seed": 6003342,
+      "reward": 1.0,
+      "tokens": 1080
+    },
+    {
+      "id": "alfworld-293",
+      "task_id": 293,
+      "sample_index": 0,
+      "rollout_seed": 6969322,
+      "reward": 1.0,
+      "tokens": 656
+    },
+    {
+      "id": "alfworld-315",
+      "task_id": 315,
+      "sample_index": 0,
+      "rollout_seed": 6407877,
+      "reward": 1.0,
+      "tokens": 999
+    },
+    {
+      "id": "alfworld-438",
+      "task_id": 438,
+      "sample_index": 0,
+      "rollout_seed": 6733166,
+      "reward": 1.0,
+      "tokens": 447
+    },
+    {
+      "id": "alfworld-371",
+      "task_id": 371,
+      "sample_index": 0,
+      "rollout_seed": 6037149,
+      "reward": 1.0,
+      "tokens": 310
+    },
+    {
+      "id": "alfworld-399",
+      "task_id": 399,
+      "sample_index": 0,
+      "rollout_seed": 6238848,
+      "reward": 1.0,
+      "tokens": 394
+    },
+    {
+      "id": "alfworld-429",
+      "task_id": 429,
+      "sample_index": 0,
+      "rollout_seed": 6392692,
+      "reward": 1.0,
+      "tokens": 499
+    },
+    {
+      "id": "alfworld-427",
+      "task_id": 427,
+      "sample_index": 0,
+      "rollout_seed": 6214483,
+      "reward": 1.0,
+      "tokens": 488
+    },
+    {
+      "id": "alfworld-325",
+      "task_id": 325,
+      "sample_index": 0,
+      "rollout_seed": 6267978,
+      "reward": 1.0,
+      "tokens": 240
+    },
+    {
+      "id": "alfworld-355",
+      "task_id": 355,
+      "sample_index": 0,
+      "rollout_seed": 6166160,
+      "reward": 1.0,
+      "tokens": 424
+    },
+    {
+      "id": "alfworld-413",
+      "task_id": 413,
+      "sample_index": 0,
+      "rollout_seed": 6436609,
+      "reward": 1.0,
+      "tokens": 364
+    },
+    {
+      "id": "alfworld-341",
+      "task_id": 341,
+      "sample_index": 0,
+      "rollout_seed": 6055352,
+      "reward": 1.0,
+      "tokens": 752
+    },
+    {
+      "id": "alfworld-306",
+      "task_id": 306,
+      "sample_index": 0,
+      "rollout_seed": 6834747,
+      "reward": 1.0,
+      "tokens": 162
+    },
+    {
+      "id": "alfworld-396",
+      "task_id": 396,
+      "sample_index": 0,
+      "rollout_seed": 6140006,
+      "reward": 1.0,
+      "tokens": 436
+    },
+    {
+      "id": "alfworld-368",
+      "task_id": 368,
+      "sample_index": 0,
+      "rollout_seed": 6986272,
+      "reward": 1.0,
+      "tokens": 657
+    },
+    {
+      "id": "alfworld-310",
+      "task_id": 310,
+      "sample_index": 0,
+      "rollout_seed": 6576260,
+      "reward": 1.0,
+      "tokens": 419
+    },
+    {
+      "id": "alfworld-265",
+      "task_id": 265,
+      "sample_index": 0,
+      "rollout_seed": 6076314,
+      "reward": 1.0,
+      "tokens": 399
+    },
+    {
+      "id": "alfworld-290",
+      "task_id": 290,
+      "sample_index": 0,
+      "rollout_seed": 6183333,
+      "reward": 1.0,
+      "tokens": 486
+    },
+    {
+      "id": "alfworld-326",
+      "task_id": 326,
+      "sample_index": 0,
+      "rollout_seed": 6175551,
+      "reward": 1.0,
+      "tokens": 315
+    },
+    {
+      "id": "alfworld-370",
+      "task_id": 370,
+      "sample_index": 0,
+      "rollout_seed": 6058781,
+      "reward": 1.0,
+      "tokens": 674
+    }
+  ],
+  "domain": "alfworld",
+  "formatted_fraction": 1.0,
+  "harness_error_episodes": 0
+}

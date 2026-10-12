@@ -1,0 +1,196 @@
+--- a/areal/engine/fsdp_engine.py
++++ b/areal/engine/fsdp_engine.py
+@@ -1084,12 +1084,30 @@
+             tik = time.perf_counter()
+             # VLM: Use from_pretrained() on loading_device.
+             with torch.device(loading_device):
+-                model = AutoModelForImageTextToText.from_pretrained(
+-                    pretrained_model_name_or_path=self.config.path,
+-                    trust_remote_code=True,
+-                    dtype=dtype,
+-                    attn_implementation=self.config.attn_impl,
+-                )
++                model_kwargs = {
++                    "pretrained_model_name_or_path": self.config.path,
++                    "trust_remote_code": True,
++                    "dtype": dtype,
++                    "attn_implementation": self.config.attn_impl,
++                }
++                if self.config.is_critic:
++                    if self.model_config.model_type != "qwen3_5":
++                        raise NotImplementedError(
++                            "Token-level critics are not implemented for vision "
++                            f"model type {self.model_config.model_type!r}."
++                        )
++                    from areal.models.transformers.qwen3_5_value import (
++                        Qwen3_5ForTokenClassification,
++                    )
++
++                    model = Qwen3_5ForTokenClassification.from_pretrained(
++                        **model_kwargs,
++                        num_labels=1,
++                    )
++                else:
++                    model = AutoModelForImageTextToText.from_pretrained(
++                        **model_kwargs,
++                    )
+                 if self.config.disable_dropout:
+                     disable_dropout_in_model(model)
+         else:
+--- a/areal/trainer/ppo/critic.py
++++ b/areal/trainer/ppo/critic.py
+@@ -34,10 +34,17 @@
+ 
+     def _compute_values(self, data: dict[str, Any]) -> torch.Tensor:
+         self.engine.eval()
+-        return self.engine.forward(
++        values = self.engine.forward(
+             input_=data,
+             aggregate_fn=lambda xs: torch.cat([x.squeeze(-1) for x in xs], dim=-1),
+         )
++        expected = data["attention_mask"].shape
++        if values.shape != expected:
++            raise RuntimeError(
++                f"Critic value shape {tuple(values.shape)} does not match "
++                f"attention mask {tuple(expected)}"
++            )
++        return values
+ 
+     @trace_perf("ppo_critic.ppo_update", category="compute")
+     @stats_tracker.scope_func_wrapper("ppo_critic")
+--- /dev/null
++++ b/areal/models/transformers/qwen3_5_value.py
+@@ -0,0 +1,55 @@
++# SPDX-License-Identifier: Apache-2.0
++
++from __future__ import annotations
++
++import torch
++from torch import nn
++from transformers.modeling_outputs import TokenClassifierOutput
++from transformers.models.qwen3_5.modeling_qwen3_5 import (
++    Qwen3_5Model,
++    Qwen3_5PreTrainedModel,
++)
++
++
++class Qwen3_5ForTokenClassification(Qwen3_5PreTrainedModel):
++    """Qwen3.5 multimodal backbone with one value prediction per token."""
++
++    _keys_to_ignore_on_load_unexpected = [r"^lm_head\.weight$"]
++
++    def __init__(self, config):
++        super().__init__(config)
++        self.num_labels = config.num_labels
++        self.model = Qwen3_5Model(config)
++        self.score = nn.Linear(
++            config.text_config.hidden_size,
++            config.num_labels,
++            bias=False,
++        )
++        self.post_init()
++
++    def get_input_embeddings(self):
++        return self.model.get_input_embeddings()
++
++    def set_input_embeddings(self, value):
++        self.model.set_input_embeddings(value)
++
++    def forward(
++        self,
++        input_ids: torch.LongTensor | None = None,
++        attention_mask: torch.Tensor | None = None,
++        position_ids: torch.LongTensor | None = None,
++        inputs_embeds: torch.FloatTensor | None = None,
++        **kwargs,
++    ) -> TokenClassifierOutput:
++        outputs = self.model(
++            input_ids=input_ids,
++            attention_mask=attention_mask,
++            position_ids=position_ids,
++            inputs_embeds=inputs_embeds,
++            **kwargs,
++        )
++        return TokenClassifierOutput(
++            logits=self.score(outputs.last_hidden_state),
++            hidden_states=outputs.hidden_states,
++            attentions=outputs.attentions,
++        )
+--- /dev/null
++++ b/tests/test_qwen3_5_value_model.py
+@@ -0,0 +1,75 @@
++import torch
++from transformers.models.qwen3_5.configuration_qwen3_5 import (
++    Qwen3_5Config,
++    Qwen3_5TextConfig,
++    Qwen3_5VisionConfig,
++)
++from transformers.models.qwen3_5.modeling_qwen3_5 import (
++    Qwen3_5ForConditionalGeneration,
++)
++
++from areal.models.transformers.qwen3_5_value import (
++    Qwen3_5ForTokenClassification,
++)
++
++
++def _tiny_config() -> Qwen3_5Config:
++    text = Qwen3_5TextConfig(
++        vocab_size=64,
++        hidden_size=16,
++        intermediate_size=32,
++        num_hidden_layers=1,
++        num_attention_heads=2,
++        num_key_value_heads=1,
++        head_dim=8,
++        layer_types=["full_attention"],
++        linear_num_key_heads=2,
++        linear_num_value_heads=2,
++        linear_key_head_dim=8,
++        linear_value_head_dim=8,
++        max_position_embeddings=128,
++        use_cache=False,
++    )
++    vision = Qwen3_5VisionConfig(
++        depth=1,
++        hidden_size=16,
++        intermediate_size=32,
++        num_heads=2,
++        out_hidden_size=16,
++        patch_size=2,
++        spatial_merge_size=1,
++        temporal_patch_size=1,
++        num_position_embeddings=16,
++    )
++    config = Qwen3_5Config(
++        text_config=text,
++        vision_config=vision,
++        image_token_id=60,
++        video_token_id=61,
++        vision_start_token_id=62,
++        vision_end_token_id=63,
++    )
++    config._attn_implementation = "eager"
++    return config
++
++
++def test_qwen3_5_value_head_converts_and_reloads_checkpoint(tmp_path):
++    actor_path = tmp_path / "actor"
++    critic_path = tmp_path / "critic"
++    Qwen3_5ForConditionalGeneration(_tiny_config()).save_pretrained(actor_path)
++
++    critic = Qwen3_5ForTokenClassification.from_pretrained(
++        actor_path,
++        num_labels=1,
++    )
++    with torch.no_grad():
++        output = critic(
++            input_ids=torch.tensor([[1, 2, 3, 4]]),
++            attention_mask=torch.ones(1, 4, dtype=torch.long),
++        )
++        critic.score.weight.fill_(0.25)
++    assert output.logits.shape == (1, 4, 1)
++
++    critic.save_pretrained(critic_path)
++    reloaded = Qwen3_5ForTokenClassification.from_pretrained(critic_path)
++    torch.testing.assert_close(reloaded.score.weight, critic.score.weight)

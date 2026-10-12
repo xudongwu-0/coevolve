@@ -1,0 +1,1072 @@
+{
+  "solver-eval-b54777e6245f-h00": {
+    "module": "src.server.tasks.alfworld.ALFWorld",
+    "parameters": {
+      "name": "solver-eval-b54777e6245f-h00",
+      "concurrency": 32,
+      "data_path": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0144/selection/attempt-01/environment/runtime/AgentBench/data/alfworld",
+      "config_path": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0144/selection/attempt-01/environment/runtime/AgentBench/src/server/tasks/alfworld/configs/base_config.yaml",
+      "prompts_path": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0144/selection/attempt-01/environment/runtime/AgentBench/src/server/tasks/alfworld/prompts/alfworld_multiturn_plan_first.json",
+      "split": "test_set",
+      "max_step": 50,
+      "task_ids": [
+        240,
+        247,
+        244,
+        246,
+        242,
+        250,
+        243,
+        284,
+        261,
+        259,
+        248,
+        251,
+        269,
+        280,
+        267,
+        254,
+        252,
+        274,
+        286,
+        270,
+        263,
+        255,
+        275,
+        289,
+        464,
+        298,
+        470,
+        422,
+        302,
+        322,
+        336,
+        491,
+        468,
+        402,
+        446,
+        325,
+        471,
+        310,
+        308,
+        341,
+        421,
+        297,
+        332,
+        323,
+        418,
+        494,
+        499,
+        477
+      ],
+      "start": 240,
+      "end": 500,
+      "sample_size": 48,
+      "enabled": false,
+      "h2": false,
+      "h3": false,
+      "h4": false,
+      "h5": false,
+      "h5_top_k": 1,
+      "tools": [
+        {
+          "type": "function",
+          "function": {
+            "name": "take_action",
+            "description": "Take an action.",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "action": {
+                  "type": "string",
+                  "description": "The action you would like to take"
+                }
+              },
+              "required": [
+                "action"
+              ],
+              "additionalProperties": false
+            }
+          }
+        }
+      ]
+    }
+  },
+  "solver-eval-b54777e6245f-h01": {
+    "module": "src.server.tasks.alfworld.ALFWorld",
+    "parameters": {
+      "name": "solver-eval-b54777e6245f-h01",
+      "concurrency": 32,
+      "data_path": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0144/selection/attempt-01/environment/runtime/AgentBench/data/alfworld",
+      "config_path": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0144/selection/attempt-01/environment/runtime/AgentBench/src/server/tasks/alfworld/configs/base_config.yaml",
+      "prompts_path": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0144/selection/attempt-01/environment/runtime/AgentBench/src/server/tasks/alfworld/prompts/alfworld_multiturn_plan_first.json",
+      "split": "test_set",
+      "max_step": 50,
+      "task_ids": [
+        240,
+        247,
+        244,
+        246,
+        242,
+        250,
+        243,
+        284,
+        261,
+        259,
+        248,
+        251,
+        269,
+        280,
+        267,
+        254,
+        252,
+        274,
+        286,
+        270,
+        263,
+        255,
+        275,
+        289,
+        464,
+        298,
+        470,
+        422,
+        302,
+        322,
+        336,
+        491,
+        468,
+        402,
+        446,
+        325,
+        471,
+        310,
+        308,
+        341,
+        421,
+        297,
+        332,
+        323,
+        418,
+        494,
+        499,
+        477
+      ],
+      "start": 240,
+      "end": 500,
+      "sample_size": 48,
+      "enabled": false,
+      "h2": false,
+      "h3": false,
+      "h4": false,
+      "h5": false,
+      "h5_top_k": 1,
+      "tools": [
+        {
+          "type": "function",
+          "function": {
+            "name": "take_action",
+            "description": "Take an action.",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "action": {
+                  "type": "string",
+                  "description": "The action you would like to take"
+                }
+              },
+              "required": [
+                "action"
+              ],
+              "additionalProperties": false
+            }
+          }
+        }
+      ],
+      "harness_overlay": {
+        "skills": [],
+        "guard_rules": [],
+        "recovery_rules": [],
+        "code_hooks": [
+          {
+            "type": "add_code_hook",
+            "hook": "on_init",
+            "code": "def hook(ctx, nb):\n    nb['stage'] = 'find_target'\n    nb['last_hint'] = ''\n    nb['transformed'] = False\n    nb['placed_count'] = 0\n    text = 'Follow ALFWorld order: find the requested target type, take it, do any required clean/heat/cool/slice transform, go to the requested destination, then put it there. Do not take back an item after placing it.'\n    return {'skills': [{'text': text}], 'tool_hint': 'When a target take, required transform, or destination put is available, use that subgoal instead of continuing broad search.'}"
+          },
+          {
+            "type": "add_code_hook",
+            "hook": "on_post_step",
+            "code": "def g(ctx, path, default=None):\n    if isinstance(ctx, dict) and path in ctx:\n        return ctx.get(path, default)\n    cur = ctx\n    for part in path.split('.'):\n        if isinstance(cur, dict) and part in cur:\n            cur = cur.get(part)\n        else:\n            return default\n    return cur\n\ndef txt(x):\n    if x is None:\n        return ''\n    if isinstance(x, (list, tuple, set)):\n        return ' '.join([txt(i) for i in x])\n    if isinstance(x, dict):\n        return ' '.join([txt(k) + ' ' + txt(v) for k, v in x.items()])\n    return str(x).lower()\n\ndef needverb(tt):\n    if 'clean' in tt:\n        return 'clean'\n    if 'heat' in tt:\n        return 'heat'\n    if 'cool' in tt:\n        return 'cool'\n    if 'slice' in tt:\n        return 'slice'\n    return ''\n\ndef hasinv(inv, target):\n    s = txt(inv)\n    return bool(target and target in s and 'nothing' not in s and 'not carrying' not in s)\n\ndef hook(ctx, nb):\n    target = txt(g(ctx, 'task.target_type', ''))\n    dest = txt(g(ctx, 'task.destination_type', ''))\n    tt = txt(g(ctx, 'task.task_type', ''))\n    if not target:\n        return None\n    verb = needverb(tt)\n    if not verb:\n        nb['transformed'] = True\n    act = txt(g(ctx, 'action.final_action', g(ctx, 'action.normalized', g(ctx, 'action.raw', ''))))\n    obs = txt(ctx.get('observation', ''))\n    inv = g(ctx, 'world.inventory', '')\n    if verb and target in act and act.startswith(verb + ' '):\n        nb['transformed'] = True\n    if verb and target in obs and (act.startswith(verb + ' ') or ('you ' + verb) in obs or 'now ' + verb in obs):\n        nb['transformed'] = True\n    pc = g(ctx, 'world.placed_count', 0)\n    try:\n        pc = int(pc)\n    except Exception:\n        pc = 0\n    try:\n        old = int(nb.get('placed_count', 0))\n    except Exception:\n        old = 0\n    if pc > old:\n        nb['placed_count'] = pc\n    adm = [txt(a) for a in (ctx.get('admissible') or [])]\n    take_here = bool(target and any(a.startswith('take ' + target + ' ') for a in adm))\n    trans_ready = bool(verb and target and any(a.startswith(verb + ' ') and target in a for a in adm))\n    put_ready = bool(target and any(a.startswith('put ') and target in a and (not dest or dest in a) for a in adm))\n    carrying = hasinv(inv, target)\n    wrong = bool(inv and isinstance(inv, (list, tuple, set)) and target not in txt(inv) and 'nothing' not in txt(inv) and 'not carrying' not in txt(inv))\n    if wrong or (isinstance(inv, str) and inv and 'nothing' not in inv and 'not carrying' not in inv and target not in inv):\n        stage = 'wrong_inventory'\n    elif 'two' in tt and nb.get('placed_count', 0) >= 2:\n        stage = 'done'\n    elif carrying:\n        if verb and not nb.get('transformed'):\n            stage = 'transform'\n        elif put_ready or (dest and any(a.startswith('put ') and dest in a for a in adm)):\n            stage = 'put_target'\n        else:\n            stage = 'go_destination'\n    elif take_here or g(ctx, 'world.target_found', False) or g(ctx, 'world.target_location', ''):\n        stage = 'take_target'\n    else:\n        stage = 'find_target'\n    nb['stage'] = stage\n    nb['target_type'] = target\n    nb['destination_type'] = dest\n    nb['task_type'] = tt\n    nb['need_verb'] = verb\n    nb['take_available'] = take_here\n    nb['transform_ready'] = trans_ready\n    nb['put_available'] = put_ready\n    nb['carrying_target'] = carrying\n    return None"
+          },
+          {
+            "type": "add_code_hook",
+            "hook": "make_pre_hint",
+            "code": "def g(ctx, path, default=None):\n    if isinstance(ctx, dict) and path in ctx:\n        return ctx.get(path, default)\n    cur = ctx\n    for part in path.split('.'):\n        if isinstance(cur, dict) and part in cur:\n            cur = cur.get(part)\n        else:\n            return default\n    return cur\n\ndef needverb(tt):\n    if 'clean' in tt:\n        return 'clean'\n    if 'heat' in tt:\n        return 'heat'\n    if 'cool' in tt:\n        return 'cool'\n    if 'slice' in tt:\n        return 'slice'\n    return ''\n\ndef hook(ctx, nb):\n    stage = nb.get('stage', '')\n    target = nb.get('target_type') or txt(g(ctx, 'task.target_type', ''))\n    dest = nb.get('destination_type') or txt(g(ctx, 'task.destination_type', ''))\n    tt = nb.get('task_type') or txt(g(ctx, 'task.task_type', ''))\n    verb = nb.get('need_verb') or needverb(tt)\n    msg = ''\n    if not target:\n        return None\n    if stage == 'wrong_inventory':\n        msg = 'You appear to be carrying a non-target item. Do not place it as the goal object; search for or take the requested target type instead.'\n    elif stage == 'take_target' and nb.get('take_available') and not nb.get('take_hinted'):\n        msg = 'The requested target type is available here; take it before continuing to search other containers.'\n    elif stage == 'transform' and verb:\n        if nb.get('transform_ready') and not nb.get('transform_hinted'):\n            msg = 'The required ' + verb + ' action for the target is available now; use it before placing the item.'\n        elif 'two' in tt:\n            msg = 'Use the required ' + verb + ' action on this target before placing it, then leave already placed targets at the destination.'\n        else:\n            place = ''\n            if verb == 'clean':\n                place = 'sinkbasin'\n            if verb == 'heat':\n                place = 'microwave'\n            if verb == 'cool':\n                place = 'fridge'\n            if verb == 'slice':\n                place = 'knife'\n            msg = 'Carry the target to the ' + place + ' and use the ' + verb + ' action before going to the destination.'\n    elif stage == 'put_target' and nb.get('put_available') and not nb.get('put_hinted'):\n        msg = 'You are at the requested destination with the target; put it in/on the ' + dest + ' now.'\n    elif stage == 'go_destination' and dest and not nb.get('put_hinted'):\n        msg = 'Carry the target to the requested ' + dest + '; do not substitute a different container type.'\n    elif stage == 'find_target' and g(ctx, 'predicates.remaining_steps_low', False):\n        msg = 'Search systematically for the requested target type; avoid carrying wrong objects or repeating examine/go loops.'\n    if not msg:\n        return None\n    key = stage + '|' + msg\n    if nb.get('last_hint') == key:\n        return None\n    nb['last_hint'] = key\n    if stage in ('take_target', 'transform', 'put_target'):\n        nb[stage + '_hinted'] = True\n    return {'message': msg}"
+          }
+        ],
+        "metadata": {
+          "source_patch_description": "Maintain subgoal stage and prevent exhaustive search, wrong-object carry, and transform/put skip loops.",
+          "overlay_only": true
+        }
+      }
+    }
+  },
+  "solver-eval-b54777e6245f-h02": {
+    "module": "src.server.tasks.alfworld.ALFWorld",
+    "parameters": {
+      "name": "solver-eval-b54777e6245f-h02",
+      "concurrency": 32,
+      "data_path": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0144/selection/attempt-01/environment/runtime/AgentBench/data/alfworld",
+      "config_path": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0144/selection/attempt-01/environment/runtime/AgentBench/src/server/tasks/alfworld/configs/base_config.yaml",
+      "prompts_path": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0144/selection/attempt-01/environment/runtime/AgentBench/src/server/tasks/alfworld/prompts/alfworld_multiturn_plan_first.json",
+      "split": "test_set",
+      "max_step": 50,
+      "task_ids": [
+        240,
+        247,
+        244,
+        246,
+        242,
+        250,
+        243,
+        284,
+        261,
+        259,
+        248,
+        251,
+        269,
+        280,
+        267,
+        254,
+        252,
+        274,
+        286,
+        270,
+        263,
+        255,
+        275,
+        289,
+        464,
+        298,
+        470,
+        422,
+        302,
+        322,
+        336,
+        491,
+        468,
+        402,
+        446,
+        325,
+        471,
+        310,
+        308,
+        341,
+        421,
+        297,
+        332,
+        323,
+        418,
+        494,
+        499,
+        477
+      ],
+      "start": 240,
+      "end": 500,
+      "sample_size": 48,
+      "enabled": false,
+      "h2": false,
+      "h3": false,
+      "h4": false,
+      "h5": false,
+      "h5_top_k": 1,
+      "tools": [
+        {
+          "type": "function",
+          "function": {
+            "name": "take_action",
+            "description": "Take an action.",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "action": {
+                  "type": "string",
+                  "description": "The action you would like to take"
+                }
+              },
+              "required": [
+                "action"
+              ],
+              "additionalProperties": false
+            }
+          }
+        }
+      ],
+      "harness_overlay": {
+        "skills": [],
+        "guard_rules": [],
+        "recovery_rules": [],
+        "code_hooks": [
+          {
+            "type": "add_code_hook",
+            "hook": "on_init",
+            "code": "def hook(ctx, nb):\n    nb['stage'] = 'find_target'\n    nb['placed_count'] = 0\n    nb['last_hint'] = ''\n    nb['holding_target'] = False\n    nb['transformed'] = False\n    nb['placed_items'] = []\n    nb['placed_locations'] = []\n    text = 'Follow this order: find the target object, take it, do any required clean heat cool or slice step while carrying it, then carry it to the destination and put it there. For two-object tasks, leave placed items and use the same destination.'\n    return {'skills': [{'text': text}], 'tool_hint': 'Track inventory, required transform, and destination instead of searching every container after the target appears.'}"
+          },
+          {
+            "type": "add_code_hook",
+            "hook": "on_post_step",
+            "code": "def as_text(x):\n    if x is None:\n        return ''\n    if isinstance(x, (list, tuple, set)):\n        return ' '.join([as_text(i) for i in x])\n    if isinstance(x, dict):\n        return ' '.join([as_text(k) + ' ' + as_text(v) for k, v in x.items()])\n    return str(x).lower()\n\ndef need_verb(tt):\n    if 'clean' in tt:\n        return 'clean'\n    if 'heat' in tt:\n        return 'heat'\n    if 'cool' in tt:\n        return 'cool'\n    if 'slice' in tt:\n        return 'slice'\n    return ''\n\ndef has_word(text, word):\n    return bool(word and word in text)\n\ndef hook(ctx, nb):\n    world = ctx.get('world') or {}\n    task = ctx.get('task') or {}\n    actd = ctx.get('action') or {}\n    action = ''\n    if isinstance(actd, dict) and actd.get('final_action'):\n        action = str(actd.get('final_action') or actd.get('normalized') or actd.get('raw') or '')\n    elif isinstance(actd, dict) and actd.get('normalized'):\n        action = str(actd.get('normalized') or actd.get('raw') or '')\n    elif actd:\n        action = str(actd)\n    action = as_text(action)\n    if 'placed_items' not in nb:\n        nb['placed_items'] = []\n    if 'placed_locations' not in nb:\n        nb['placed_locations'] = []\n    target = task.get('target_type') or ''\n    dest = task.get('destination_type') or ''\n    tt = as_text(task.get('task_type') or ctx.get('task.task_type') or '')\n    verb = need_verb(tt)\n    admiss = ctx.get('admissible') or []\n    inv = as_text(world.get('inventory') or ctx.get('world.inventory') or '')\n    if 'nothing' in inv and 'not carrying' in inv:\n        inv = ''\n    if target and action.startswith('take ') and has_word(action, target):\n        nb['holding_target'] = True\n        nb['wrong_inventory'] = False\n    if target and action.startswith('put ') and has_word(action, target):\n        nb['holding_target'] = False\n    if target and verb and target in action and action.startswith(verb + ' '):\n        nb['transformed'] = True\n    pc = world.get('placed_count')\n    if isinstance(pc, int) and pc > nb.get('placed_count', 0):\n        nb['placed_count'] = pc\n    elif action.startswith('put ') and has_word(action, target) and dest and has_word(action, dest):\n        item = action[4:]\n        loc = item\n        if ' in/on ' in item:\n            parts = item.split(' in/on ')\n            item = parts[0]\n            loc = parts[1]\n        if item and item not in nb['placed_items']:\n            nb['placed_items'].append(item)\n        if loc and loc not in nb['placed_locations']:\n            nb['placed_locations'].append(loc)\n        nb['placed_count'] = len(nb['placed_items'])\n    carrying = bool(inv and 'nothing' not in inv and 'not carrying' not in inv)\n    holding = carrying and (not target or has_word(inv, target))\n    if holding and verb and not nb.get('transformed') and verb != 'slice':\n        nb['stage'] = 'transform'\n    elif carrying and target and not has_word(inv, target):\n        nb['stage'] = 'wrong_inventory'\n    elif holding and (not verb or nb.get('transformed')):\n        if dest and has_word(action, dest) and action.startswith('put '):\n            nb['stage'] = 'placed'\n        else:\n            nb['stage'] = 'go_destination'\n    else:\n        take_ok = False\n        for a in admiss:\n            if target and as_text(a).startswith('take ') and has_word(as_text(a), target):\n                take_ok = True\n        if take_ok and not holding and not (carrying and target and not has_word(inv, target)):\n            nb['stage'] = 'take_target'\n        else:\n            nb['stage'] = 'find_target'\n    nb['holding_target'] = holding\n    nb['target_type'] = target\n    nb['destination_type'] = dest\n    nb['task_type'] = tt\n    nb['verb'] = verb\n    return None"
+          },
+          {
+            "type": "add_code_hook",
+            "hook": "make_pre_hint",
+            "code": "def hook(ctx, nb):\n    target = nb.get('target_type') or 'target object'\n    dest = nb.get('destination_type') or 'destination'\n    stage = nb.get('stage')\n    verb = nb.get('verb')\n    msg = ''\n    if stage == 'wrong_inventory':\n        msg = 'You are carrying a non-target item. Do not place it at the goal; recover the ' + target + ' instead.'\n    elif stage == 'take_target':\n        msg = 'The ' + target + ' is available here. Take the target before continuing to search.'\n    elif stage == 'transform' and verb:\n        if verb in ['clean', 'heat', 'cool']:\n            msg = 'Carry the ' + target + ' to the ' + verb + ' station and use the ' + verb + ' action before placing it.'\n        else:\n            msg = 'Carry the ' + target + ' and use the required ' + verb + ' action before placing it.'\n    elif stage == 'go_destination':\n        msg = 'Carry the ' + target + ' to the ' + dest + ' and put it there; do not put it on unrelated surfaces.'\n    elif stage == 'find_target' and 'two' in (nb.get('task_type') or '') and nb.get('placed_count', 0) > 0:\n        msg = 'One ' + target + ' is already placed. Leave it there, find another ' + target + ', and use the same ' + dest + '.'\n    if not msg or msg == nb.get('last_hint'):\n        return None\n    nb['last_hint'] = msg\n    return {'message': msg}"
+          },
+          {
+            "type": "add_code_hook",
+            "hook": "on_before_action",
+            "code": "def as_text(x):\n    if x is None:\n        return ''\n    if isinstance(x, (list, tuple, set)):\n        return ' '.join([as_text(i) for i in x])\n    if isinstance(x, dict):\n        return ' '.join([as_text(k) + ' ' + as_text(v) for k, v in x.items()])\n    return str(x).lower()\n\ndef need_verb(tt):\n    if 'clean' in tt:\n        return 'clean'\n    if 'heat' in tt:\n        return 'heat'\n    if 'cool' in tt:\n        return 'cool'\n    if 'slice' in tt:\n        return 'slice'\n    return ''\n\ndef has_word(text, word):\n    return bool(word and word in text)\n\ndef hook(ctx, nb):\n    world = ctx.get('world') or {}\n    task = ctx.get('task') or {}\n    actd = ctx.get('action') or {}\n    action = ''\n    if isinstance(actd, dict) and actd.get('final_action'):\n        action = str(actd.get('final_action') or actd.get('normalized') or actd.get('raw') or '')\n    elif isinstance(actd, dict) and actd.get('normalized'):\n        action = str(actd.get('normalized') or actd.get('raw') or '')\n    elif actd:\n        action = str(actd)\n    action = as_text(action)\n    if not action:\n        return None\n    target = nb.get('target_type') or task.get('target_type') or ''\n    dest = nb.get('destination_type') or task.get('destination_type') or ''\n    tt = as_text(task.get('task_type') or ctx.get('task.task_type') or '')\n    verb = need_verb(tt)\n    admiss = ctx.get('admissible') or []\n    inv = as_text(world.get('inventory') or ctx.get('world.inventory') or '')\n    if 'nothing' in inv and 'not carrying' in inv:\n        inv = ''\n    carrying = bool(inv and 'nothing' not in inv and 'not carrying' not in inv)\n    holding = carrying and (not target or has_word(inv, target))\n    non_target = carrying and target and not has_word(inv, target)\n    if non_target and action.startswith('put ') and (not dest or has_word(action, dest)) and not (has_word(action, target) or has_word(action, 'target')):\n        return {'kind': 'block_and_prompt', 'message': 'This is not the target object. Do not place a non-target item at the goal; recover the target instead.'}\n    if 'two' in (nb.get('task_type') or '') and target and action.startswith('take ') and has_word(action, target) and nb.get('placed_count', 0) > 0:\n        items = nb.get('placed_items') or []\n        for item in items:\n            if item and item in action and item not in action.split(' from ')[-1]:\n                return {'kind': 'block_and_prompt', 'message': 'Do not take back an already placed target. Leave it there and find another target for the same destination.'}\n    if target and action.startswith('put ') and has_word(action, target) and dest and not has_word(action, dest) and verb and not nb.get('transformed') and (holding or (not carrying and target in action)):\n        if action in admiss or (not carrying and target in action and any(a.startswith('put ') and has_word(a, target) for a in admiss)):\n            return {'kind': 'block_and_prompt', 'message': 'This target still needs its required ' + verb + ' step before being placed. Go to the transform station first.'}\n    return None"
+          }
+        ],
+        "metadata": {
+          "source_patch_description": "Add staged ALFWorld guidance for target carrying, transformation, placement, and pick-two reuse.",
+          "overlay_only": true
+        }
+      }
+    }
+  },
+  "solver-eval-b54777e6245f-h03": {
+    "module": "src.server.tasks.alfworld.ALFWorld",
+    "parameters": {
+      "name": "solver-eval-b54777e6245f-h03",
+      "concurrency": 32,
+      "data_path": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0144/selection/attempt-01/environment/runtime/AgentBench/data/alfworld",
+      "config_path": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0144/selection/attempt-01/environment/runtime/AgentBench/src/server/tasks/alfworld/configs/base_config.yaml",
+      "prompts_path": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0144/selection/attempt-01/environment/runtime/AgentBench/src/server/tasks/alfworld/prompts/alfworld_multiturn_plan_first.json",
+      "split": "test_set",
+      "max_step": 50,
+      "task_ids": [
+        240,
+        247,
+        244,
+        246,
+        242,
+        250,
+        243,
+        284,
+        261,
+        259,
+        248,
+        251,
+        269,
+        280,
+        267,
+        254,
+        252,
+        274,
+        286,
+        270,
+        263,
+        255,
+        275,
+        289,
+        464,
+        298,
+        470,
+        422,
+        302,
+        322,
+        336,
+        491,
+        468,
+        402,
+        446,
+        325,
+        471,
+        310,
+        308,
+        341,
+        421,
+        297,
+        332,
+        323,
+        418,
+        494,
+        499,
+        477
+      ],
+      "start": 240,
+      "end": 500,
+      "sample_size": 48,
+      "enabled": false,
+      "h2": false,
+      "h3": false,
+      "h4": false,
+      "h5": false,
+      "h5_top_k": 1,
+      "tools": [
+        {
+          "type": "function",
+          "function": {
+            "name": "take_action",
+            "description": "Take an action.",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "action": {
+                  "type": "string",
+                  "description": "The action you would like to take"
+                }
+              },
+              "required": [
+                "action"
+              ],
+              "additionalProperties": false
+            }
+          }
+        }
+      ],
+      "harness_overlay": {
+        "skills": [],
+        "guard_rules": [],
+        "recovery_rules": [],
+        "code_hooks": [
+          {
+            "type": "add_code_hook",
+            "hook": "on_init",
+            "code": "def hook(ctx, nb):\n    nb['stage'] = 'find_target'\n    nb['last_hint'] = ''\n    nb['transformed'] = False\n    nb['placed_count'] = 0\n    nb['placed_locations'] = []\n    nb['placed_items'] = []\n    nb['carrying_target'] = False\n    text = 'Use ALFWorld order: find and take the requested object type, do any required clean, heat, or cool transform before placing, then put it only at the requested destination. For two-object tasks, leave placed items and repeat with another target at the same destination.'\n    return {'skills': [{'text': text}], 'tool_hint': 'If an admissible take, transform, or final put action is available, prefer that over broad searching.'}"
+          },
+          {
+            "type": "add_code_hook",
+            "hook": "on_post_step",
+            "code": "def hook(ctx, nb):\n    task = ctx.get('task') or {}\n    world = ctx.get('world') or {}\n    if not isinstance(task, dict):\n        task = {}\n    if not isinstance(world, dict):\n        world = {}\n    target = str(task.get('target_type') or ctx.get('task.target_type') or '').lower()\n    dest = str(task.get('destination_type') or ctx.get('task.destination_type') or '').lower()\n    ttype = str(task.get('task_type') or ctx.get('task.task_type') or '').lower()\n    actinfo = ctx.get('action') or {}\n    if not isinstance(actinfo, dict):\n        actinfo = {}\n    action = str(actinfo.get('final_action') or actinfo.get('normalized') or actinfo.get('raw') or ctx.get('action.final_action') or ctx.get('action.normalized') or ctx.get('action.raw') or '').lower()\n    obs = str(ctx.get('observation') or '').lower()\n    inv = world.get('inventory') or []\n    if isinstance(inv, str):\n        inv = [inv.lower()]\n    inv_text = ' '.join(str(x).lower() for x in inv)\n    has_target = bool(target and target in inv_text and 'nothing' not in inv_text)\n    carrying = bool(inv_text and 'nothing' not in inv_text and 'not carrying' not in inv_text)\n    if target and target in action and 'nothing' not in action:\n        carrying = True\n    if target and action.startswith('take ') and target in action and 'nothing' not in action:\n        carrying = True\n    if target and action.startswith('put ') and target in action:\n        carrying = False\n    need = ''\n    if 'clean' in ttype:\n        need = 'clean'\n    if 'heat' in ttype:\n        need = 'heat'\n    if 'cool' in ttype:\n        need = 'cool'\n    transform_done = bool(nb.get('transformed', False))\n    if need and target:\n        if action.startswith(need + ' ') and target in action:\n            transform_done = True\n        if need == 'clean' and target in obs and ('wash' in obs or 'rinse' in obs or 'clean' in obs):\n            transform_done = True\n        if need == 'heat' and target in obs and 'hot' in obs and 'heat' in obs:\n            transform_done = True\n        if need == 'cool' and target in obs and 'cold' in obs and 'cool' in obs:\n            transform_done = True\n    nb['carrying_target'] = carrying\n    nb['transformed'] = transform_done\n    pc = world.get('placed_count')\n    if isinstance(pc, int) and pc > nb.get('placed_count', 0):\n        nb['placed_count'] = pc\n    locs = world.get('placed_locations') or []\n    if locs and not nb.get('placed_locations'):\n        nb['placed_locations'] = locs\n    items = world.get('placed_items') or []\n    if items and not nb.get('placed_items'):\n        nb['placed_items'] = items\n    take_ready = bool(target and any(a.startswith('take ') and target in a for a in (ctx.get('admissible') or [])))\n    put_ready = bool(target and dest and any(a.startswith('put ') and target in a and dest in a for a in (ctx.get('admissible') or [])))\n    if carrying and target and dest and not transform_done and need:\n        nb['stage'] = 'transform'\n    elif carrying and target and dest and transform_done:\n        nb['stage'] = 'put_target' if put_ready else 'go_destination'\n    elif carrying and target and not transform_done and need:\n        nb['stage'] = 'transform'\n    elif carrying and target and not transform_done:\n        nb['stage'] = 'wrong_inventory'\n    elif take_ready or world.get('target_found') or world.get('target_location'):\n        nb['stage'] = 'take_target' if take_ready else 'find_target'\n    elif carrying and target:\n        nb['stage'] = 'go_destination'\n    else:\n        nb['stage'] = 'find_target'\n    if carrying and target and need and not transform_done:\n        nb['need_transform'] = need\n    return None"
+          },
+          {
+            "type": "add_code_hook",
+            "hook": "make_pre_hint",
+            "code": "def hook(ctx, nb):\n    task = ctx.get('task') or {}\n    if not isinstance(task, dict):\n        task = {}\n    ttype = str(task.get('task_type') or ctx.get('task.task_type') or '').lower()\n    need = nb.get('need_transform') or ''\n    if not need and 'clean' in ttype:\n        need = 'clean'\n    if not need and 'heat' in ttype:\n        need = 'heat'\n    if not need and 'cool' in ttype:\n        need = 'cool'\n    stage = nb.get('stage') or 'find_target'\n    target = str(task.get('target_type') or ctx.get('task.target_type') or 'target').lower()\n    dest = str(task.get('destination_type') or ctx.get('task.destination_type') or 'destination').lower()\n    msg = ''\n    if need and stage == 'transform' and not nb.get('transformed') and target:\n        msg = 'Before placing, use the admissible action to ' + need + ' the ' + target + '. Do not put an untransformed target at the destination.'\n    elif stage == 'transform' and need and target and not nb.get('transformed'):\n        msg = 'Carry the ' + target + ' to an appliance that can ' + need + ' it before placing it at the ' + dest + '.'\n    elif stage == 'put_target' and target and dest:\n        msg = 'The ' + target + ' appears ready; put it at the ' + dest + ' now instead of placing it elsewhere.'\n    elif stage == 'wrong_inventory' and target:\n        msg = 'You are carrying a non-target item; do not place it at the destination. Recover by setting it down if needed, then find a ' + target + '.'\n    elif 'two' in ttype and stage in ('find_target', 'take_target') and nb.get('placed_count', 0) > 0 and target:\n        msg = 'One ' + target + ' is already placed; leave it there and find or take another ' + target + ' for the same ' + dest + '.'\n    elif stage == 'go_destination' and target and dest:\n        msg = 'Keep carrying the ' + target + ' and navigate to the ' + dest + ' for the final put.'\n    if not msg:\n        return None\n    key = stage + ':' + msg[:70]\n    if nb.get('last_hint') == key:\n        return None\n    nb['last_hint'] = key\n    return {'message': msg}"
+          },
+          {
+            "type": "add_code_hook",
+            "hook": "on_before_action",
+            "code": "def hook(ctx, nb):\n    task = ctx.get('task') or {}\n    if not isinstance(task, dict):\n        task = {}\n    target = str(task.get('target_type') or ctx.get('task.target_type') or '').lower()\n    dest = str(task.get('destination_type') or ctx.get('task.destination_type') or '').lower()\n    ttype = str(task.get('task_type') or ctx.get('task.task_type') or '').lower()\n    actinfo = ctx.get('action') or {}\n    if not isinstance(actinfo, dict):\n        actinfo = {}\n    action = str(actinfo.get('final_action') or actinfo.get('normalized') or actinfo.get('raw') or ctx.get('action.final_action') or ctx.get('action.normalized') or ctx.get('action.raw') or '').lower()\n    if not action or not target:\n        return None\n    need = ''\n    if 'clean' in ttype:\n        need = 'clean'\n    if 'heat' in ttype:\n        need = 'heat'\n    if 'cool' in ttype:\n        need = 'cool'\n    stage = nb.get('stage') or ''\n    if need and action.startswith('put ') and target in action and not nb.get('transformed'):\n        if need == 'clean' and (action.count(' ') >= 4 or dest in action or (ctx.get('predicates') or {}).get('remaining_steps_low')):\n            return {'kind': 'block_and_prompt', 'message': 'This target still needs to be cleaned before placing. Choose an admissible clean action for the target instead of putting it down.'}\n        if need == 'heat' and (action.count(' ') >= 5 or dest in action or (ctx.get('predicates') or {}).get('remaining_steps_low')):\n            return {'kind': 'block_and_prompt', 'message': 'This target still needs to be heated before placing. Choose an admissible heat action for the target instead of putting it down.'}\n        if need == 'cool' and (action.count(' ') >= 5 or dest in action or (ctx.get('predicates') or {}).get('remaining_steps_low')):\n            return {'kind': 'block_and_prompt', 'message': 'This target still needs to be cooled before placing. Choose an admissible cool action for the target instead of putting it down.'}\n    if 'two' in ttype and action.startswith('take ') and target in action and dest and dest in action and nb.get('placed_count', 0) > 0:\n        return {'kind': 'block_and_prompt', 'message': 'Do not take back a target already placed at the destination. Find or take another target of the same type and return to the same destination.'}\n    return None"
+          }
+        ],
+        "metadata": {
+          "source_patch_description": "Add reusable ALFWorld subgoal tracking and targeted hints to prevent skipped transforms, wrong placements, and exhaustive search loops.",
+          "overlay_only": true
+        }
+      }
+    }
+  },
+  "solver-eval-b54777e6245f-h04": {
+    "module": "src.server.tasks.alfworld.ALFWorld",
+    "parameters": {
+      "name": "solver-eval-b54777e6245f-h04",
+      "concurrency": 32,
+      "data_path": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0144/selection/attempt-01/environment/runtime/AgentBench/data/alfworld",
+      "config_path": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0144/selection/attempt-01/environment/runtime/AgentBench/src/server/tasks/alfworld/configs/base_config.yaml",
+      "prompts_path": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0144/selection/attempt-01/environment/runtime/AgentBench/src/server/tasks/alfworld/prompts/alfworld_multiturn_plan_first.json",
+      "split": "test_set",
+      "max_step": 50,
+      "task_ids": [
+        240,
+        247,
+        244,
+        246,
+        242,
+        250,
+        243,
+        284,
+        261,
+        259,
+        248,
+        251,
+        269,
+        280,
+        267,
+        254,
+        252,
+        274,
+        286,
+        270,
+        263,
+        255,
+        275,
+        289,
+        464,
+        298,
+        470,
+        422,
+        302,
+        322,
+        336,
+        491,
+        468,
+        402,
+        446,
+        325,
+        471,
+        310,
+        308,
+        341,
+        421,
+        297,
+        332,
+        323,
+        418,
+        494,
+        499,
+        477
+      ],
+      "start": 240,
+      "end": 500,
+      "sample_size": 48,
+      "enabled": false,
+      "h2": false,
+      "h3": false,
+      "h4": false,
+      "h5": false,
+      "h5_top_k": 1,
+      "tools": [
+        {
+          "type": "function",
+          "function": {
+            "name": "take_action",
+            "description": "Take an action.",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "action": {
+                  "type": "string",
+                  "description": "The action you would like to take"
+                }
+              },
+              "required": [
+                "action"
+              ],
+              "additionalProperties": false
+            }
+          }
+        }
+      ],
+      "harness_overlay": {
+        "skills": [],
+        "guard_rules": [],
+        "recovery_rules": [],
+        "code_hooks": [
+          {
+            "type": "add_code_hook",
+            "hook": "on_init",
+            "code": "def hook(ctx, nb):\n    nb['stage'] = 'find_target'\n    nb['transform_done'] = False\n    nb['placed_count'] = 0\n    nb['last_hint'] = ''\n    return {'skills': [{'text': 'Follow ALFWorld order: find and take the target type, do any required clean heat cool or slice step, then carry it to the destination and use the put action. Do not place a raw target when a transform is required.'}], 'tool_hint': 'Prefer admissible actions that advance the current subgoal; avoid closing or leaving when a target take or destination put is available.'}"
+          },
+          {
+            "type": "add_code_hook",
+            "hook": "on_post_step",
+            "code": "def text(x):\n    return str(x or '').lower()\n\ndef need(task_type):\n    if 'clean' in task_type:\n        return 'clean'\n    if 'heat' in task_type:\n        return 'heat'\n    if 'cool' in task_type:\n        return 'cool'\n    if 'slice' in task_type:\n        return 'slice'\n    return ''\n\ndef inv_has(inv, target):\n    s = text(inv)\n    return bool(target and target in s and 'not carrying' not in s and 'nothing' not in s)\n\ndef action_text(ctx):\n    a = ctx.get('action') or {}\n    if isinstance(a, dict):\n        return text(a.get('final_action') or a.get('normalized') or a.get('raw'))\n    return text(ctx.get('action.final_action') or ctx.get('action.normalized') or ctx.get('action.raw'))\n\ndef has_adm(adm, prefix, target, dest):\n    for x in adm or []:\n        s = text(x)\n        if not s.startswith(prefix):\n            continue\n        if target and target not in s:\n            continue\n        if dest and dest not in s:\n            continue\n        return True\n    return False\n\ndef hook(ctx, nb):\n    task = ctx.get('task') or {}\n    world = ctx.get('world') or {}\n    target = text(task.get('target_type') or ctx.get('task.target_type'))\n    dest = text(task.get('destination_type') or ctx.get('task.destination_type'))\n    task_type = text(task.get('task_type') or ctx.get('task.task_type'))\n    verb = need(task_type)\n    if not verb:\n        nb['transform_done'] = True\n    else:\n        act = action_text(ctx)\n        obs = text(ctx.get('observation'))\n        if act.startswith(verb + ' ') and target in act and 'nothing happens' not in obs and 'cannot' not in obs:\n            nb['transform_done'] = True\n    inv = world.get('inventory') or ctx.get('world.inventory')\n    carrying_target = inv_has(inv, target)\n    carrying_any = inv and text(inv) not in ('[]', '{}') and 'nothing' not in text(inv) and 'not carrying' not in text(inv)\n    if carrying_any and target and not carrying_target:\n        nb['stage'] = 'wrong_inventory'\n    elif carrying_target:\n        if verb and not nb.get('transform_done'):\n            nb['stage'] = 'transform'\n        else:\n            nb['stage'] = 'put_target' if (has_adm(ctx.get('admissible') or [], 'put ', target, dest) or (dest and dest in text(world.get('current_location') or ctx.get('world.current_location')))) else 'go_destination'\n    else:\n        take_avail = has_adm(ctx.get('admissible') or [], 'take ', target, '')\n        nb['stage'] = 'take_target' if take_avail else 'find_target'\n        if take_avail and target and target in text(world.get('target_location') or ctx.get('world.target_location')) and not nb.get('target_taken'):\n            nb['target_taken'] = True\n    if target and action_text(ctx).startswith('put ') and target in action_text(ctx) and 'you put' in obs and (not dest or dest in obs):\n        old = nb.get('placed_count') or 0\n        try:\n            nb['placed_count'] = int(old) + 1\n        except Exception:\n            nb['placed_count'] = 1\n        if verb and not nb.get('transform_done'):\n            nb['stage'] = 'transform'\n    pc = world.get('placed_count')\n    if pc is not None:\n        try:\n            nb['placed_count'] = int(pc)\n        except Exception:\n            pass\n    return None"
+          },
+          {
+            "type": "add_code_hook",
+            "hook": "make_pre_hint",
+            "code": "def need(task_type):\n    if 'clean' in task_type:\n        return 'clean'\n    if 'heat' in task_type:\n        return 'heat'\n    if 'cool' in task_type:\n        return 'cool'\n    if 'slice' in task_type:\n        return 'slice'\n    return ''\n\ndef hook(ctx, nb):\n    task = ctx.get('task') or {}\n    target = text(task.get('target_type') or ctx.get('task.target_type'))\n    dest = text(task.get('destination_type') or ctx.get('task.destination_type'))\n    task_type = text(task.get('task_type') or ctx.get('task.task_type'))\n    verb = need(task_type)\n    stage = nb.get('stage') or 'find_target'\n    msg = ''\n    if stage == 'wrong_inventory':\n        msg = 'Inventory appears to hold a non-target item; do not place it at the goal. Recover by setting it down if needed, then find the target type.'\n    elif stage == 'transform' and target and verb and not nb.get('transform_done'):\n        msg = 'This target still needs the required ' + verb + ' step before any destination put. Go to the proper appliance and use the admissible ' + verb + ' action.'\n    elif stage == 'take_target' and target:\n        msg = 'A target ' + target + ' is available here; take an admissible take action for it instead of closing containers or leaving.'\n    elif stage == 'put_target' and target and dest and verb and not nb.get('transform_done'):\n        msg = 'Do not put the ' + target + ' at the ' + dest + ' yet; first complete the required ' + verb + ' transform.'\n    elif stage == 'put_target' and target and (not verb or nb.get('transform_done')):\n        msg = 'You are carrying the target; go to the ' + dest + ' and use the admissible put action there.'\n    elif stage == 'go_destination' and target and dest and (ctx.get('predicates.same_observation_repeated') or ctx.get('predicates.same_action_repeated') or ctx.get('predicates.remaining_steps_low')):\n        msg = 'Keep carrying the ' + target + ' and navigate to the ' + dest + ' for the final put.'\n    if not msg:\n        return None\n    key = stage + ':' + msg[:70]\n    if not key or nb.get('last_hint') == key:\n        return None\n    nb['last_hint'] = key\n    return {'message': msg}"
+          }
+        ],
+        "metadata": {
+          "source_patch_description": "Add compact stage tracking and soft guidance for target transforms and missed placement opportunities.",
+          "overlay_only": true
+        }
+      }
+    }
+  },
+  "solver-eval-b54777e6245f-h05": {
+    "module": "src.server.tasks.alfworld.ALFWorld",
+    "parameters": {
+      "name": "solver-eval-b54777e6245f-h05",
+      "concurrency": 32,
+      "data_path": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0144/selection/attempt-01/environment/runtime/AgentBench/data/alfworld",
+      "config_path": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0144/selection/attempt-01/environment/runtime/AgentBench/src/server/tasks/alfworld/configs/base_config.yaml",
+      "prompts_path": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0144/selection/attempt-01/environment/runtime/AgentBench/src/server/tasks/alfworld/prompts/alfworld_multiturn_plan_first.json",
+      "split": "test_set",
+      "max_step": 50,
+      "task_ids": [
+        240,
+        247,
+        244,
+        246,
+        242,
+        250,
+        243,
+        284,
+        261,
+        259,
+        248,
+        251,
+        269,
+        280,
+        267,
+        254,
+        252,
+        274,
+        286,
+        270,
+        263,
+        255,
+        275,
+        289,
+        464,
+        298,
+        470,
+        422,
+        302,
+        322,
+        336,
+        491,
+        468,
+        402,
+        446,
+        325,
+        471,
+        310,
+        308,
+        341,
+        421,
+        297,
+        332,
+        323,
+        418,
+        494,
+        499,
+        477
+      ],
+      "start": 240,
+      "end": 500,
+      "sample_size": 48,
+      "enabled": false,
+      "h2": false,
+      "h3": false,
+      "h4": false,
+      "h5": false,
+      "h5_top_k": 1,
+      "tools": [
+        {
+          "type": "function",
+          "function": {
+            "name": "take_action",
+            "description": "Take an action.",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "action": {
+                  "type": "string",
+                  "description": "The action you would like to take"
+                }
+              },
+              "required": [
+                "action"
+              ],
+              "additionalProperties": false
+            }
+          }
+        }
+      ],
+      "harness_overlay": {
+        "skills": [],
+        "guard_rules": [],
+        "recovery_rules": [],
+        "code_hooks": [
+          {
+            "type": "add_code_hook",
+            "hook": "on_init",
+            "code": "def hook(ctx, nb):\n    nb['stage'] = 'find_target'\n    nb['placed_count'] = 0\n    nb['last_hint'] = ''\n    nb['placed_locations'] = []\n    nb['transformed'] = False\n    skill = 'Use ALFWorld order: find and take the target, do any required clean heat cool or slice transform while carrying it, then put it at the destination. For two-object tasks, leave placed targets and reuse the same destination.'\n    return {'skills': [{'text': skill}], 'tool_hint': 'Do not put the target down before the required transform; do not take back items already placed.'}"
+          },
+          {
+            "type": "add_code_hook",
+            "hook": "on_post_step",
+            "code": "def getv(ctx, path, default=None):\n    if isinstance(ctx, dict) and path in ctx:\n        return ctx.get(path, default)\n    cur = ctx\n    for p in path.split('.'):\n        if isinstance(cur, dict) and p in cur:\n            cur = cur.get(p)\n        else:\n            return default\n    return cur\n\ndef needverb(tt):\n    if 'clean' in tt:\n        return 'clean'\n    if 'heat' in tt:\n        return 'heat'\n    if 'cool' in tt:\n        return 'cool'\n    if 'slice' in tt:\n        return 'slice'\n    return ''\n\ndef carry(target, inv, world):\n    if not target:\n        return False\n    text = ' ' + str(inv).lower() + ' '\n    return target in text or ('you are carrying' + target + ' in your') in text or world.get('inventory', '')\n\ndef hook(ctx, nb):\n    tt = str(getv(ctx, 'task.task_type', '') or '').lower()\n    target = str(getv(ctx, 'task.target_type', '') or '').lower()\n    dest = str(getv(ctx, 'task.destination_type', '') or '').lower()\n    if not target:\n        return None\n    verb = needverb(tt)\n    if not verb:\n        nb['transformed'] = True\n    else:\n        act = str(getv(ctx, 'action.final_action', '') or getv(ctx, 'action.normalized', '') or getv(ctx, 'action.raw', '') or '').lower()\n        obs = str(ctx.get('observation', '') or '').lower()\n        if act.startswith(verb + ' ' + target + ' ') or (' ' + verb + ' ' + target + ' ') in obs:\n            nb['transformed'] = True\n    pc = getv(ctx, 'world.placed_count', 0)\n    try:\n        pc = int(pc)\n    except Exception:\n        pc = 0\n    world = getv(ctx, 'world', {})\n    if isinstance(world, dict):\n        pc = max(pc, int(world.get('placed_count', 0) or 0))\n    inv = getv(ctx, 'world.inventory', '')\n    holding = carry(target, inv, world)\n    admissible = ctx.get('admissible', []) or []\n    has_take = False\n    has_put = False\n    has_trans = False\n    for a in admissible:\n        al = str(a).lower()\n        if al.startswith('take ' + target + ' '):\n            has_take = True\n        if al.startswith('put ' + target + ' ') and (not dest or dest in al):\n            has_put = True\n        if verb and al.startswith(verb + ' ' + target + ' '):\n            has_trans = True\n    take_ready = has_take and not (verb and not nb.get('transformed'))\n    locs = nb.get('placed_locations') or []\n    if not isinstance(locs, list):\n        locs = []\n    if isinstance(world, dict) and isinstance(world.get('placed_locations'), list):\n        locs = list(locs) + list(world.get('placed_locations'))\n    elif isinstance(world, dict) and world.get('placed_locations'):\n        locs.append(str(world.get('placed_locations')).lower())\n    if pc > nb.get('placed_count', 0):\n        nb['placed_count'] = pc\n    if pc > 0 and pc < 2 and act.startswith('put ' + target + ' ') and dest and dest in act and dest not in locs:\n        locs.append(act.split(' in/on ', 1)[1])\n        nb['placed_locations'] = locs\n    if pc >= 2 and verb and not nb.get('transformed') and take_ready and (act.startswith('go ') or act.startswith('examine ')):\n        nb['stage'] = 'transform'\n    elif holding and verb and not nb.get('transformed') and (take_ready or has_trans):\n        nb['stage'] = 'transform'\n    elif holding and dest and (has_put or getv(ctx, 'predicates.remaining_steps_low', False) or getv(ctx, 'predicates.same_action_repeated', False) or getv(ctx, 'predicates.same_observation_repeated', False) or getv(ctx, 'predicates.remaining_steps_low', False)):\n        nb['stage'] = 'put_target'\n    elif holding:\n        nb['stage'] = 'go_destination'\n    elif take_ready:\n        nb['stage'] = 'take_target'\n    else:\n        nb['stage'] = 'find_target'\n    if not holding and dest and getv(ctx, 'action.final_action', '') and getv(ctx, 'action.final_action', '').startswith('put ' + target + ' ') and dest in getv(ctx, 'action.final_action', '') and not verb and not nb.get('transformed'):\n        nb['wrong_inventory'] = 'placed without transform'\n    nb['transform_verb'] = verb\n    nb['target_type'] = target\n    nb['destination_type'] = dest\n    return None"
+          },
+          {
+            "type": "add_code_hook",
+            "hook": "make_pre_hint",
+            "code": "def getv(ctx, path, default=None):\n    if isinstance(ctx, dict) and path in ctx:\n        return ctx.get(path, default)\n    cur = ctx\n    for p in path.split('.'):\n        if isinstance(cur, dict) and p in cur:\n            cur = cur.get(p)\n        else:\n            return default\n    return cur\n\ndef needverb(tt):\n    if 'clean' in tt:\n        return 'clean'\n    if 'heat' in tt:\n        return 'heat'\n    if 'cool' in tt:\n        return 'cool'\n    if 'slice' in tt:\n        return 'slice'\n    return ''\n\ndef emit(nb, msg):\n    if not msg or nb.get('last_hint') == msg:\n        return None\n    nb['last_hint'] = msg\n    return {'message': msg}\n\ndef hook(ctx, nb):\n    tt = str(getv(ctx, 'task.task_type', '') or nb.get('task_type', '') or '').lower()\n    target = nb.get('target_type') or str(getv(ctx, 'task.target_type', '') or '').lower()\n    dest = nb.get('destination_type') or str(getv(ctx, 'task.destination_type', '') or '').lower()\n    verb = nb.get('transform_verb') or needverb(tt)\n    if not target or not verb:\n        return None\n    stage = nb.get('stage')\n    pc = nb.get('placed_count') or 0\n    try:\n        pc = int(pc)\n    except Exception:\n        pc = 0\n    if stage == 'transform' and pc < 2:\n        return emit(nb, 'Transform the carried ' + target + ' with the available ' + verb + ' action before putting it anywhere.')\n    if stage == 'put_target' and dest:\n        return emit(nb, 'Carry the transformed ' + target + ' to a ' + dest + ' and use the put action there.')\n    if stage == 'take_target' and pc > 0 and pc < 2 and dest:\n        return emit(nb, 'Do not take back a target already placed at the ' + dest + '; find another ' + target + ' and keep the same destination.')\n    return None"
+          },
+          {
+            "type": "add_code_hook",
+            "hook": "on_before_action",
+            "code": "def getv(ctx, path, default=None):\n    if isinstance(ctx, dict) and path in ctx:\n        return ctx.get(path, default)\n    cur = ctx\n    for p in path.split('.'):\n        if isinstance(cur, dict) and p in cur:\n            cur = cur.get(p)\n        else:\n            return default\n    return cur\n\ndef needverb(tt):\n    if 'clean' in tt:\n        return 'clean'\n    if 'heat' in tt:\n        return 'heat'\n    if 'cool' in tt:\n        return 'cool'\n    if 'slice' in tt:\n        return 'slice'\n    return ''\n\ndef hook(ctx, nb):\n    tt = str(getv(ctx, 'task.task_type', '') or nb.get('task_type', '') or '').lower()\n    target = nb.get('target_type') or str(getv(ctx, 'task.target_type', '') or '').lower()\n    dest = nb.get('destination_type') or str(getv(ctx, 'task.destination_type', '') or '').lower()\n    verb = nb.get('transform_verb') or needverb(tt)\n    action = str(getv(ctx, 'action.final_action', '') or getv(ctx, 'action.normalized', '') or getv(ctx, 'action.raw', '') or '').lower()\n    if not action or not target or not verb:\n        return None\n    holding = bool(getv(ctx, 'world.inventory', '')) or bool(nb.get('holding_target'))\n    carrying_target = bool(target in str(getv(ctx, 'world.inventory', '')).lower()) or bool(nb.get('holding_target')) or (action.startswith('put ' + target + ' ') and 'pick up' in str(ctx.get('observation', '')).lower())\n    transformed = bool(nb.get('transformed')) or bool(verb in action and target in action and 'pick up' in str(ctx.get('observation', '')).lower())\n    pc = nb.get('placed_count') or 0\n    try:\n        pc = int(pc)\n    except Exception:\n        pc = 0\n    if action.startswith('put ' + target + ' ') and dest and dest in action and not transformed and pc < 2:\n        return {'kind': 'block_and_prompt', 'message': 'Do not put the target at the destination yet. First use the available transform action on the carried ' + target + '; then put it at the destination.'}\n    if verb and pc > 0 and pc < 2 and not nb.get('transformed') and action.startswith('take ' + target + ' '):\n        return {'kind': 'block_and_prompt', 'message': 'Do not take back a target already placed at the destination. Keep the placed item there and continue with the next required subgoal.'}\n    if verb and action.startswith('examine ') and not transformed and (getv(ctx, 'predicates.same_observation_repeated', False) or getv(ctx, 'predicates.same_action_repeated', False) or getv(ctx, 'predicates.remaining_steps_low', False)) and (holding or carrying_target or getv(ctx, 'world.target_found', False)):\n        return {'kind': 'block_and_prompt', 'message': 'This looks like a loop. Use the available transform action on the carried ' + target + ' instead of only examining containers.'}\n    return None"
+          }
+        ],
+        "metadata": {
+          "source_patch_description": "Maintain target transform and placement stage guidance to prevent premature puts and transform skips.",
+          "overlay_only": true
+        }
+      }
+    }
+  },
+  "solver-eval-b54777e6245f-h06": {
+    "module": "src.server.tasks.alfworld.ALFWorld",
+    "parameters": {
+      "name": "solver-eval-b54777e6245f-h06",
+      "concurrency": 32,
+      "data_path": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0144/selection/attempt-01/environment/runtime/AgentBench/data/alfworld",
+      "config_path": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0144/selection/attempt-01/environment/runtime/AgentBench/src/server/tasks/alfworld/configs/base_config.yaml",
+      "prompts_path": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0144/selection/attempt-01/environment/runtime/AgentBench/src/server/tasks/alfworld/prompts/alfworld_multiturn_plan_first.json",
+      "split": "test_set",
+      "max_step": 50,
+      "task_ids": [
+        240,
+        247,
+        244,
+        246,
+        242,
+        250,
+        243,
+        284,
+        261,
+        259,
+        248,
+        251,
+        269,
+        280,
+        267,
+        254,
+        252,
+        274,
+        286,
+        270,
+        263,
+        255,
+        275,
+        289,
+        464,
+        298,
+        470,
+        422,
+        302,
+        322,
+        336,
+        491,
+        468,
+        402,
+        446,
+        325,
+        471,
+        310,
+        308,
+        341,
+        421,
+        297,
+        332,
+        323,
+        418,
+        494,
+        499,
+        477
+      ],
+      "start": 240,
+      "end": 500,
+      "sample_size": 48,
+      "enabled": false,
+      "h2": false,
+      "h3": false,
+      "h4": false,
+      "h5": false,
+      "h5_top_k": 1,
+      "tools": [
+        {
+          "type": "function",
+          "function": {
+            "name": "take_action",
+            "description": "Take an action.",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "action": {
+                  "type": "string",
+                  "description": "The action you would like to take"
+                }
+              },
+              "required": [
+                "action"
+              ],
+              "additionalProperties": false
+            }
+          }
+        }
+      ],
+      "harness_overlay": {
+        "skills": [],
+        "guard_rules": [],
+        "recovery_rules": [],
+        "code_hooks": [
+          {
+            "type": "add_code_hook",
+            "hook": "on_init",
+            "code": "def hook(ctx, nb):\n    nb['stage'] = 'find_target'\n    nb['transformed'] = False\n    nb['placed_count'] = 0\n    nb['last_hint'] = ''\n    text = 'Follow ALFWorld order: find and take the target, do any required clean heat cool or slice transform while holding it, then go to the destination and put it. For two-object tasks, leave placed items and place another target at the same destination.'\n    hint = 'Do not carry a transformed item to the destination and put it back in the transform place; after transforming, navigate to the destination.'\n    return {'skills': [{'text': text}], 'tool_hint': hint}"
+          },
+          {
+            "type": "add_code_hook",
+            "hook": "on_post_step",
+            "code": "def getv(ctx, path, default=None):\n    if isinstance(ctx, dict) and path in ctx:\n        return ctx.get(path, default)\n    cur = ctx\n    for part in path.split('.'):\n        if isinstance(cur, dict) and part in cur:\n            cur = cur.get(part)\n        else:\n            return default\n    return cur\n\ndef text(x):\n    if x is None:\n        return ''\n    return str(x).lower()\n\ndef needverb(tt):\n    if 'clean' in tt:\n        return 'clean'\n    if 'heat' in tt:\n        return 'heat'\n    if 'cool' in tt:\n        return 'cool'\n    if 'slice' in tt:\n        return 'slice'\n    return ''\n\ndef counttake(adm, target):\n    n = 0\n    for a in adm:\n        s = ' ' + text(a) + ' '\n        if target and (' take ' + target + ' ') in s:\n            n = n + 1\n    return n\n\ndef hook(ctx, nb):\n    world = ctx.get('world') or {}\n    tt = text(getv(ctx, 'task.task_type', ''))\n    target = text(getv(ctx, 'task.target_type', ''))\n    dest = text(getv(ctx, 'task.destination_type', ''))\n    verb = needverb(tt)\n    if not verb:\n        nb['transformed'] = True\n    act = text(getv(ctx, 'action.final_action', getv(ctx, 'action.normalized', getv(ctx, 'action.raw', ''))))\n    obs = text(ctx.get('observation', ''))\n    if target and verb and act.startswith(verb + ' ') and target in act and 'nothing happens' not in obs:\n        nb['transformed'] = True\n    if target and act.startswith('put ') and target in act and 'you put' in obs:\n        pc = nb.get('placed_count')\n        try:\n            pc = int(pc)\n        except Exception:\n            pc = 0\n        pc = pc + 1\n        nb['placed_count'] = pc\n    inv = world.get('inventory')\n    if isinstance(inv, list):\n        invs = ' '.join(text(x) for x in inv)\n    else:\n        invs = text(inv)\n    inv_nonempty = bool(invs) and 'nothing' not in invs and 'empty' not in invs and not (target and target in invs and 'not carrying' not in invs and 'not holding' not in invs)\n    has_target = bool(target and target in invs and 'not carrying' not in invs and 'not holding' not in invs)\n    admissible = ctx.get('admissible') or []\n    takes = counttake(admissible, target) if target else 0\n    if 'pick_two' in tt and nb.get('placed_count', 0) > 0 and not has_target and takes > 0:\n        nb['stage'] = 'find_target'\n    elif inv_nonempty and not has_target:\n        nb['stage'] = 'wrong_inventory'\n    elif target and verb and not nb.get('transformed') and has_target:\n        nb['stage'] = 'transform'\n    elif has_target and target and dest and (not verb or nb.get('transformed')):\n        nb['stage'] = 'put_target'\n    elif target and takes > 0:\n        nb['stage'] = 'take_target'\n    else:\n        nb['stage'] = 'find_target'\n    return None"
+          },
+          {
+            "type": "add_code_hook",
+            "hook": "make_pre_hint",
+            "code": "def getv(ctx, path, default=None):\n    if isinstance(ctx, dict) and path in ctx:\n        return ctx.get(path, default)\n    cur = ctx\n    for part in path.split('.'):\n        if isinstance(cur, dict) and part in cur:\n            cur = cur.get(part)\n        else:\n            return default\n    return cur\n\ndef needverb(tt):\n    if 'clean' in tt:\n        return 'clean'\n    if 'heat' in tt:\n        return 'heat'\n    if 'cool' in tt:\n        return 'cool'\n    if 'slice' in tt:\n        return 'slice'\n    return ''\n\ndef emit(nb, key, msg):\n    if not msg or nb.get('last_hint') == key:\n        return None\n    nb['last_hint'] = key\n    return {'message': msg}\n\ndef hook(ctx, nb):\n    tt = text(getv(ctx, 'task.task_type', ''))\n    target = text(getv(ctx, 'task.target_type', ''))\n    dest = text(getv(ctx, 'task.destination_type', ''))\n    verb = needverb(tt)\n    stage = nb.get('stage')\n    if 'pick_two' in tt and nb.get('placed_count', 0) > 0 and target and stage == 'find_target':\n        return emit(nb, 'two_target', 'Leave any target already placed at the destination; find another ' + target + ' and put it at the same ' + dest + '.')\n    if not verb or not target:\n        return None\n    if stage == 'transform' and verb == 'clean':\n        return emit(nb, 'clean', 'This is a clean task: hold the ' + target + ' and use an available clean action at the sinkbasin before placing it.')\n    if stage == 'transform' and verb == 'heat':\n        return emit(nb, 'heat', 'This is a heat task: hold the ' + target + ' and use an available heat action at the microwave before placing it.')\n    if stage == 'transform' and verb == 'cool':\n        return emit(nb, 'cool', 'This is a cool task: hold the ' + target + ' and use an available cool action at the fridge before placing it.')\n    if stage == 'transform' and verb == 'slice':\n        return emit(nb, 'slice', 'This is a slice task: hold the ' + target + ' and use an available slice action at the knife before placing it.')\n    if stage == 'put_target' and verb == 'clean':\n        return emit(nb, 'clean_dest', 'Do not put the ' + target + ' back in the sinkbasin after cleaning it; carry it to the ' + dest + ' and put it there.')\n    if stage == 'put_target' and verb == 'heat':\n        return emit(nb, 'heat_dest', 'Do not put the ' + target + ' back in the microwave after heating it; carry it to the ' + dest + ' and put it there.')\n    if stage == 'put_target' and verb == 'cool':\n        return emit(nb, 'cool_dest', 'Do not put the ' + target + ' back in the fridge after cooling it; carry it to the ' + dest + ' and put it there.')\n    if stage == 'put_target' and verb == 'slice':\n        return emit(nb, 'slice_dest', 'Do not put the ' + target + ' back at the knife after slicing it; carry it to the ' + dest + ' and put it there.')\n    return None"
+          }
+        ],
+        "metadata": {
+          "source_patch_description": "Add compact stage tracking and soft ALFWorld guidance for transform-before-place tasks.",
+          "overlay_only": true
+        }
+      }
+    }
+  },
+  "solver-eval-b54777e6245f-h07": {
+    "module": "src.server.tasks.alfworld.ALFWorld",
+    "parameters": {
+      "name": "solver-eval-b54777e6245f-h07",
+      "concurrency": 32,
+      "data_path": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0144/selection/attempt-01/environment/runtime/AgentBench/data/alfworld",
+      "config_path": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0144/selection/attempt-01/environment/runtime/AgentBench/src/server/tasks/alfworld/configs/base_config.yaml",
+      "prompts_path": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0144/selection/attempt-01/environment/runtime/AgentBench/src/server/tasks/alfworld/prompts/alfworld_multiturn_plan_first.json",
+      "split": "test_set",
+      "max_step": 50,
+      "task_ids": [
+        240,
+        247,
+        244,
+        246,
+        242,
+        250,
+        243,
+        284,
+        261,
+        259,
+        248,
+        251,
+        269,
+        280,
+        267,
+        254,
+        252,
+        274,
+        286,
+        270,
+        263,
+        255,
+        275,
+        289,
+        464,
+        298,
+        470,
+        422,
+        302,
+        322,
+        336,
+        491,
+        468,
+        402,
+        446,
+        325,
+        471,
+        310,
+        308,
+        341,
+        421,
+        297,
+        332,
+        323,
+        418,
+        494,
+        499,
+        477
+      ],
+      "start": 240,
+      "end": 500,
+      "sample_size": 48,
+      "enabled": false,
+      "h2": false,
+      "h3": false,
+      "h4": false,
+      "h5": false,
+      "h5_top_k": 1,
+      "tools": [
+        {
+          "type": "function",
+          "function": {
+            "name": "take_action",
+            "description": "Take an action.",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "action": {
+                  "type": "string",
+                  "description": "The action you would like to take"
+                }
+              },
+              "required": [
+                "action"
+              ],
+              "additionalProperties": false
+            }
+          }
+        }
+      ],
+      "harness_overlay": {
+        "skills": [],
+        "guard_rules": [],
+        "recovery_rules": [],
+        "code_hooks": [
+          {
+            "type": "add_code_hook",
+            "hook": "on_init",
+            "code": "def hook(ctx, nb):\n    nb['stage'] = 'find_target'\n    nb['last_hint'] = ''\n    nb['transform_done'] = False\n    nb['transformed_item'] = ''\n    nb['placed_count'] = 0\n    text = 'Follow ALFWorld task order: find the requested object type, take it, do any required clean/heat/cool transform before final placement, then put it at the destination. For pick-two, leave placed targets at the destination and find another one.'\n    return {'skills': [{'text': text}], 'tool_hint': 'Use admissible target take, transform, and destination put actions in order; do not carry or close containers as the goal.'}"
+          },
+          {
+            "type": "add_code_hook",
+            "hook": "on_post_step",
+            "code": "def val(ctx, path, default=None):\n    if isinstance(ctx, dict) and path in ctx:\n        return ctx.get(path, default)\n    cur = ctx\n    for p in path.split('.'):\n        if isinstance(cur, dict) and p in cur:\n            cur = cur.get(p)\n        else:\n            return default\n    return cur\n\ndef txt(x):\n    if x is None:\n        return ''\n    if isinstance(x, (list, tuple, set)):\n        return ' '.join([txt(v) for v in x])\n    if isinstance(x, dict):\n        return ' '.join([txt(v) for v in x.values()])\n    return str(x).lower()\n\ndef needverb(tt):\n    if 'clean' in tt:\n        return 'clean'\n    if 'heat' in tt:\n        return 'heat'\n    if 'cool' in tt:\n        return 'cool'\n    return ''\n\ndef firstmatch(adm, prefix, words):\n    for a in adm:\n        s = ' ' + a + ' '\n        ok = s.startswith(prefix + ' ')\n        for w in words:\n            if (' ' + w + ' ') not in s:\n                ok = False\n        if ok:\n            return a\n    return ''\n\ndef hook(ctx, nb):\n    task_type = txt(val(ctx, 'task.task_type', ''))\n    target = txt(val(ctx, 'task.target_type', ''))\n    dest = txt(val(ctx, 'task.destination_type', ''))\n    verb = needverb(task_type)\n    if not verb:\n        nb['transform_done'] = True\n        return None\n    if target and target in task_type and 'transform' in task_type and target in txt(val(ctx, 'action.final_action', val(ctx, 'action.normalized', val(ctx, 'action.raw', '')))):\n        nb['transform_done'] = True\n        nb['transformed_item'] = target\n    pc = val(ctx, 'world.placed_count', 0)\n    try:\n        pc = int(pc)\n    except Exception:\n        pc = 0\n    old = nb.get('placed_count', 0)\n    try:\n        old = int(old)\n    except Exception:\n        old = 0\n    two = 'two' in task_type\n    if two and target and target in task_type and 'pick' in task_type:\n        if pc > old:\n            nb['transformed_item'] = ''\n            nb['transform_done'] = False\n    inv = txt(val(ctx, 'world.inventory', ''))\n    carrying = bool(target and target in inv and 'nothing' not in inv and 'not carrying' not in inv)\n    wrong = bool(inv and 'nothing' not in inv and 'not carrying' not in inv and target and target not in inv)\n    take_here = bool(target and firstmatch(val(ctx, 'admissible', []), 'take ' + target, [target]))\n    act = txt(val(ctx, 'action.final_action', val(ctx, 'action.normalized', val(ctx, 'action.raw', ''))))\n    if act and 'pick ' in act and target and target in act and two and target in task_type and 'pick' in task_type and ' from ' in act:\n        source = act.split(' from ', 1)[1]\n        locs = txt(val(ctx, 'world.placed_locations', ''))\n        if source and source in locs and old >= 0:\n            nb['placed_count'] = max(old, pc - 1)\n    if two and target and target in task_type and 'pick' in task_type:\n        try:\n            nb['placed_count'] = int(val(ctx, 'world.placed_count', nb.get('placed_count', 0)))\n        except Exception:\n            nb['placed_count'] = old\n    if wrong:\n        stage = 'wrong_inventory'\n    elif carrying:\n        if verb and not nb.get('transform_done'):\n            stage = 'transform'\n        else:\n            stage = 'go_destination'\n    elif take_here:\n        stage = 'take_target'\n    else:\n        stage = 'find_target'\n    nb['stage'] = stage\n    nb['target_type'] = target\n    nb['destination_type'] = dest\n    nb['task_type'] = task_type\n    nb['transform_verb'] = verb\n    return None"
+          },
+          {
+            "type": "add_code_hook",
+            "hook": "make_pre_hint",
+            "code": "def val(ctx, path, default=None):\n    if isinstance(ctx, dict) and path in ctx:\n        return ctx.get(path, default)\n    cur = ctx\n    for p in path.split('.'):\n        if isinstance(cur, dict) and p in cur:\n            cur = cur.get(p)\n        else:\n            return default\n    return cur\n\ndef needverb(tt):\n    if 'clean' in tt:\n        return 'clean'\n    if 'heat' in tt:\n        return 'heat'\n    if 'cool' in tt:\n        return 'cool'\n    return ''\n\ndef emit(nb, msg):\n    if not msg or nb.get('last_hint') == msg:\n        return None\n    nb['last_hint'] = msg\n    return {'message': msg}\n\ndef hook(ctx, nb):\n    task_type = nb.get('task_type') or txt(val(ctx, 'task.task_type', ''))\n    target = nb.get('target_type') or txt(val(ctx, 'task.target_type', ''))\n    dest = nb.get('destination_type') or txt(val(ctx, 'task.destination_type', ''))\n    verb = nb.get('transform_verb') or needverb(task_type)\n    stage = nb.get('stage') or 'find_target'\n    pc = nb.get('placed_count', 0)\n    try:\n        pc = int(pc)\n    except Exception:\n        pc = 0\n    if verb and target and stage == 'transform' and not nb.get('transform_done'):\n        return emit(nb, 'You are carrying the requested ' + target + '. Use an admissible ' + verb + ' action on it before going to the final destination.')\n    if 'two' in task_type and target and 'pick' in task_type and pc >= 1 and stage in ['find_target', 'take_target']:\n        return emit(nb, 'This is a pick-two task. Do not take back the ' + target + ' already placed at the destination; find another one and use the same destination.')\n    if stage == 'put_target' and target and dest:\n        return emit(nb, 'You are at the destination with the ' + target + '. Put it in/on the ' + dest + ' now instead of closing or carrying it away.')\n    if stage == 'wrong_inventory' and target:\n        return emit(nb, 'You appear to be carrying a non-target item. Do not place it as the goal; recover and then take the requested ' + target + '.')\n    return None"
+          },
+          {
+            "type": "add_code_hook",
+            "hook": "on_before_action",
+            "code": "def val(ctx, path, default=None):\n    if isinstance(ctx, dict) and path in ctx:\n        return ctx.get(path, default)\n    cur = ctx\n    for p in path.split('.'):\n        if isinstance(cur, dict) and p in cur:\n            cur = cur.get(p)\n        else:\n            return default\n    return cur\n\ndef needverb(tt):\n    if 'clean' in tt:\n        return 'clean'\n    if 'heat' in tt:\n        return 'heat'\n    if 'cool' in tt:\n        return 'cool'\n    return ''\n\ndef firstmatch(adm, prefix, words):\n    for a in adm:\n        s = ' ' + a + ' '\n        ok = s.startswith(prefix + ' ')\n        for w in words:\n            if (' ' + w + ' ') not in s:\n                ok = False\n        if ok:\n            return a\n    return ''\n\ndef targetpresent(adm, words):\n    for a in adm:\n        s = ' ' + a + ' '\n        for w in words:\n            if (' ' + w + ' ') not in s:\n                return False\n    return True\n\ndef hook(ctx, nb):\n    task_type = nb.get('task_type') or txt(val(ctx, 'task.task_type', ''))\n    target = nb.get('target_type') or txt(val(ctx, 'task.target_type', ''))\n    dest = nb.get('destination_type') or txt(val(ctx, 'task.destination_type', ''))\n    verb = nb.get('transform_verb') or needverb(task_type)\n    if not verb or not target:\n        return None\n    adm = val(ctx, 'admissible', []) or []\n    inv = txt(val(ctx, 'world.inventory', ''))\n    carrying = bool(target in inv and 'nothing' not in inv and 'not carrying' not in inv)\n    transform_ready = bool(carrying and firstmatch(adm, verb + ' ' + target, [target]))\n    transform_late = bool(carrying and 'transform' in task_type and verb in task_type and not nb.get('transform_done') and not transform_ready and targetpresent(adm, [target]))\n    if transform_late and not nb.get('transform_hint_done'):\n        nb['transform_hint_done'] = True\n        return {'kind': 'block_and_prompt', 'message': 'The target is ready to be transformed but no ' + verb + ' action is available here. Do not put or carry the target away; keep it with you and go to a place where ' + verb + ' is admissible.'}\n    if transform_ready and not nb.get('transform_ready_hint_done'):\n        nb['transform_ready_hint_done'] = True\n        return {'kind': 'block_and_prompt', 'message': 'A required ' + verb + ' action for the carried ' + target + ' is available now. Use that transform before any destination put.'}\n    two = 'two' in task_type and 'pick' in task_type\n    placed = bool(two and nb.get('placed_count', 0) > 0)\n    take_target = bool(target and firstmatch(adm, 'take ' + target, [target]))\n    take_dest = bool(placed and target and firstmatch(adm, 'take ' + target, [target, dest]))\n    if placed and take_target and not take_dest and nb.get('stage') == 'find_target' and (val(ctx, 'predicates.same_action_repeated', False) or val(ctx, 'predicates.same_observation_repeated', False) or val(ctx, 'predicates.remaining_steps_low', False)):\n        return {'kind': 'block_and_prompt', 'message': 'Do not search for another ' + target + ' by taking back an item already at the destination. Look elsewhere for a different target item.'}\n    return None"
+          }
+        ],
+        "metadata": {
+          "source_patch_description": "Add stage-aware ALFWorld guidance for target taking, required transforms, and pick-two placement preservation.",
+          "overlay_only": true
+        }
+      }
+    }
+  },
+  "solver-eval-b54777e6245f-h08": {
+    "module": "src.server.tasks.alfworld.ALFWorld",
+    "parameters": {
+      "name": "solver-eval-b54777e6245f-h08",
+      "concurrency": 32,
+      "data_path": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0144/selection/attempt-01/environment/runtime/AgentBench/data/alfworld",
+      "config_path": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0144/selection/attempt-01/environment/runtime/AgentBench/src/server/tasks/alfworld/configs/base_config.yaml",
+      "prompts_path": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0144/selection/attempt-01/environment/runtime/AgentBench/src/server/tasks/alfworld/prompts/alfworld_multiturn_plan_first.json",
+      "split": "test_set",
+      "max_step": 50,
+      "task_ids": [
+        240,
+        247,
+        244,
+        246,
+        242,
+        250,
+        243,
+        284,
+        261,
+        259,
+        248,
+        251,
+        269,
+        280,
+        267,
+        254,
+        252,
+        274,
+        286,
+        270,
+        263,
+        255,
+        275,
+        289,
+        464,
+        298,
+        470,
+        422,
+        302,
+        322,
+        336,
+        491,
+        468,
+        402,
+        446,
+        325,
+        471,
+        310,
+        308,
+        341,
+        421,
+        297,
+        332,
+        323,
+        418,
+        494,
+        499,
+        477
+      ],
+      "start": 240,
+      "end": 500,
+      "sample_size": 48,
+      "enabled": false,
+      "h2": false,
+      "h3": false,
+      "h4": false,
+      "h5": false,
+      "h5_top_k": 1,
+      "tools": [
+        {
+          "type": "function",
+          "function": {
+            "name": "take_action",
+            "description": "Take an action.",
+            "parameters": {
+              "type": "object",
+              "properties": {
+                "action": {
+                  "type": "string",
+                  "description": "The action you would like to take"
+                }
+              },
+              "required": [
+                "action"
+              ],
+              "additionalProperties": false
+            }
+          }
+        }
+      ],
+      "harness_overlay": {
+        "skills": [],
+        "guard_rules": [],
+        "recovery_rules": [],
+        "code_hooks": [
+          {
+            "type": "add_code_hook",
+            "hook": "on_init",
+            "code": "def hook(ctx, nb):\n    nb['stage'] = 'find_target'\n    nb['last_hint'] = ''\n    nb['placed_count'] = 0\n    nb['transformed'] = False\n    nb['placed_locs'] = []\n    return {'skills': [{'text': 'ALFWorld order: find a target, take it, do any required clean heat or cool step, go to the destination, then put it there. For two-object tasks, place two targets at the same destination and do not take back a target already placed.'}], 'tool_hint': 'Do not carry or place a wrong object type; after a successful put, leave the target there.'}"
+          },
+          {
+            "type": "add_code_hook",
+            "hook": "on_post_step",
+            "code": "def getv(ctx, path, default=None):\n    if isinstance(ctx, dict) and path in ctx:\n        return ctx.get(path, default)\n    cur = ctx\n    for part in path.split('.'):\n        if isinstance(cur, dict) and part in cur:\n            cur = cur.get(part)\n        else:\n            return default\n    return cur\n\ndef text(x):\n    if x is None:\n        return ''\n    if isinstance(x, dict):\n        return ' '.join([text(v) for v in x.values()]).lower()\n    if isinstance(x, list) or isinstance(x, tuple):\n        return ' '.join([text(v) for v in x]).lower()\n    return str(x).lower()\n\ndef hook(ctx, nb):\n    task_type = text(getv(ctx, 'task.task_type', ''))\n    target = text(getv(ctx, 'task.target_type', ''))\n    dest = text(getv(ctx, 'task.destination_type', ''))\n    world = getv(ctx, 'world', {})\n    if not isinstance(world, dict):\n        world = {}\n    adm = ctx.get('admissible') or []\n    inv = text(world.get('inventory', getv(ctx, 'world.inventory', '')))\n    inv_nonempty = bool(inv) and 'nothing' not in inv and 'empty' not in inv and 'none' not in inv\n    has_target = bool(target and target in inv)\n    wrong_inv = bool(inv_nonempty and target and not has_target)\n    trans = ''\n    if 'clean' in task_type:\n        trans = 'clean'\n    elif 'heat' in task_type:\n        trans = 'heat'\n    elif 'cool' in task_type:\n        trans = 'cool'\n    if trans:\n        if target and trans == 'clean' and 'wash' in task_type and 'wash' in inv:\n            has_target = True\n        if target and trans and 'nothing happens' not in inv and 'not enough' not in inv and 'cannot' not in inv:\n            has_target = True\n        if target and trans and trans in inv and 'nothing happens' not in inv and 'not enough' not in inv and 'cannot' not in inv:\n            has_target = True\n        if target and trans and target in inv and trans in inv and 'nothing happens' not in inv and 'not enough' not in inv and 'cannot' not in inv:\n            has_target = True\n    if trans and target and target in inv:\n        if trans in inv and 'nothing happens' not in inv and 'not enough' not in inv and 'cannot' not in inv:\n            nb['transformed'] = True\n        if trans == 'clean' and 'wash' in inv and 'nothing happens' not in inv and 'not enough' not in inv and 'cannot' not in inv:\n            nb['transformed'] = True\n        if trans == 'heat' and 'hot' in inv and 'nothing happens' not in inv and 'not enough' not in inv and 'cannot' not in inv:\n            nb['transformed'] = True\n        if trans == 'cool' and 'cold' in inv and 'nothing happens' not in inv and 'not enough' not in inv and 'cannot' not in inv:\n            nb['transformed'] = True\n    pc = world.get('placed_count', getv(ctx, 'world.placed_count', nb.get('placed_count', 0)))\n    try:\n        pc = int(pc)\n    except Exception:\n        pc = 0\n    if pc > nb.get('placed_count', 0):\n        nb['placed_count'] = pc\n    locs = world.get('placed_locations', getv(ctx, 'world.placed_locations', []))\n    if isinstance(locs, (list, tuple)) and locs:\n        nb['placed_locs'] = [text(x) for x in locs]\n    take_ready = False\n    put_ready = False\n    for a in adm:\n        al = text(a)\n        if target and al.startswith('take ' + target + ' '):\n            take_ready = True\n        if target and dest and al.startswith('put ' + target + ' ') and dest in al:\n            put_ready = True\n    if wrong_inv:\n        stage = 'wrong_inventory'\n    elif inv_nonempty and has_target and trans and not nb.get('transformed'):\n        stage = 'transform'\n    elif inv_nonempty and has_target:\n        stage = 'put_target' if put_ready else 'go_destination'\n    else:\n        stage = 'take_target' if take_ready else 'find_target'\n    nb['stage'] = stage\n    nb['target_type'] = target\n    nb['destination_type'] = dest\n    nb['transform'] = trans\n    nb['has_target'] = has_target\n    nb['wrong_inventory'] = wrong_inv\n    return None"
+          },
+          {
+            "type": "add_code_hook",
+            "hook": "make_pre_hint",
+            "code": "def getv(ctx, path, default=None):\n    if isinstance(ctx, dict) and path in ctx:\n        return ctx.get(path, default)\n    cur = ctx\n    for part in path.split('.'):\n        if isinstance(cur, dict) and part in cur:\n            cur = cur.get(part)\n        else:\n            return default\n    return cur\n\ndef hook(ctx, nb):\n    target = nb.get('target_type') or 'target object'\n    dest = nb.get('destination_type') or 'destination'\n    trans = nb.get('transform') or ''\n    stage = nb.get('stage') or ''\n    msg = ''\n    if stage == 'wrong_inventory':\n        msg = 'You are carrying a non-target item. Do not place it at the goal; free your hand and search for the required ' + target + '.'\n    elif stage == 'transform' and trans:\n        msg = 'Before placing the ' + target + ', use the admissible ' + trans + ' action at the proper appliance or sink. A wrong transform or skipping it will cause failure.'\n    elif stage == 'put_target' and dest:\n        msg = 'You have the prepared ' + target + '. Go to the ' + dest + ' and use the put action there; do not put it on or in a different receptacle.'\n    elif stage == 'find_target' and 'two' in (ctx.get('task.task_type') or ''):\n        msg = 'One ' + target + ' is already placed. Leave it there, find another ' + target + ', and return to the same ' + dest + '.'\n    if not msg:\n        return None\n    key = stage + ':' + msg[:70]\n    if nb.get('last_hint') == key:\n        return None\n    nb['last_hint'] = key\n    return {'message': msg}"
+          },
+          {
+            "type": "add_code_hook",
+            "hook": "on_before_action",
+            "code": "def getv(ctx, path, default=None):\n    if isinstance(ctx, dict) and path in ctx:\n        return ctx.get(path, default)\n    cur = ctx\n    for part in path.split('.'):\n        if isinstance(cur, dict) and part in cur:\n            cur = cur.get(part)\n        else:\n            return default\n    return cur\n\ndef text(x):\n    if x is None:\n        return ''\n    if isinstance(x, dict):\n        return ' '.join([text(v) for v in x.values()]).lower()\n    if isinstance(x, list) or isinstance(x, tuple):\n        return ' '.join([text(v) for v in x]).lower()\n    return str(x).lower()\n\ndef hook(ctx, nb):\n    action = text(getv(ctx, 'action.final_action', getv(ctx, 'action.normalized', getv(ctx, 'action.raw', ''))))\n    target = nb.get('target_type') or text(getv(ctx, 'task.target_type', ''))\n    dest = nb.get('destination_type') or text(getv(ctx, 'task.destination_type', ''))\n    trans = nb.get('transform') or ''\n    task_type = text(getv(ctx, 'task.task_type', ''))\n    if not target or not action:\n        return None\n    pc = nb.get('placed_count', 0)\n    try:\n        pc = int(pc)\n    except Exception:\n        pc = 0\n    locs = nb.get('placed_locs') or []\n    if not isinstance(locs, (list, tuple)):\n        locs = []\n    placed_here = pc > 0 and dest and (' from ' + dest) in action\n    if placed_here or (pc > 0 and target in action and ' from ' in action and any(target in text(x) for x in locs)):\n        return {'kind': 'block_and_prompt', 'message': 'Do not take back a target that has already been placed. Leave it there and continue with any remaining required target or final step.'}\n    if nb.get('has_target') and trans and not nb.get('transformed') and trans != 'clean' and trans != 'heat' and trans != 'cool':\n        if action.startswith('put ' + target + ' '):\n            return {'kind': 'block_and_prompt', 'message': 'Do not place the target yet. First complete the required ' + trans + ' step using the admissible transform action.'}\n        if trans == 'clean' and 'wash' in task_type and action.startswith('wash ' + target + ' '):\n            return {'kind': 'block_and_prompt', 'message': 'Do not wash the target here. Use the admissible clean action at the proper appliance or sink first.'}\n        if trans != 'clean' and action.startswith(trans + ' ' + target + ' '):\n            return {'kind': 'block_and_prompt', 'message': 'Do not use the wrong transform action. Use the admissible ' + trans + ' action for this target.'}\n    wrong_put = bool(dest and action.startswith('put ' + target + ' ') and dest not in action and nb.get('has_target'))\n    if wrong_put and (action in (ctx.get('output') or '') or 'nothing happens' in (ctx.get('observation') or '') or 'not enough' in (ctx.get('observation') or '')):\n        return {'kind': 'block_and_prompt', 'message': 'This is not the required destination for the target. Carry it to the ' + dest + ' and put it there.'}\n    return None"
+          }
+        ],
+        "metadata": {
+          "source_patch_description": "Add compact stage tracking with soft guidance and narrow guards for transform and placement order.",
+          "overlay_only": true
+        }
+      }
+    }
+  }
+}

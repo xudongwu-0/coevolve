@@ -1,0 +1,236 @@
+{
+  "status": "completed",
+  "selection": {
+    "global_step": 95,
+    "rounds": 96,
+    "patch_label": "proposal07",
+    "harness": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_convergence_v1r4/block-01/round0096/patches/95-proposal07.json",
+    "pair": {
+      "editor": {
+        "actor": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_convergence_v1r4/block-01/editor/optimizer/engine/checkpoints/chengboliu/alfworld_ma_convergence_v1_b01/editor/actor/epoch0epochstep95globalstep95",
+        "critic": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_convergence_v1r4/block-01/editor/optimizer/engine/checkpoints/chengboliu/alfworld_ma_convergence_v1_b01/editor/critic/epoch0epochstep95globalstep95"
+      },
+      "solver": {
+        "actor": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_convergence_v1r4/block-01/solver/optimizer/engine/checkpoints/chengboliu/alfworld_ma_convergence_v1_b01/solver/actor/epoch0epochstep95globalstep95",
+        "critic": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_convergence_v1r4/block-01/solver/optimizer/engine/checkpoints/chengboliu/alfworld_ma_convergence_v1_b01/solver/critic/epoch0epochstep95globalstep95"
+      }
+    },
+    "scores": {
+      "95": {
+        "no_patch": 0.9375,
+        "proposal00": 0.9791666666666666,
+        "proposal01": 0.9791666666666666,
+        "proposal02": 0.9166666666666666,
+        "proposal03": 0.9791666666666666,
+        "proposal04": 0.9166666666666666,
+        "proposal05": 0.9791666666666666,
+        "proposal06": 0.7291666666666666,
+        "proposal07": 1.0,
+        "incumbent_harness": 0.9583333333333334
+      }
+    },
+    "valid_proposals": {
+      "95": 8
+    },
+    "incremental_consumed_h_plus_w": 1280,
+    "cumulative_consumed_h_plus_w": 1920,
+    "actual_campaign_consumed": 1280,
+    "actual_campaign_generated_complete": 1536,
+    "sampled_engineer_actions_including_unrewarded": 768,
+    "frozen_at_unix": 1791348376.2759228
+  },
+  "scores": {
+    "no_patch": {
+      "all200": {
+        "accuracy": 0.925,
+        "successes": 185.0
+      },
+      "strict197": {
+        "accuracy": 0.9289340101522843,
+        "successes": 183.0
+      }
+    },
+    "joint_harness": {
+      "all200": {
+        "accuracy": 0.97,
+        "successes": 194.0
+      },
+      "strict197": {
+        "accuracy": 0.9695431472081218,
+        "successes": 191.0
+      }
+    }
+  },
+  "reports": {
+    "no_patch": {
+      "path": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_convergence_v1r4/block-01/round0096_no_patch_report.json",
+      "sha256": "47236b7f3f0ba45cdc1aed37c746ec4eda8499c415972ea3eded5fce02a625fe"
+    },
+    "joint_harness": {
+      "path": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_convergence_v1r4/block-01/round0096_joint_harness_report.json",
+      "sha256": "3530931526308d5af62427ea34ae2916cb4f2d97ef003ff66e4854523ce7ea3e"
+    }
+  },
+  "versus_w1_h2": {
+    "question_count": 200,
+    "metric": "mean@1",
+    "control_accuracy": 0.92,
+    "candidate_accuracy": 0.97,
+    "candidate_minus_control": 0.05,
+    "paired_question_bootstrap_95pct": [
+      0.02,
+      0.085
+    ],
+    "improved_questions": 11,
+    "regressed_questions": 1,
+    "bootstrap_draws": 10000,
+    "bootstrap_seed": 9000045,
+    "limitation": "Question-level uncertainty only; not training-seed robustness. Development selection scores are exploratory, not confirmatory."
+  },
+  "training": {
+    "editor": {
+      "status": "completed",
+      "role": "editor",
+      "steps": 96,
+      "actor_updates": 64,
+      "critic_updates": 128,
+      "metrics_sha256": "16fc410858f6fc5b36c11d0ae52da9b0f74d4eaa2deb9f7b6004d1949eee9307",
+      "checkpoints": {
+        "actor": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_convergence_v1r4/block-01/editor/optimizer/engine/checkpoints/chengboliu/alfworld_ma_convergence_v1_b01/editor/actor/epoch0epochstep95globalstep95",
+        "critic": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_convergence_v1r4/block-01/editor/optimizer/engine/checkpoints/chengboliu/alfworld_ma_convergence_v1_b01/editor/critic/epoch0epochstep95globalstep95"
+      },
+      "elapsed_seconds": 5703.276384115219,
+      "joint_rounds": 96,
+      "optimizer_resets_between_rounds": false,
+      "finished_at_unix": 1791345609.3020413,
+      "checkpoint_history": {
+        "47": {
+          "actor": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_convergence_v1r4/block-01/editor/optimizer/engine/checkpoints/chengboliu/alfworld_ma_convergence_v1_b01/editor/actor/epoch0epochstep47globalstep47",
+          "critic": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_convergence_v1r4/block-01/editor/optimizer/engine/checkpoints/chengboliu/alfworld_ma_convergence_v1_b01/editor/critic/epoch0epochstep47globalstep47"
+        },
+        "95": {
+          "actor": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_convergence_v1r4/block-01/editor/optimizer/engine/checkpoints/chengboliu/alfworld_ma_convergence_v1_b01/editor/actor/epoch0epochstep95globalstep95",
+          "critic": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_convergence_v1r4/block-01/editor/optimizer/engine/checkpoints/chengboliu/alfworld_ma_convergence_v1_b01/editor/critic/epoch0epochstep95globalstep95"
+        }
+      },
+      "stop": null,
+      "active_rounds": 64,
+      "inactive_rounds": 32,
+      "critic_only_warmup_steps": 0,
+      "actor_steps": 64,
+      "critic_steps": 128,
+      "consumed_policy_trajectories": 512,
+      "committed_generated_policy_trajectories": 768,
+      "inactive_counterpart_trajectories": 256,
+      "actor_updated_policy_trajectories": 512,
+      "critic_warmup_policy_trajectories": 0,
+      "collection_policy_version": 96,
+      "policy_version_semantics": "Native collection/lag version, not the number of weight-changing updates.",
+      "generated_policy_trajectories": 768,
+      "sampled_engineer_actions": 768,
+      "schedule": "joint_joint_anchor",
+      "checkpoint_update_counts": {
+        "47": {
+          "active_rounds": 32,
+          "inactive_rounds": 16,
+          "critic_only_warmup_steps": 0,
+          "actor_steps": 32,
+          "critic_steps": 64
+        },
+        "95": {
+          "active_rounds": 64,
+          "inactive_rounds": 32,
+          "critic_only_warmup_steps": 0,
+          "actor_steps": 64,
+          "critic_steps": 128
+        }
+      },
+      "uncommitted_generated_policy_trajectories": 0
+    },
+    "solver": {
+      "status": "completed",
+      "role": "solver",
+      "steps": 96,
+      "actor_updates": 96,
+      "critic_updates": 192,
+      "metrics_sha256": "89991a476fcd5f98ee85945cd08052950db90791eb9c8e3484dd2a23b78fa2f8",
+      "checkpoints": {
+        "actor": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_convergence_v1r4/block-01/solver/optimizer/engine/checkpoints/chengboliu/alfworld_ma_convergence_v1_b01/solver/actor/epoch0epochstep95globalstep95",
+        "critic": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_convergence_v1r4/block-01/solver/optimizer/engine/checkpoints/chengboliu/alfworld_ma_convergence_v1_b01/solver/critic/epoch0epochstep95globalstep95"
+      },
+      "elapsed_seconds": 5764.794921398163,
+      "joint_rounds": 96,
+      "optimizer_resets_between_rounds": false,
+      "finished_at_unix": 1791345670.9124942,
+      "checkpoint_history": {
+        "47": {
+          "actor": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_convergence_v1r4/block-01/solver/optimizer/engine/checkpoints/chengboliu/alfworld_ma_convergence_v1_b01/solver/actor/epoch0epochstep47globalstep47",
+          "critic": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_convergence_v1r4/block-01/solver/optimizer/engine/checkpoints/chengboliu/alfworld_ma_convergence_v1_b01/solver/critic/epoch0epochstep47globalstep47"
+        },
+        "95": {
+          "actor": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_convergence_v1r4/block-01/solver/optimizer/engine/checkpoints/chengboliu/alfworld_ma_convergence_v1_b01/solver/actor/epoch0epochstep95globalstep95",
+          "critic": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_convergence_v1r4/block-01/solver/optimizer/engine/checkpoints/chengboliu/alfworld_ma_convergence_v1_b01/solver/critic/epoch0epochstep95globalstep95"
+        }
+      },
+      "stop": null,
+      "active_rounds": 96,
+      "inactive_rounds": 0,
+      "critic_only_warmup_steps": 0,
+      "actor_steps": 96,
+      "critic_steps": 192,
+      "consumed_policy_trajectories": 768,
+      "committed_generated_policy_trajectories": 768,
+      "inactive_counterpart_trajectories": 0,
+      "actor_updated_policy_trajectories": 768,
+      "critic_warmup_policy_trajectories": 0,
+      "collection_policy_version": 96,
+      "policy_version_semantics": "Native collection/lag version, not the number of weight-changing updates.",
+      "generated_policy_trajectories": 768,
+      "sampled_engineer_actions": 768,
+      "schedule": "joint_joint_anchor",
+      "checkpoint_update_counts": {
+        "47": {
+          "active_rounds": 48,
+          "inactive_rounds": 0,
+          "critic_only_warmup_steps": 0,
+          "actor_steps": 48,
+          "critic_steps": 96
+        },
+        "95": {
+          "active_rounds": 96,
+          "inactive_rounds": 0,
+          "critic_only_warmup_steps": 0,
+          "actor_steps": 96,
+          "critic_steps": 192
+        }
+      },
+      "uncommitted_generated_policy_trajectories": 0
+    }
+  },
+  "finished_at_unix": 1791349251.7369347,
+  "met_report_deadline": true,
+  "limitations": [
+    "Exploratory single seed; all200 is a reused development cohort, not a sealed test.",
+    "strict197 excludes goal-family overlap, not development selection exposure.",
+    "Best-arm checkpoint and harness selection costs are not free.",
+    "Matching refers to consumed H+W trajectories, not tokens/FLOPs or prefetched generations.",
+    "MAPPO-inspired joint CTDE/ValueNorm/PPO; native token GAE and SAO TIS/DIS retained.",
+    "Clipped teammate trajectory correction is an experimental biased extension, not standard MAPPO."
+  ],
+  "versus_initial_h0_w0": {
+    "question_count": 200,
+    "metric": "mean@1",
+    "control_accuracy": 0.935,
+    "candidate_accuracy": 0.97,
+    "candidate_minus_control": 0.035,
+    "paired_question_bootstrap_95pct": [
+      0.01,
+      0.065
+    ],
+    "improved_questions": 7,
+    "regressed_questions": 0,
+    "bootstrap_draws": 10000,
+    "bootstrap_seed": 9000046,
+    "limitation": "Question-level uncertainty only; not training-seed robustness. Development selection scores are exploratory, not confirmatory."
+  }
+}

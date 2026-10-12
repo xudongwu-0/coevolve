@@ -1,0 +1,112 @@
+{
+  "campaign": "searchqa_chess_campaign_20260929_v2",
+  "amendment": {
+    "supersedes": "searchqa_chess_campaign_20260929",
+    "reason": "The first paired H1 pilot generated 128 invalid editor actions: 126 rejected imports and two rejected calls. Both workers were intentionally stopped after durable H1 checkpoints, before W1.",
+    "interface": "Allow only explicitly approved re/json imports and APIs within the existing isolated hook sandbox. All filesystem, network, private-attribute and resource restrictions remain.",
+    "restart": "Do not reuse the pilot's trained weights. Repeat development baselines under the amended implementation, select the shared initializer by the unchanged rule, and restart all arms from it.",
+    "accounting": "Retain the old campaign and its physical-rollout and optimizer ledgers as interface-pilot cost; exclude it from algorithm-effect claims.",
+    "unchanged": "Models, dataset splits, initial harnesses, verifiers, sampling budgets, seed, algorithm settings, arm allocation, acceptance and stopping rules."
+  },
+  "domain_order": [
+    "chess",
+    "searchqa"
+  ],
+  "models": {
+    "original": "/mnt/3fs/xudong/coevolve/assets/Qwen3-4B-Instruct-2507",
+    "sft1152": "/mnt/3fs/xudong/coevolve/runs/rewrite_timebox_20260929T0745Z/round_01/training/checkpoint"
+  },
+  "sft_receipt": "/mnt/3fs/xudong/coevolve/runs/rewrite_timebox_20260929T0745Z/round_01/training/result.json",
+  "domains": {
+    "chess": {
+      "data": "/mnt/3fs/xudong/coevolve/assets/chess_sao_20260929",
+      "test_questions": 256,
+      "metric": "legal-UCI exact match"
+    },
+    "searchqa": {
+      "data": "/mnt/3fs/xudong/coevolve/assets/searchqa_sao_20260929",
+      "test_questions": 700,
+      "metric": "local normalized alias exact match; NOT paid WHALE judge accuracy",
+      "adaptations": {
+        "verifier": "Fixed local normalized answer-alias exact match replaces the paid WHALE LLM judge.",
+        "retrieval": "Full public wiki18 corpus (21,015,324 passages), local CPU Tantivy BM25 lexical retrieval instead of paper e5 dense retrieval.",
+        "exact_paper_reproduction": false
+      }
+    }
+  },
+  "nodes": {
+    "dev-NDH200-026": {
+      "uid": 1008,
+      "root": "/mnt/3fs/xudong/coevolve/runs/searchqa_chess_campaign_20260929_v2/node4",
+      "baseline": "original",
+      "alternating": "sao",
+      "single": "weight_only",
+      "peer": "dev-NDH200-025"
+    },
+    "dev-NDH200-025": {
+      "uid": 1009,
+      "root": "/mnt/3fs/xudong/coevolve/runs/searchqa_chess_campaign_20260929_v2/node3",
+      "baseline": "sft1152",
+      "alternating": "ma_sao",
+      "single": "harness_only",
+      "peer": "dev-NDH200-026"
+    }
+  },
+  "seed": 42,
+  "common": {
+    "context_tokens": 16384,
+    "solver_tokens": 4096,
+    "editor_tokens": 2048,
+    "editor_steps": 3,
+    "editor_batch_size": 16,
+    "solver_steps": 32,
+    "solver_batch_size": 64,
+    "editor_lr": 5e-06,
+    "solver_lr": 2e-06,
+    "critic_lr": 1e-05,
+    "editor_temperature": 0.7,
+    "staleness": 1,
+    "weight_update_mode": "xccl",
+    "reward_questions": 32,
+    "feedback_questions": 32,
+    "dev_questions": 256,
+    "baseline_samples": 8,
+    "selection_samples": 2,
+    "report_samples": 8,
+    "proposals": 4,
+    "eval_concurrency": 256
+  },
+  "algorithm": {
+    "central_critic": false,
+    "critic_warmup_steps": 8,
+    "warmup_recycled_per_row": 2,
+    "solver_recycle_fraction": 1.0,
+    "replay_fraction": 0.25,
+    "interaction_credit": 0.0
+  },
+  "stopping": {
+    "minimum_blocks": 3,
+    "patience": 3,
+    "minimum_dev_gain": 0.005,
+    "maximum_blocks": 12
+  },
+  "runtime": {
+    "phase_timeout_seconds": 14400,
+    "peer_timeout_seconds": 43200,
+    "safety_seconds": 172800,
+    "heartbeat_seconds": 15,
+    "restore_authorized_filler": true
+  },
+  "interpretation": {
+    "initializer": "Both dev256x8 outcomes are persisted, higher mean wins separately per domain, original wins ties. Freeze common E/W initializer before any training or test.",
+    "selection": "Same dev256 at 2 samples for incumbent and four proposal slots; positive paired one-sided 95% bootstrap LCB with Bonferroni alpha=0.05/4. Exact-source dedup; full dev256x8 on accepted harness for stopping. Exploratory reuse, not held-out confirmation.",
+    "blocks": "First alternating block H-W-H is mandatory. Subsequent W-H blocks continue saved editor, solver, harness and separate role critics; preceding H supplies each W recycle pool. Independent singles restart from the same frozen initializer.",
+    "extension": "Continue both alternating arms under common patience only while MA dev gain is positive and greater than SAO gain. First gate failure is not_extended, later failure extension_gate_closed. Paired CI is logged, not a statistical-superiority claim when it crosses zero.",
+    "stopping": "Best checkpoint fixed by dev only. At least 3 blocks and 3 blocks without >=0.005 dev gain; 12-block safety exits budget_exhausted, not converged. Gate exceptions are explicitly not convergence.",
+    "epochs": "Solver train windows wrap deterministically across epochs, distinct within a phase. Reward32 windows rotate through the 128 training-only reward questions; later reuse is disclosed. No dev/test gold in editor feedback.",
+    "recycling": "Canonical committed paired reward receipts only; 1024 warmup and 2048 actor-mixed episodes are disjoint and once-per-planned-optimizer-phase. Episode IDs include the immutable campaign identity and unique originating reward run/phase, so unchanged harnesses cannot collide across fresh phases. MA adds critic-only compute; report physical generation separately from optimizer compute.",
+    "handoff": "Every native SAO phase loads saved HF actor/critic weights and RESETS optimizer moments; not continuous Adam or partial optimizer resume. No custom PPO, loss or central critic.",
+    "diagnostic": "Solver response4096/context16384 in both arms; editor response2048. This differs from paper response8192/16384, and is a single-training-seed controlled diagnostic.",
+    "reports": "Test mean@8 only after final dev checkpoint is irreversibly frozen; never read test outcomes in initializer, selection, gate or stopping functions. SearchQA uses local alias EM, not the paid WHALE judge, and CPU Tantivy BM25 lexical retrieval over the full wiki18 corpus, not e5 dense retrieval. This is an adaptation, not exact paper reproduction."
+  }
+}

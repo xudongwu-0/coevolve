@@ -1,0 +1,12 @@
+{
+  "original_v2": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2",
+  "v2_attempt02": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_attempt02",
+  "new_native_calibration_weights_are_not_formal_initialization": true,
+  "interrupted_partial_work_is_not_free_or_continued_without_state": true,
+  "evidence": {
+    "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2/full/INTERRUPTED.json": "e47e5ee1f585bbc04cc6760987670e363382de44e37dfcfc6b575907dba741fc",
+    "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2/full/INTERRUPTED.md": "c387791c83bc37bbea504683f55b009b371c5d6bcc6b3b7e5766d5673c056d8a",
+    "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_attempt02/full/INTERRUPTED.json": "d9e92e17464f0a11523b3ee43efeccbc4564b882d64e983cda50d7af85fa82da",
+    "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_attempt02/full/INTERRUPTED.md": "407ff32c7cf83305b3a6cafeb72b5da24de68adcff4362ea6912e378a380ed87"
+  }
+}

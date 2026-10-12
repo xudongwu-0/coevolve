@@ -1,0 +1,98 @@
+{
+  "status": "passed",
+  "payload": {
+    "status": "passed",
+    "files": 4225,
+    "bytes": 182643105
+  },
+  "data_split": {
+    "catalogue_tasks": 500,
+    "training_tasks": 240,
+    "training_source_rows": 768,
+    "shared_training_episodes": 1152,
+    "selection_tasks": 48,
+    "main_tasks": 200,
+    "strict_goal_disjoint_tasks": 197,
+    "train_main_task_overlap": 0,
+    "train_selection_task_overlap": 0,
+    "selection_main_overlap": 48,
+    "main_goal_related_to_training": [
+      291,
+      414,
+      467
+    ],
+    "remaining_nonselection_tasks": 152,
+    "selection48_is_part_of_main200": true,
+    "interpretation": "Reused development evaluation, not an untouched held-out test."
+  },
+  "full": {
+    "96": {
+      "no_patch": {
+        "successes": 178,
+        "questions": 200,
+        "accuracy": 0.89,
+        "strict197_successes": 176,
+        "nonselection152_successes": 134,
+        "nonselection152_scope": "Post-hoc descriptive subset, not a new primary or untouched test."
+      },
+      "selected": {
+        "successes": 180,
+        "questions": 200,
+        "accuracy": 0.9,
+        "strict197_successes": 177,
+        "nonselection152_successes": 135,
+        "nonselection152_scope": "Post-hoc descriptive subset, not a new primary or untouched test."
+      }
+    },
+    "144": {
+      "no_patch": {
+        "successes": 179,
+        "questions": 200,
+        "accuracy": 0.895,
+        "strict197_successes": 176,
+        "nonselection152_successes": 135,
+        "nonselection152_scope": "Post-hoc descriptive subset, not a new primary or untouched test."
+      },
+      "selected": {
+        "successes": 186,
+        "questions": 200,
+        "accuracy": 0.93,
+        "strict197_successes": 183,
+        "nonselection152_successes": 140,
+        "nonselection152_scope": "Post-hoc descriptive subset, not a new primary or untouched test."
+      }
+    }
+  },
+  "without_peer_metric_rounds": {
+    "editor": 76,
+    "solver": 76
+  },
+  "native_metadata": {
+    "full": {
+      "completed_rounds": 144,
+      "sha256": "ffed7ac7704636aad0fd95ca6608f9fe6e0be438ed8e2752ff2288598ed2c14b",
+      "metadata_verified": true,
+      "model_tensors_present_in_git": false,
+      "scope": "Git verifies saved receipts only; native tensors require separate artifact download."
+    },
+    "without_peer": {
+      "completed_rounds": 72,
+      "sha256": "4f56da0f6203ae6711072f0c000f63fc7c1b46ab6ce10c747330d4c5c5967b2a",
+      "metadata_verified": true,
+      "model_tensors_present_in_git": false,
+      "scope": "Git verifies saved receipts only; native tensors require separate artifact download."
+    }
+  },
+  "verified_snapshot_runtime_files": {
+    "runs/source-snapshots/alfworld-ma-mechanisms-single-seed-v2": 320,
+    "runs/source-snapshots/alfworld-ma-mechanisms-rolling12-v2": 322,
+    "runs/source-snapshots/alfworld-ma-mechanisms-eval-recovery-v1": 322,
+    "runs/source-snapshots/alfworld-ma-mechanisms-report-recovery-v1": 322,
+    "runs/source-snapshots/alfworld-ma-mechanisms-rolling12-v3": 322,
+    "runs/source-snapshots/alfworld-ma-mechanisms-idle2h-v1": 323,
+    "runs/source-snapshots/alfworld-ma-mechanisms-serial15-v3": 333
+  },
+  "training_allowed": false,
+  "gpu_or_api_used": false,
+  "interpretation": "Recomputed stored evidence; not a new training or model-evaluation run."
+}

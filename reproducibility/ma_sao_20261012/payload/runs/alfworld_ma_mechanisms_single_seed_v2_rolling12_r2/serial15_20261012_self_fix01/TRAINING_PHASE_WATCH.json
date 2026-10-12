@@ -1,0 +1,26 @@
+{
+  "observer_pid": 1219221,
+  "checked_at_beijing": "2026-10-12T14:25:05+08:00",
+  "controller_status": "training_or_evaluating",
+  "worker": {
+    "phase": "training",
+    "arm": "without_peer",
+    "pid": 1195954,
+    "at_unix": 1791782068.9114323
+  },
+  "read_only_training": true,
+  "automatic_restart": false,
+  "event": "observing_training",
+  "rounds": {
+    "editor": 75,
+    "solver": 75
+  },
+  "validated_checkpoint": {
+    "path": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/without_peer/recovery/round-0072-attempt-0003/COMMITTED.json",
+    "sha256": "4f56da0f6203ae6711072f0c000f63fc7c1b46ab6ce10c747330d4c5c5967b2a",
+    "completed_rounds": 72,
+    "validated_at_beijing": "2026-10-12T14:22:05+08:00",
+    "validation": "shard sizes, small hashes, optimizer/ValueNorm/RNG/cursors; not full large-tensor hashes"
+  },
+  "all_numeric_metrics_finite": true
+}

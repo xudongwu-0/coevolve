@@ -1,0 +1,47 @@
+{
+  "status": "native_restored_and_new_training_progress",
+  "checked_at_beijing": "2026-10-12T13:24:51+08:00",
+  "attempt": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/without_peer/attempts/attempt-0003",
+  "controller_pid": 1194617,
+  "controller_start_ticks": "337894909",
+  "resume_round": 24,
+  "current_progress": {
+    "at_beijing": "2026-10-12T13:24:51+08:00",
+    "controller_pid": 1194617,
+    "worker": {
+      "phase": "training",
+      "arm": "without_peer",
+      "pid": 1195954,
+      "at_unix": 1791782068.9114323
+    },
+    "roles": {
+      "editor": {
+        "committed_rounds": 25,
+        "native_loaded": true,
+        "latest_metric_unix": 1791782666.529017
+      },
+      "solver": {
+        "committed_rounds": 25,
+        "native_loaded": true,
+        "latest_metric_unix": 1791782664.9601681
+      }
+    },
+    "paired_checkpoint_round": 24,
+    "restored_both_roles": true
+  },
+  "source": "/mnt/3fs/xudong/coevolve/runs/source-snapshots/alfworld-ma-mechanisms-serial15-v3",
+  "source_manifest_sha256": "a1a42b1bf85598bdab91a8966ed659cf931d27e0e7354925cc9550b4f29cff08",
+  "role_restore_receipts": {
+    "editor": {
+      "path": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/without_peer/attempts/attempt-0003/without_peer/editor/optimizer/RECOVERY_LOADED.json",
+      "sha256": "be7b60a15e41af07fbe91f2ac909af70ad400aba25a649cec5c8d33396d536e2"
+    },
+    "solver": {
+      "path": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/without_peer/attempts/attempt-0003/without_peer/solver/optimizer/RECOVERY_LOADED.json",
+      "sha256": "c74e899a54cfbc7f83120674c9a1cb02330234ac35ed4d7816231715b5f31ab7"
+    }
+  },
+  "external_kill_auto_restart": false,
+  "self_failure_recovery_requires_diagnosis": true,
+  "bitwise_rollout_equivalence_claimed": false
+}

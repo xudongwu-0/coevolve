@@ -1,0 +1,59 @@
+{
+  "status": "completed",
+  "role": "solver",
+  "steps": 144,
+  "actor_updates": 141,
+  "critic_updates": 288,
+  "metrics_sha256": "74a6475346cc0f8c518ce26d15fd817955c0e839b1ba5df714f01bf3c70f25fa",
+  "checkpoints": {
+    "actor": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/attempts/attempt-0001/full/solver/optimizer/engine/checkpoints/chengboliu/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2-full/solver/actor/epoch0epochstep143globalstep143",
+    "critic": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/attempts/attempt-0001/full/solver/optimizer/engine/checkpoints/chengboliu/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2-full/solver/critic/epoch0epochstep143globalstep143"
+  },
+  "elapsed_seconds": 10527.883791208267,
+  "joint_rounds": 144,
+  "optimizer_resets_between_rounds": false,
+  "finished_at_unix": 1791555704.613212,
+  "checkpoint_history": {
+    "95": {
+      "actor": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/attempts/attempt-0001/full/solver/optimizer/engine/checkpoints/chengboliu/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2-full/solver/actor/epoch0epochstep95globalstep95",
+      "critic": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/attempts/attempt-0001/full/solver/optimizer/engine/checkpoints/chengboliu/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2-full/solver/critic/epoch0epochstep95globalstep95"
+    },
+    "143": {
+      "actor": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/attempts/attempt-0001/full/solver/optimizer/engine/checkpoints/chengboliu/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2-full/solver/actor/epoch0epochstep143globalstep143",
+      "critic": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/attempts/attempt-0001/full/solver/optimizer/engine/checkpoints/chengboliu/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2-full/solver/critic/epoch0epochstep143globalstep143"
+    }
+  },
+  "stop": null,
+  "active_rounds": 144,
+  "inactive_rounds": 0,
+  "critic_only_warmup_steps": 3,
+  "actor_steps": 141,
+  "critic_steps": 288,
+  "consumed_policy_trajectories": 1152,
+  "committed_generated_policy_trajectories": 1152,
+  "inactive_counterpart_trajectories": 0,
+  "actor_updated_policy_trajectories": 1128,
+  "critic_warmup_policy_trajectories": 24,
+  "collection_policy_version": 144,
+  "policy_version_semantics": "Native collection/lag version, not the number of weight-changing updates.",
+  "generated_policy_trajectories": 1152,
+  "sampled_engineer_actions": 1152,
+  "schedule": "joint_joint_anchor",
+  "checkpoint_update_counts": {
+    "95": {
+      "active_rounds": 96,
+      "inactive_rounds": 0,
+      "critic_only_warmup_steps": 3,
+      "actor_steps": 93,
+      "critic_steps": 192
+    },
+    "143": {
+      "active_rounds": 144,
+      "inactive_rounds": 0,
+      "critic_only_warmup_steps": 3,
+      "actor_steps": 141,
+      "critic_steps": 288
+    }
+  },
+  "uncommitted_generated_policy_trajectories": 0
+}

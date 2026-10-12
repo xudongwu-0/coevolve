@@ -24,7 +24,7 @@ from .evaluation import stable_id_seed_offset
 from .joint_context import joint_context_audit
 from .large_train import training_capacity_audit, validate_training_rows
 from .launch import Launcher
-from .resources import gpu_release_audit
+from .resources import gpu_release_audit, research_resources_released
 
 
 class PhaseAttemptsExhausted(RuntimeError):
@@ -83,12 +83,8 @@ def checked_native_report(report: dict, task_ids: list[int], evaluation: dict) -
 
 def checked_release(root: Path) -> dict:
     released = read_json(root / "RELEASED.json")
-    if (
-        released["foreign_gpu_pids"]
-        or not set(released["remaining_gpu_pids"]) <= set(released["verified_filler_pids"])
-        or not released["filler_unit_active"]
-    ):
-        raise RuntimeError("A prerequisite did not release research GPUs with filler active")
+    if not research_resources_released(released):
+        raise RuntimeError("A prerequisite did not release research GPUs under the verified filler policy")
     return released
 
 

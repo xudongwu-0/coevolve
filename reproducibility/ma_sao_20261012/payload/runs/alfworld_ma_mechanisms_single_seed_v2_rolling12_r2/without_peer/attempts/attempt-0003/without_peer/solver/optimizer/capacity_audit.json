@@ -1,0 +1,6 @@
+{
+  "role": "solver",
+  "applicable": false,
+  "microbatch_tokens": 32768,
+  "required_microbatch_tokens": 1
+}

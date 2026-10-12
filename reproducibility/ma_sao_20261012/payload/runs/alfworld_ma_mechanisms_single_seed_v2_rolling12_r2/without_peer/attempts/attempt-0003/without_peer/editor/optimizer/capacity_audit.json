@@ -1,0 +1,19 @@
+{
+  "role": "editor",
+  "applicable": true,
+  "fresh_rows": 1152,
+  "replay_rows": 0,
+  "minimum_fresh_prompt_tokens": 7317,
+  "maximum_fresh_prompt_tokens": 7602,
+  "maximum_new_tokens": 4096,
+  "maximum_replay_trajectory_tokens": null,
+  "required_microbatch_tokens": 11698,
+  "microbatch_tokens": 32768,
+  "context_tokens": 32768,
+  "chat_template_kwargs": {
+    "enable_thinking": true,
+    "add_generation_prompt": false,
+    "continue_final_message": true
+  },
+  "assistant_prefill": "<think>\n"
+}

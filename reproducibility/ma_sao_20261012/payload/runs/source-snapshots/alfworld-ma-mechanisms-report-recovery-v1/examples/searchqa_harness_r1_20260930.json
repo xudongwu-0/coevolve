@@ -1,0 +1,149 @@
+{
+  "campaign": "searchqa_harness_r1_20260930",
+  "method": "Harness-R1 target-specific harness engineer",
+  "upstream": {
+    "repository": "https://github.com/DeepExperience/Harness-R1",
+    "revision": "94f2e087f573e1b82fc9568bb634d4ae9a887e28",
+    "local_source": "/mnt/3fs/xudong/coevolve/third_party/harness-r1-upstream",
+    "license": "Apache-2.0"
+  },
+  "engineer": {
+    "base_model": "/mnt/3fs/xudong/coevolve/assets/Qwen3.5-9B",
+    "initialization": "fresh_base_only",
+    "exclude_old_editor_weights": true,
+    "enable_thinking": true,
+    "response_protocol": "prefill_think_patch",
+    "output": "<think>...</think><patch>...</patch>"
+  },
+  "target": {
+    "model": "/mnt/3fs/xudong/coevolve/runs/searchqa_chess_campaign_20260929_v2/node3/searchqa/ma_sao/blocks/0004/w4/engine/checkpoints/chengboliu/searchqa_chess_campaign_20260929_v2-searchqa-ma_sao-0004/w4/actor/epoch0epochstep39globalstep39",
+    "model_sha256": "ed70e9c6825cc84b3c292455aa1e2c972da8b48b52f12d422cf7ccf61cbd25ae",
+    "selection": "best development checkpoint from the paused SearchQA MA-SAO arm",
+    "selection_dev_mean_at_8": 0.29296875,
+    "frozen_during_engineer_training": true,
+    "enable_thinking": false,
+    "temperature": 1.0,
+    "top_p": 1.0,
+    "top_k": -1,
+    "total_assistant_tokens": 4096,
+    "context_tokens": 16384,
+    "base_harness": "/mnt/3fs/xudong/coevolve/runs/searchqa_chess_campaign_20260929_v2/node3/searchqa/initial.py",
+    "base_harness_sha256": "36c8acd75caceee979b4f5f7f46fcc4b7a2000bde8789b5f65480cefcc272e4d"
+  },
+  "benchmark": {
+    "name": "searchqa",
+    "data": "/mnt/3fs/xudong/coevolve/assets/searchqa_sao_20260929",
+    "metric": "local normalized answer-alias exact match",
+    "retrieval": "frozen full wiki18 Tantivy BM25",
+    "exact_paper_reproduction": false,
+    "adaptation": "Harness-R1 code-hook protocol and same-task delta reward are retained; SearchQA replaces the paper's three AgentBench environments."
+  },
+  "patch": {
+    "schema_version": "harness-r1-patch-v1",
+    "benchmark": "searchqa",
+    "allowed_action": "add_code_hook",
+    "hooks": [
+      "on_init",
+      "make_pre_hint",
+      "on_before_action",
+      "on_post_step"
+    ],
+    "hook_signature": "hook(ctx, nb)",
+    "persistent_episode_notebook": true,
+    "ast_validation": true,
+    "sandboxed_execution": true,
+    "validity_bonus": 0.0
+  },
+  "harness_evolution": {
+    "initial_incumbent": "h0 plus no lifecycle hooks",
+    "h0_is_initial_only": true,
+    "candidate_semantics": "A candidate patch overrides only the lifecycle hooks it names and inherits every other hook from the incumbent.",
+    "reward_baseline": "the current incumbent harness on identical task identities and rollout seeds",
+    "acceptance": "accept only a development-confirmed positive patch; merge it into the incumbent before collecting the next failure packets",
+    "failure_packet_refresh": "collect new failures under each newly accepted incumbent",
+    "rollback": "rejecting a candidate keeps the incumbent; it does not reset a previously accepted harness to h0"
+  },
+  "cold_start_sft": {
+    "source": "training-only silver examples selected by real same-task rerun from fresh-base candidates and validated generic seed patches",
+    "minimum_examples": 256,
+    "target_examples": 512,
+    "maximum_examples": 877,
+    "epochs": 2,
+    "learning_rate": 1e-05,
+    "cutoff_length": 32768,
+    "dtype": "bfloat16",
+    "global_batch_size": 24,
+    "seed": 42
+  },
+  "failure_packets": {
+    "source_split": "train",
+    "tasks_per_packet": 8,
+    "minimum_packets": 256,
+    "maximum_packets": 1500,
+    "increment": 256,
+    "only_failed_target_trajectories": true,
+    "exclude_dev_and_test_identities": true,
+    "include_full_public_trajectory": true
+  },
+  "online_grpo": {
+    "reward": "patched average reward minus immutable baseline average reward on identical task identities and rollout seeds",
+    "rollout_batch_size": 4,
+    "samples_per_prompt": 8,
+    "global_batch_size": 32,
+    "iterations_per_update": 4,
+    "temperature": 0.7,
+    "top_p": 0.95,
+    "max_prompt_length": 28672,
+    "max_response_length": 12288,
+    "learning_rate": 1e-06,
+    "maximum_rollout_batches": 174,
+    "seed": 42
+  },
+  "post_success_algorithm_comparison": {
+    "gate": "Run only after standard Harness-R1 produces a syntax-valid, sandbox-valid patch with positive development gain.",
+    "methods": [
+      "Harness-R1 online GRPO",
+      "SAO applied to Harness Engineer weights",
+      "MA-SAO applied to Harness Engineer weights"
+    ],
+    "shared_initial_engineer": "the same frozen cold-start SFT checkpoint",
+    "shared_initial_harness": "h0 plus no lifecycle hooks",
+    "shared_target": "the exact frozen target model in this protocol",
+    "shared_inputs": "the same failure packets, train task identities, target rollout seeds, prompts, decoding settings, and reward definition",
+    "shared_budget": "equal target reruns and equal Engineer optimizer updates",
+    "independent_incumbents": true,
+    "primary_metric": "best development-confirmed cumulative harness gain over h0",
+    "secondary_metrics": [
+      "patch validity",
+      "sandbox success",
+      "accepted patches per target rerun",
+      "held-out test gain after irreversible development freeze"
+    ]
+  },
+  "selection": {
+    "development_questions": 256,
+    "development_samples_per_question": 8,
+    "minimum_checkpoints": 3,
+    "patience": 3,
+    "minimum_absolute_gain": 0.005,
+    "test_questions": 700,
+    "test_samples_per_question": 8,
+    "test_after_irreversible_dev_freeze_only": true
+  },
+  "rl_effectiveness": {
+    "question": "Does reinforcement learning make the Engineer more effective at modifying a frozen target's harness?",
+    "engineer_controls": ["fresh pretrained 9B", "cold-start SFT 9B", "online GRPO 9B"],
+    "primary_contrast": "online GRPO versus cold-start SFT under matched proposal and target-rerun budgets",
+    "initial_comparison_incumbent": "h0 plus no lifecycle hooks",
+    "fixed_target_tool_and_token_budgets": true,
+    "no_positive_train_delta_is_not_success": true,
+    "report_constant_reward_groups_and_infrastructure_failures_separately": true,
+    "development_acceptance_requires": "positive paired question-level bootstrap 95% lower bound and at least 0.005 absolute gain",
+    "baseline_score": "freshly measure under this frozen serving protocol; historical 29.296875% is context, not a replacement for rerunning h0"
+  },
+  "nodes": {
+    "dev-NDH200-026": "Engineer SFT and GRPO",
+    "dev-NDH200-025": "frozen target serving, failure packet collection, and same-task reruns"
+  },
+  "run_root": "/mnt/3fs/xudong/coevolve/runs/searchqa_harness_r1_20260930"
+}

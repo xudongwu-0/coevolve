@@ -1,0 +1,70 @@
+{
+  "metric": "paired fixed-harness matrix",
+  "unique_harnesses": 9,
+  "logical_harnesses": 10,
+  "samples_per_question": 1,
+  "question_count": 48,
+  "variants": {
+    "no_patch": {
+      "accuracy": 0.9166666666666666,
+      "report": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0096/selection/attempt-01/reports/53a56c2f9537da0d78e856bb36436af24573acff4b627a60c758d87618c2d794.json",
+      "harness_sha256": "53a56c2f9537da0d78e856bb36436af24573acff4b627a60c758d87618c2d794",
+      "source_path": "/mnt/3fs/xudong/coevolve/runs/source-snapshots/alfworld-ma-mechanisms-single-seed-v2/examples/alfworld_no_patch.json"
+    },
+    "incumbent_harness": {
+      "accuracy": 0.9791666666666666,
+      "report": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0096/selection/attempt-01/reports/54cf60d78be48813731bf8ce610f2036597bdbd54888eb139be3c6955f9dc42d.json",
+      "harness_sha256": "54cf60d78be48813731bf8ce610f2036597bdbd54888eb139be3c6955f9dc42d",
+      "source_path": "/mnt/3fs/xudong/coevolve/runs/alfworld_joint_h0w0_8h_v1/initial/patches/-1-proposal01.json"
+    },
+    "candidate-proposal00": {
+      "accuracy": 0.2708333333333333,
+      "report": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0096/selection/attempt-01/reports/7100cd2d02aceeb570d75615385f1cf6f9d3ddb7f4a1ee6f77a5226c1bfbd450.json",
+      "harness_sha256": "7100cd2d02aceeb570d75615385f1cf6f9d3ddb7f4a1ee6f77a5226c1bfbd450",
+      "source_path": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0096/patches/candidate-proposal00.json"
+    },
+    "candidate-proposal01": {
+      "accuracy": 0.9375,
+      "report": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0096/selection/attempt-01/reports/d7497a99e3875862364349e7944a7d2cf2863963648e43e543c34cd4b9476354.json",
+      "harness_sha256": "d7497a99e3875862364349e7944a7d2cf2863963648e43e543c34cd4b9476354",
+      "source_path": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0096/patches/candidate-proposal01.json"
+    },
+    "candidate-proposal02": {
+      "accuracy": 0.875,
+      "report": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0096/selection/attempt-01/reports/702b585436f710dd675ff8114e652700356b39889623d91aabda3e7010daf8cf.json",
+      "harness_sha256": "702b585436f710dd675ff8114e652700356b39889623d91aabda3e7010daf8cf",
+      "source_path": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0096/patches/candidate-proposal02.json"
+    },
+    "candidate-proposal03": {
+      "accuracy": 0.9166666666666666,
+      "report": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0096/selection/attempt-01/reports/53a56c2f9537da0d78e856bb36436af24573acff4b627a60c758d87618c2d794.json",
+      "harness_sha256": "53a56c2f9537da0d78e856bb36436af24573acff4b627a60c758d87618c2d794",
+      "source_path": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0096/patches/candidate-proposal03.json"
+    },
+    "candidate-proposal04": {
+      "accuracy": 0.9375,
+      "report": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0096/selection/attempt-01/reports/092e088693e5cf39ec0950991050caa56402ec62e1846eb7e5e3f2eaa6152b6b.json",
+      "harness_sha256": "092e088693e5cf39ec0950991050caa56402ec62e1846eb7e5e3f2eaa6152b6b",
+      "source_path": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0096/patches/candidate-proposal04.json"
+    },
+    "candidate-proposal05": {
+      "accuracy": 0.8958333333333334,
+      "report": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0096/selection/attempt-01/reports/e2a6cb1a37197fc6ff2b41049f38829ed024c24f5d830d244148a818f4f7d81d.json",
+      "harness_sha256": "e2a6cb1a37197fc6ff2b41049f38829ed024c24f5d830d244148a818f4f7d81d",
+      "source_path": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0096/patches/candidate-proposal05.json"
+    },
+    "candidate-proposal06": {
+      "accuracy": 0.8958333333333334,
+      "report": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0096/selection/attempt-01/reports/68e07d68bd0aa60d14539db6b391e7748bb23c0ab4e6003b5a3660322e46eeba.json",
+      "harness_sha256": "68e07d68bd0aa60d14539db6b391e7748bb23c0ab4e6003b5a3660322e46eeba",
+      "source_path": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0096/patches/candidate-proposal06.json"
+    },
+    "candidate-proposal07": {
+      "accuracy": 0.9166666666666666,
+      "report": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0096/selection/attempt-01/reports/3892297ca3216a214b71cb5204993910c2cd218d2179c76f5fe74c870f577bf7.json",
+      "harness_sha256": "3892297ca3216a214b71cb5204993910c2cd218d2179c76f5fe74c870f577bf7",
+      "source_path": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/round0096/patches/candidate-proposal07.json"
+    }
+  },
+  "duplicate_policy": "Identical canonical patches share a rollout report; all labels remain. Task/sample decode seeds are identical across distinct harnesses."
+}

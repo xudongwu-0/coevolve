@@ -1,0 +1,30 @@
+{
+  "roles": [
+    {
+      "name": "target",
+      "model": "/mnt/3fs/xudong/coevolve/assets/Harness-R1/target-agent-sft",
+      "model_receipt": "/mnt/3fs/xudong/coevolve/assets/Harness-R1/target-agent-sft/provenance.json",
+      "model_receipt_sha256": "5158061cac580f575dd3072f51bd6979a349883e2f5b7d524fbe727a89f58b41",
+      "gpus": "0,1,2,3",
+      "port": 19301,
+      "context": 32768,
+      "tool_call_parser": "qwen3_xml",
+      "language_model_only": true,
+      "gdn_prefill_backend": "triton",
+      "prefix_caching": true
+    },
+    {
+      "name": "engineer",
+      "model": "/mnt/3fs/xudong/coevolve/assets/Harness-R1/cold-start-sft",
+      "model_receipt": "/mnt/3fs/xudong/coevolve/assets/Harness-R1/cold-start-sft/provenance.json",
+      "model_receipt_sha256": "471bb9adf966c289278be0ecc1c6210151cb1f24f059d47537d8f12fbe715691",
+      "gpus": "4,5,6,7",
+      "port": 19401,
+      "context": 40960,
+      "tool_call_parser": "qwen3_xml",
+      "language_model_only": true,
+      "gdn_prefill_backend": "triton",
+      "prefix_caching": true
+    }
+  ]
+}

@@ -1,0 +1,39 @@
+diff --git a/areal/experimental/openai/client.py b/areal/experimental/openai/client.py
+--- a/areal/experimental/openai/client.py
++++ b/areal/experimental/openai/client.py
+@@ -666,13 +666,15 @@ class AsyncCompletionsWithReward(BaseAsyncCompletions):
+         tokenizer_messages = messages_for_tokenizer if has_images else messages_list
+         tokenizer_messages = _parse_tool_call_arguments(tokenizer_messages)
+         if self.chat_template_type == "hf":
++            template_kwargs = dict(extra_body.get("chat_template_kwargs", {}))
++            add_generation_prompt = template_kwargs.pop("add_generation_prompt", True)
+             prompt_token_ids = apply_chat_template(
+                 self.tokenizer,
+                 tokenizer_messages,
+                 tools=tools_list,
+-                add_generation_prompt=True,
++                add_generation_prompt=add_generation_prompt,
+                 tokenize=True,
+-                **extra_body.get("chat_template_kwargs", {}),
++                **template_kwargs,
+             )
+         elif self.chat_template_type == "concat":
+             concat_messages = (
+@@ -1110,13 +1112,15 @@ def concat_prompt_token_ids_with_parent(
+     all_message_list += message_list
+     all_message_list = _parse_tool_call_arguments(all_message_list)
+ 
++    template_kwargs = dict(extra_body.get("chat_template_kwargs", {}))
++    add_generation_prompt = template_kwargs.pop("add_generation_prompt", True)
+     all_tokens = apply_chat_template(
+         tokenizer,
+         all_message_list,
+         tools=tools,
+-        add_generation_prompt=True,
++        add_generation_prompt=add_generation_prompt,
+         tokenize=True,
+-        **extra_body.get("chat_template_kwargs", {}),
++        **template_kwargs,
+     )
+     parent_eos_num = parent_tokens.count(eos_token_id)
+     if parent_eos_num > 0:

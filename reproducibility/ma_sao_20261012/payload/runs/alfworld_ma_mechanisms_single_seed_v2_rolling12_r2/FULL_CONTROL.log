@@ -1,0 +1,40 @@
+RESOURCE two-hour-resume-admission: free=True; stable=1/1
+RESOURCE two-hour-resume-admission: free=True; stable=1/1
+full-editor-remote: PID 3627372, GPUs 
+full-solver: PID 3627373, GPUs 
+START full attempt-0001: same seed; committed cursor=0; checkpoint every12
+engineer-candidate_replica0: PID 3775432, GPUs 0
+engineer-candidate_replica1: PID 3775433, GPUs 1
+engineer-candidate_replica2: PID 3775434, GPUs 2
+engineer-candidate_replica3: PID 3775435, GPUs 3
+engineer-candidate_replica4: PID 3775436, GPUs 4
+engineer-candidate_replica5: PID 3775437, GPUs 5
+engineer-candidate_replica6: PID 3775444, GPUs 6
+engineer-candidate_replica7: PID 3775451, GPUs 7
+candidate-proposal00-attempt-1: PID 3777240, GPUs 
+candidate-proposal01-attempt-1: PID 3777244, GPUs 
+candidate-proposal02-attempt-1: PID 3777249, GPUs 
+candidate-proposal03-attempt-1: PID 3777253, GPUs 
+candidate-proposal04-attempt-1: PID 3777257, GPUs 
+candidate-proposal05-attempt-1: PID 3777261, GPUs 
+candidate-proposal06-attempt-1: PID 3777266, GPUs 
+candidate-proposal07-attempt-1: PID 3777271, GPUs 
+selection-attempt-1: PID 3777417, GPUs 0,1,2,3,4,5,6,7
+evaluation200-attempt-1: PID 3783551, GPUs 0,1,2,3,4,5,6,7
+engineer-candidate_replica0: PID 3790262, GPUs 0
+engineer-candidate_replica1: PID 3790269, GPUs 1
+engineer-candidate_replica2: PID 3790272, GPUs 2
+engineer-candidate_replica3: PID 3790273, GPUs 3
+engineer-candidate_replica4: PID 3790274, GPUs 4
+engineer-candidate_replica5: PID 3790275, GPUs 5
+engineer-candidate_replica6: PID 3790276, GPUs 6
+engineer-candidate_replica7: PID 3790289, GPUs 7
+candidate-proposal00-attempt-1: PID 3792258, GPUs 
+candidate-proposal01-attempt-1: PID 3792262, GPUs 
+candidate-proposal02-attempt-1: PID 3792266, GPUs 
+candidate-proposal03-attempt-1: PID 3792270, GPUs 
+candidate-proposal04-attempt-1: PID 3792276, GPUs 
+candidate-proposal05-attempt-1: PID 3792280, GPUs 
+candidate-proposal06-attempt-1: PID 3792284, GPUs 
+candidate-proposal07-attempt-1: PID 3792291, GPUs 
+selection-attempt-1: PID 3792500, GPUs 0,1,2,3,4,5,6,7

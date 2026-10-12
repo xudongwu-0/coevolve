@@ -1,0 +1,164 @@
+{
+  "schema": "paired-native-recovery-v1",
+  "role": "solver",
+  "completed_rounds": 72,
+  "batch_size": 8,
+  "committed_sample_cursor": 576,
+  "science_sha256": "971a0a7855a5a7a2f1b4bbf155609544a7008991c8853d967c5881edf5aeca0d",
+  "data_sha256": "ecbe1065486f92116e3330ff797da40c6ada2edda1657836d5469d93340b302f",
+  "source_run": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/without_peer/attempts/attempt-0003/without_peer/solver/optimizer",
+  "source_joint": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/without_peer/attempts/attempt-0003/without_peer/joint",
+  "protected_hf_relative_paths": [],
+  "files": {
+    "actor/.metadata": {
+      "bytes": 729739,
+      "sha256": "2de3579979042ec3c9df35514cde662838c552989eb73a763d3f13f92b304407"
+    },
+    "actor/__0_0.distcp": {
+      "bytes": 9411010296
+    },
+    "actor/__1_0.distcp": {
+      "bytes": 9411010296
+    },
+    "actor/__2_0.distcp": {
+      "bytes": 9411010296
+    },
+    "actor/__3_0.distcp": {
+      "bytes": 9411010296
+    },
+    "actor/adam-rank0.json": {
+      "bytes": 288,
+      "sha256": "d1fed06e11680a00d0339a35c8b3dd9eadda28c15f6a24e7c731c5bdae91cfb6"
+    },
+    "actor/adam-rank1.json": {
+      "bytes": 288,
+      "sha256": "c6f5ddec075c7f077f9df89b4c78cd26e8b84aa798d1119cf2e0d8607711d867"
+    },
+    "actor/adam-rank2.json": {
+      "bytes": 288,
+      "sha256": "8c289089ecff908803bbcf987d3bf241e31f19745c2647efb936b9ef253a0016"
+    },
+    "actor/adam-rank3.json": {
+      "bytes": 288,
+      "sha256": "949f2358280428d2561e4bd818d71bddee7176e8555bf207bbe4b1bba437112c"
+    },
+    "actor/joint_schedule.json": {
+      "bytes": 810,
+      "sha256": "67a2e2be8be643cc67a2c1bd48e6be4d1a709ee464ee7419240114783a730b1c"
+    },
+    "actor/optim_world_size_4_rank_0.pt": {
+      "bytes": 17908105065
+    },
+    "actor/optim_world_size_4_rank_1.pt": {
+      "bytes": 17908105065
+    },
+    "actor/optim_world_size_4_rank_2.pt": {
+      "bytes": 17908105065
+    },
+    "actor/optim_world_size_4_rank_3.pt": {
+      "bytes": 17908105065
+    },
+    "actor/training-rank0.pt": {
+      "bytes": 14941,
+      "sha256": "676bdc77778a1db04786f5242b0d23e099d13deb1a8dd292cdafb3e803e070a0"
+    },
+    "actor/training-rank1.pt": {
+      "bytes": 14877,
+      "sha256": "0ee7682f8ba142bd22065881a5d16ce7487269ac085495a817429792894c3e9b"
+    },
+    "actor/training-rank2.pt": {
+      "bytes": 14877,
+      "sha256": "fae5843d2ea0ef5d0d8b5a99b00c4c56650d6801d26858b3cb2e9102270eb62f"
+    },
+    "actor/training-rank3.pt": {
+      "bytes": 14941,
+      "sha256": "c41e3b4abbdfc8200085aa26b79a2d15cf7aed98748c0ed7be2a70de74e26b7f"
+    },
+    "controller.json": {
+      "bytes": 2023,
+      "sha256": "44cf15553e0d399cb2d9525f0e6052e0b8a8c189b60f7f7832a1856213c27d39"
+    },
+    "critic/.metadata": {
+      "bytes": 729395,
+      "sha256": "cd39c29bef2047a5a0535247dea00dce8a7d2d305ecc36d158b87197c66f61ba"
+    },
+    "critic/__0_0.distcp": {
+      "bytes": 8393907960
+    },
+    "critic/__1_0.distcp": {
+      "bytes": 8393889999
+    },
+    "critic/__2_0.distcp": {
+      "bytes": 8393891512
+    },
+    "critic/__3_0.distcp": {
+      "bytes": 8393889999
+    },
+    "critic/adam-rank0.json": {
+      "bytes": 290,
+      "sha256": "38a05158da5eba65ca61d33b7f9930e7d739b09df401f8579626916041c4927d"
+    },
+    "critic/adam-rank1.json": {
+      "bytes": 290,
+      "sha256": "f44b002273ffd7e2d0a12189bff0cf4eaf658a5e397c6f2a8be40340122a3810"
+    },
+    "critic/adam-rank2.json": {
+      "bytes": 290,
+      "sha256": "faedbe1565179632ba809353376c2aa0ff265cb25dea81899d48ae3ef4fe9a2f"
+    },
+    "critic/adam-rank3.json": {
+      "bytes": 290,
+      "sha256": "6e727fb60fa840f60f3b8d7625780fc00047095409845e9227df522563654d9d"
+    },
+    "critic/joint_critic_settings.json": {
+      "bytes": 65,
+      "sha256": "27592213c8121eb2aaabb96331e6ed3b5144c763a0b52193a74936fa394cf3f1"
+    },
+    "critic/joint_schedule.json": {
+      "bytes": 810,
+      "sha256": "67a2e2be8be643cc67a2c1bd48e6be4d1a709ee464ee7419240114783a730b1c"
+    },
+    "critic/joint_value_norm.json": {
+      "bytes": 279,
+      "sha256": "ce4e605f73c51b65bd22a3eb0310db73c25c179e4bdab373ecd8dde8623162e1"
+    },
+    "critic/optim_world_size_4_rank_0.pt": {
+      "bytes": 15873901382
+    },
+    "critic/optim_world_size_4_rank_1.pt": {
+      "bytes": 15873868614
+    },
+    "critic/optim_world_size_4_rank_2.pt": {
+      "bytes": 15873868614
+    },
+    "critic/optim_world_size_4_rank_3.pt": {
+      "bytes": 15873868614
+    },
+    "critic/training-rank0.pt": {
+      "bytes": 14941,
+      "sha256": "e5e2b3abb58100432951ec5c260b0456501ab90d194149525e5293c5fe4a4920"
+    },
+    "critic/training-rank1.pt": {
+      "bytes": 14877,
+      "sha256": "a4b5cb489317e27a681e2d7399ab2e696d4bea45f108078f0dc41bd728b5c584"
+    },
+    "critic/training-rank2.pt": {
+      "bytes": 14877,
+      "sha256": "d6d1ad03528c8d6c804dee689e98e2418231bcaa145d32dc739ae6a90300f484"
+    },
+    "critic/training-rank3.pt": {
+      "bytes": 14941,
+      "sha256": "fcca0c81a6a9aaa9a599212a89a0cd450d0bf8edb16cf73667975bf99acc73eb"
+    },
+    "metrics.jsonl": {
+      "bytes": 802192,
+      "sha256": "db0d167c5292f53552af808eb2068e538cc3387ad0b2a510691a924328982020"
+    },
+    "spec.json": {
+      "bytes": 8258,
+      "sha256": "082fe7d08a8c40ffc730594b4c13b1b4cdcd5c5a584dd3e425d2b2952fe11d5a"
+    }
+  },
+  "save_seconds": 260.2130641937256,
+  "at_unix": 1791786087.1998563
+}

@@ -1,0 +1,82 @@
+{
+  "model": "ShaoShuai0605/Harness-R1",
+  "revision": "f6a915953f8206f3f5c7ef0b40240e1f4d2b6676",
+  "subfolder": "harness-r1",
+  "authentication": "explicit token=False; implicit token disabled",
+  "started_at": "2026-09-30T13:28:41.475764+00:00",
+  "completed_at": "2026-09-30T13:38:37.238542+00:00",
+  "files": [
+    {
+      "path": "chat_template.jinja",
+      "size": 7756,
+      "sha256": "a4aee8afcf2e0711942cf848899be66016f8d14a889ff9ede07bca099c28f715",
+      "expected_hash": "a585dec894e63da457d9440ec6aa7caa16d20860",
+      "hash_kind": "git_blob_sha1",
+      "verified": true,
+      "source": "https://huggingface.co/ShaoShuai0605/Harness-R1/resolve/f6a915953f8206f3f5c7ef0b40240e1f4d2b6676/harness-r1/chat_template.jinja"
+    },
+    {
+      "path": "config.json",
+      "size": 2900,
+      "sha256": "3fc65c38df56fa76051c21fd134586c6ea852553e97cdac4be6ba6d9af80e154",
+      "expected_hash": "b677d9f0f1e2405acb69aa13fd953b60488362ef",
+      "hash_kind": "git_blob_sha1",
+      "verified": true,
+      "source": "https://huggingface.co/ShaoShuai0605/Harness-R1/resolve/f6a915953f8206f3f5c7ef0b40240e1f4d2b6676/harness-r1/config.json"
+    },
+    {
+      "path": "generation_config.json",
+      "size": 163,
+      "sha256": "3eed7757d418f2155aaef7b53fc66b53908e785f1a2d545a099d5f5227437236",
+      "expected_hash": "e86761049bd75cd8b16328ab5ba5fd44c2d6acdf",
+      "hash_kind": "git_blob_sha1",
+      "verified": true,
+      "source": "https://huggingface.co/ShaoShuai0605/Harness-R1/resolve/f6a915953f8206f3f5c7ef0b40240e1f4d2b6676/harness-r1/generation_config.json"
+    },
+    {
+      "path": "model.safetensors",
+      "size": 18819722360,
+      "sha256": "7d16d5ad5734af16b1fd0619caeb04270a024df86ca6e6c6e9bdb60e45f39af7",
+      "expected_hash": "7d16d5ad5734af16b1fd0619caeb04270a024df86ca6e6c6e9bdb60e45f39af7",
+      "hash_kind": "sha256",
+      "verified": true,
+      "source": "https://huggingface.co/ShaoShuai0605/Harness-R1/resolve/f6a915953f8206f3f5c7ef0b40240e1f4d2b6676/harness-r1/model.safetensors"
+    },
+    {
+      "path": "preprocessor_config.json",
+      "size": 482,
+      "sha256": "957eb01d1ea45341a92d543daec95857a7cbeff5803834bc0603b27ba7b41b3f",
+      "expected_hash": "be0d97d66db8dcf3e2af39c4eea4fb204b79efa5",
+      "hash_kind": "git_blob_sha1",
+      "verified": true,
+      "source": "https://huggingface.co/ShaoShuai0605/Harness-R1/resolve/f6a915953f8206f3f5c7ef0b40240e1f4d2b6676/harness-r1/preprocessor_config.json"
+    },
+    {
+      "path": "processor_config.json",
+      "size": 1300,
+      "sha256": "14932921ca485d458a04dafd8069fbb0a4505622a48208d19ed247115801385b",
+      "expected_hash": "7ad6acdf4203f22b7b990e36ccc3a1fe38563d5e",
+      "hash_kind": "git_blob_sha1",
+      "verified": true,
+      "source": "https://huggingface.co/ShaoShuai0605/Harness-R1/resolve/f6a915953f8206f3f5c7ef0b40240e1f4d2b6676/harness-r1/processor_config.json"
+    },
+    {
+      "path": "tokenizer.json",
+      "size": 19989325,
+      "sha256": "06b9509352d2af50381ab2247e083b80d32d5c0aba91c272ca9ff729b6a0e523",
+      "expected_hash": "06b9509352d2af50381ab2247e083b80d32d5c0aba91c272ca9ff729b6a0e523",
+      "hash_kind": "sha256",
+      "verified": true,
+      "source": "https://huggingface.co/ShaoShuai0605/Harness-R1/resolve/f6a915953f8206f3f5c7ef0b40240e1f4d2b6676/harness-r1/tokenizer.json"
+    },
+    {
+      "path": "tokenizer_config.json",
+      "size": 1195,
+      "sha256": "d31e4f848da45ecf70ec28e51f680f96222e74217570d6a74d3c823a6f669f37",
+      "expected_hash": "2ff2f4dba8d1dd9200c620bb2a26f7277e331c3d",
+      "hash_kind": "git_blob_sha1",
+      "verified": true,
+      "source": "https://huggingface.co/ShaoShuai0605/Harness-R1/resolve/f6a915953f8206f3f5c7ef0b40240e1f4d2b6676/harness-r1/tokenizer_config.json"
+    }
+  ]
+}

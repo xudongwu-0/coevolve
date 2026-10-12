@@ -1,0 +1,21 @@
+{
+  "status": "native_full_started",
+  "started_utc": "2026-10-09T11:26:14.504303+00:00",
+  "verified_utc": "2026-10-09T11:28:40.433333+00:00",
+  "controller_pid": 3626493,
+  "attempt": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/attempts/attempt-0001",
+  "resume_round": 0,
+  "remote_service": "alfworld-mechanism-full-editor-single-seed-v2-rolling12-full-0001",
+  "remote_state": {
+    "MainPID": "1302169",
+    "Result": "success",
+    "LoadState": "loaded",
+    "ActiveState": "active",
+    "SubState": "running"
+  },
+  "progress": {
+    "editor": 0,
+    "solver": 0
+  },
+  "at_unix": 1791545320.4333465
+}

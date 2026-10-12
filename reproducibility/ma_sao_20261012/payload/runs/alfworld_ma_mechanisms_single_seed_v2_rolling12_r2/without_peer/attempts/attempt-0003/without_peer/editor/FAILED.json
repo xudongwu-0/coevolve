@@ -1,0 +1,7 @@
+{
+  "error": "RuntimeError('Joint partner failed: {\\'sample_id\\': \\'anchor-0077-005-h0w0-00413-task10\\', \\'version\\': 77, \\'slot\\': 5, \\'error\\': \\'RuntimeError(\"Joint partner failed: {\\\\\\'sample_id\\\\\\': \\\\\\'anchor-0077-001-h0w0-00409-task24\\\\\\', \\\\\\'version\\\\\\': 77, \\\\\\'slot\\\\\\': 1, \\\\\\'error\\\\\\': \\\\\\'CancelledError()\\\\\\', \\\\\\'failed_at_unix\\\\\\': 1791786340.5371292}\")\\', \\'failed_at_unix\\': 1791786340.7255058}')",
+  "role": "editor",
+  "failed_at_unix": 1791786341.1260228,
+  "native_returncode": null,
+  "foreign_workload": null
+}

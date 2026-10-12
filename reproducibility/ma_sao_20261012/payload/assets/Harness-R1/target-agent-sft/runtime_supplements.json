@@ -1,0 +1,17 @@
+{
+  "checkpoint_provenance_sha256": "5158061cac580f575dd3072f51bd6979a349883e2f5b7d524fbe727a89f58b41",
+  "supplements": [
+    {
+      "path": "preprocessor_config.json",
+      "sha256": "957eb01d1ea45341a92d543daec95857a7cbeff5803834bc0603b27ba7b41b3f",
+      "source": "../harness-r1/preprocessor_config.json"
+    },
+    {
+      "path": "processor_config.json",
+      "sha256": "14932921ca485d458a04dafd8069fbb0a4505622a48208d19ed247115801385b",
+      "source": "../harness-r1/processor_config.json"
+    }
+  ],
+  "reason": "The upstream target-agent-sft subfolder omits shared Qwen3.5 processor metadata required by vLLM; copied byte-for-byte from the same pinned release's harness-r1 subfolder.",
+  "model_weights_unchanged": true
+}

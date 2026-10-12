@@ -11,6 +11,10 @@ For the current ALFWorld joint-round protocol and status, see
 [project state](PROJECT_STATE.md) and [MA-SAO](MA_SAO.md). The protocol below
 records the earlier math campaign, not the current joint implementation.
 
+For the consolidated ALFWorld research questions, designs, result tables and
+conclusions through2026-10-07 16:19 UTC, see the
+[standalone experiment report](./ALFWORLD_SAO_MA_SAO_EXPERIMENT_REPORT_2026-10-07.md).
+
 ## Protocol (historical math campaign)
 
 - Baseline ("SAO"): editor (harness model) and solver (weights) each updated
@@ -3493,3 +3497,2278 @@ WHALEv6 failed during the second full-context synthetic GPU smoke process,
 before baseline training. Its failure correctly blocked downstream SAO.
 Dependent unstarted queues were paused for explicit recovery; no failed
 infrastructure episode was scored as a model failure or silently retried.
+
+
+## 2026-10-04: MA improvement retry after nullable tool-call failure
+
+The latest Copilot objective remains MA-SAO > historical W1+h2=92%; WHALE is
+paused. Cross-play is complete: MA64 no/h0/h64/h112 =77.5/90/89.5/78.5%,
+MA112 =79.5/86.5/87.5/83.5%. These are reused-development diagnostics, not
+replacement scores for the original87.5/82.5% MA reports or an untouched test.
+
+Improvement v1 failed after eight committed rounds per role: task190, round9
+reached an AgentRL Pydantic error because a text-only completion included
+`tool_calls: null`. The worker traceback, not an inferred OOM, establishes the
+cause. Omit that optional null field at the local adapter boundary; preserve
+text, tokens, worker judgment and propagation of genuine HTTP failures.
+Validation:70 tests+30 subtests; real CPU worker using the failing task and
+patch accepted synthetic text-only output, then scored token exhaustion zero.
+Receipt: runs/alfworld_ma_null_calls_smoke_20261004/RESULT.json. No model score
+is claimed for this one environment episode.
+
+Runs/alfworld_ma_improve_v2 restarts the same H0/MA64 initialization with fresh
+Adam, retaining the64-round cap, round32 probe, guarded h0 candidate, low H/W
+learning rates and KL. It is not exact optimizer continuation. Failed v1 cost:
+128 consumed H+W trajectories,158 complete generated role trajectories
+(overlapping counts), retained separately from parent's1840 actual/1024 path.
+The old run and saved weights remain intact. The source snapshot is based on
+0bbb1cf plus the tested boundary patch; SOURCE_MANIFEST.json pins file hashes.
+Node3/editor+matched and node4/solver+best+guard started as persistent units
+coevolve-ma-improve-v2-*. Both nodes passed release/filler audits beforehand.
+Report deadline:2026-10-04 16:31:05 UTC. Launch is not a performance result;
+no post-training score or superiority claim exists at this entry.
+
+
+## 2026-10-04: research questions and prospective diagnosis of guarded MA
+
+**RQ1 — What caused the late MA system decline?** Existing fixed-weight cross-play
+finds MA64+h64=89.5% versus MA64+h112=78.5%, a -11pp paired difference
+[-16,-6]pp. This supports harness degradation/selection/compatibility as a
+concrete failure mode. It does not establish that Solver changes are harmless:
+MA112+h0=86.5% versus MA64+h0=90%. A joint update alone does not prevent decline.
+
+**RQ2 — Can constrained co-adaptation preserve a strong harness and improve the
+Solver enough to beat W1+h2?** The running experiment is the guarded MA package:
+H0 Actor + MA64 Solver/critics, fresh Adam, H/W LR1e-7/1e-6, KL0.02, K2,
+three critic warmup rounds, simultaneous updates/lag1. Retain h0 unless a new
+patch gains at least2/48 selection questions.64 new rounds, saved every8;
+round32 is secondary, the selection48-chosen best-arm endpoint is primary.
+Do not pick between these endpoints after reading all200 results. This tests
+the package; LR, KL and selection changes are not individually identified.
+
+**RQ3 — If the package succeeds or fails, which component explains the change?**
+Before either campaign endpoint exists, freeze
+`runs/alfworld_ma_improvement_study_v1/protocol.json`. After both training and
+existing evaluations release GPUs, run a fixed2x2 matrix: branch-start/selected
+Solver crossed with initial h0/selection-chosen patch, plus empty-harness
+controls. Remeasure W1+h2 with the same runtime, seed, token and question
+contract. Maximum1600 environment episodes, zero new training; identical
+patches share physical evaluations. Node3 unit`coevolve-ma-improvement-study-v1`
+is persistently queued; its source snapshot is separate from running training.
+Runner and paired-analysis regression tests:12 passed.
+
+Estimate weight gain at fixed h0, patch gain at fixed selected weights, and
+interaction=(patch-h0 at selected weights)-(patch-h0 at starting weights).
+Report question-paired95% intervals; empty intervals of evidence are not
+claims of no effect. Publish all200, selection48 and the disjoint152 complement.
+The complement was exposed in earlier work and is NOT an untouched test set.
+Fresh baseline comparison prevents interpreting small service/retest shifts as
+algorithmic superiority. The primary claim remains the original frozen endpoint,
+with diagnostic remeasurement reported alongside, never silently substituted.
+
+**Decision rules after results.** If the primary exceeds92% and the fresh paired
+comparison supports improvement, the next question is robustness/cost under
+independent seeds and truly unused tasks. If fixed-h0 weights regress, prioritize
+a fixed-h0 Solver-only ablation with identical update budget before attributing
+the failure to Engineer search. If weights improve but selected patches regress
+outside selection48, prioritize selection generalization and paired marginal
+harness benefit. If neither component shows a supported gain, do not claim that
+joint MA has improved. A new training experiment needs a stated hypothesis and
+frozen comparison, not only another learning-rate change.
+
+
+### Additional mechanism probes before v2 endpoint results
+
+First32-round training receipt audit: old MA31/256 invalid proposals,21 of those
+received team success; guarded v2 24/256 invalid,17 received team success.
+`joint_workflow` falls back to no patch and sends the same binary environmental
+reward to both roles. This demonstrates that terminal reward alone does not
+identify helpful Engineer contribution. It is not proof of positive PPO advantage
+or a causal explanation of degradation. Different Solver initializations confound
+between-run rate comparisons. A paired marginal-benefit objective remains a
+future hypothesis, not an implemented/tested improvement.
+
+Historical matched-weight cross-play:18/25 h64→h112 regressions are clean/heat/
+cool tasks.14/25 regressed native traces contain the late wrong-object blocker.
+A CPU hook probe shows h112 suggests setting aside a distractor but blocks its
+placement even away from the goal; h0/h64 do not block this synthetic recovery.
+Probe states are synthetic; no performance gain is inferred.
+
+RQ4: Does the action guard itself contribute to h112's performance loss?
+Freeze `runs/alfworld_h112_guard_ablation_v1`: fixed MA64 Solver, original h112
+versus a copy with exactly the single on_before_action hook removed. All other
+patch fields/actions unchanged, same200 tasks/seed/token contract, empty-harness
+control,600 environment episodes and0 training trajectories. Run on node4 after
+the current campaign releases GPUs. This is a post-hoc mechanistic intervention,
+not a learned MA candidate or a baseline superiority claim. Pairwise95% interval
+must support the effect; removing a whole hook cannot isolate one internal
+condition. Independent source snapshot retains original frozen training files.
+Artifacts: TRAINING_SIGNAL_DIAGNOSTIC.json, HISTORICAL_FAMILY_DIAGNOSTIC.json,
+HOOK_RECOVERY_PROBE.json and HISTORICAL_REGRESSION_TRACES.json under the
+improvement study root. These are supporting diagnostics, not new final scores.
+
+
+### Partial-training recovery amendment, before endpoint scores
+
+The guarded run generated512 trajectories per role but committed only H62/W63
+updates (496+504=1000 consumed). A repeated version0/sample00003 request after
+the final environment round failed with ConnectError. Native cyclic data loading
+and overlapping dispatcher submission explain a plausible end-of-budget wrap;
+no algorithmic collapse is inferred and no scheduler fix is claimed.
+Common saved checkpoints end at round56. Existing recovery preserves failure
+records and evaluates round32 plus the last three common checkpoints40/48/56.
+The planned full64-round endpoint is unavailable; this is partial-run evidence.
+
+The first diagnostic queues failed closed before GPU launch. Before endpoint
+reports existed, v2 protocols explicitly inherited the original designs and pinned
+both failures, recovered SHARED receipts, and metric hashes. Only these verified
+training failures are eligible; new evaluation failures remain fatal. Original
+selection rules and all contrasts unchanged. New recovery regression plus the
+factorial/intervention tests:5 passed. Independent frozen source manifest:
+`runs/source-snapshots/alfworld-ma-diagnostics-v2/SOURCE_MANIFEST.json`.
+Node3 `alfworld-ma-improvement-study-v2`, node4
+`alfworld-h112-guard-ablation-v2` await both original evaluations and GPU release.
+Correct branch research consumption is1840+128+1000=2968, including the failed
+first attempt; generated and consumed counts overlap and must not be summed.
+
+
+### End-of-budget execution experiment and local repair
+
+RQ: Can native overlapping submission wrap a finite joint ledger even when the
+trainer requests only the planned batches? A CPU probe invokes the real upstream
+BatchTaskDispatcher method with delayed fake results,24 cyclic inputs and3x8
+requested outputs. It submits32 inputs, repeating the first8, while delivering24.
+The local JointRolloutBudget adapter retains native queue/staleness capacity and
+result waiting, but caps submissions at steps*batch_size; it submits/delivers24
+without wrapping. Rejection, dynamic batches, insufficient inputs and excess
+requests fail explicitly, rather than inventing/replacing paired trajectories.
+Installed only on future joint training dispatchers, with no third-party/global
+patch or modification of frozen running experiments.45 related tests passed;
+real-native CPU comparison is FINITE_BUDGET_CPU_PROBE.json in study_v2.
+This validates the scheduling mechanism on a controlled CPU test, not a completed
+GPU training run or any task-accuracy improvement. GPU reproduction remains pending.
+
+Diagnostic v2 first startup encountered empty gitlink dependency directories in
+the new worktree, before runner entry or any evaluation. Dependency links were
+repaired (DEPENDENCY_LINKS.json); frozen Python files unchanged. Original logs
+retained. Both services restarted and verified active, waiting for the predecessor.
+
+
+## 2026-10-04：改进分支与机制消融结果已完成
+
+研究问题1：低学习率/KL/保留h0的方法包能否超过92%？主终点selection48选中
+round40/proposal02，all200=88%，相对历史92%为-4pp，配对95%[-9,+1]pp；
+round32辅助终点88.5%，不能因较高就替换主终点。训练仍是H62/W63部分完成。
+同环境交叉重测：起点W+空/h0/新patch=78/89/85.5%；选中W=82/85/88%；
+W1空/h2=87.5/89.5%。相对重测基线-1.5pp[-6.5,+3.5]，没有优越性证据。
+固定h0权重变化-4pp[-8.5,+0.5]；空harness+4pp[-2,+10]；兼容性交互
++6.5pp[+0.5,+13]，提示协适应而非单一组件全面提升。单训练种子、复用开发题。
+
+研究问题2：h112动作护栏是否损害表现？固定MA64，同次重测原h112=81%，
+删除整钩子=87%，空=79%；+6pp[+2.5,+10]，14题改善/2题退步。
+支持该钩子在当前条件下有害，但尚不能归因到其中某一个条件；不是学习方法成绩。
+两组诊断分别1600/600环境episode，0新增训练；分支累计训练消费2968条。
+完整结果：runs/alfworld_ma_improvement_study_v2/COMPLETE.json及
+runs/alfworld_h112_guard_ablation_v2/COMPLETE.json。历史92%不被重测89.5%覆盖。
+
+下一问题：仅禁用“错误物品阻拦”分支能否解释整钩子消融收益？已冻结并启动
+runs/alfworld_h112_branch_ablation_v1，node4服务alfworld-h112-branch-ablation-v1。
+固定MA64，原h112/仅禁用该分支/删除整钩子/空harness，共800episode，0训练。
+主比较为单分支减原版；次比较为删整钩子减单分支。后者不显著不代表等价。
+源码独立快照，相关6测试通过；其他动作及两物体任务防护代码保持原样。
+
+
+## 持续总目标（2026-10-04用户明确授权）
+
+持续提出研究问题、设计/运行实验并分析，直到MA-SAO超过历史W1+h2=92%，
+且比较公平性/可信度经过核验。不能为达标选择性报告、改口径或把人工消融当学习成绩。
+Codex active goal已创建；不要仅启动队列就把总目标标为完成，持续监控并推进。
+
+当前单分支消融alfworld_h112_branch_ablation_v1在node4运行。下一研究问题是
+非法patch回退空harness却获得成功奖励是否妨碍Engineer学习。
+冻结协议runs/alfworld_validity_credit_study_v1/protocol.json：team对照与
+validity_gated处理，两组各32轮、512条H+W，总1024条；同H0/MA64起点、
+数据/种子/超参，仅非法patch的Editor奖励置零，Solver/环境不变。
+固定round32为终点，8proposal+incumbent、selection48与2/48门槛不变，
+不根据200题结果换模型。对照和处理都使用预算修复，旧v2仅作历史支持。
+相关49测试通过。源码冻结runs/source-snapshots/alfworld-validity-credit-v1。
+
+正式两臂尚未启动。先跑runs/alfworld_joint_budget_gpu_smoke_v1两轮原生GPU验证：
+各16轨迹、1actor/4critic更新、总32条角色训练轨迹；必须无重复/故障且完整收尾。
+队列alfworld-joint-budget-gpu-smoke-v1-queue等待单分支消融完成和GPU释放，
+自动启动node3 editor/node4 solver。两个spec、协议、queue.py及日志可核验。
+下一步：收单分支结果，核验GPU smoke的两role COMPLETE、metrics与完整唯一receipt；
+通过后准备并依次运行同快照的32轮对照和处理，比较主终点及非法patch率。
+若失败，修复并保留失败成本，不启动依赖训练。不得修改已冻结源码。
+
+
+### Validity-credit execution queued after native GPU gate
+
+Prepared both32-round arms with identical inherited H0/MA64 models, task order,
+seeds, selection48 and optimizer settings. Only Editor invalid-patch reward mode
+differs. Both use bounded submission. Frozen driver/learner snapshot:
+runs/source-snapshots/alfworld-validity-credit-study-v1. Main service
+alfworld-validity-credit-study-v1 is active, waiting for the two-round GPU smoke.
+It requires exact update counts,16 unique receipts per role, paired outcomes,
+correct role/team rewards and clean release before launching control training,
+its fixed round32 evaluation, then treatment training/evaluation. Driver/audit
+regressions4 passed. PRIMARY_RESULTS will remain explicitly diagnostics-pending;
+it is not a full research completion flag. DIAGNOSTIC_PROTOCOL.json freezes
+fixed-h0 and contemporaneous W1+h2 comparisons, max1600 environment episodes,
+before primary scores exist. No new training beyond two512-role-trajectory arms.
+Study helpers read committed artifacts and preserve all failed attempts; snapshots
+must not be edited. Continue monitoring predecessor branch ablation, GPU smoke,
+then study units. The overall>92% goal remains active and unachieved.
+
+
+### Prespecified credit diagnostics now persistently queued
+
+Implemented frozen diagnostics for the two credit arms: control/treatment Solver
+with no patch, fixed h0, own selection48-chosen patch, plus contemporary W1
+with no patch/h2. Same200 questions and inference contract, maximum1600 episodes.
+Original primary results remain separate from remeasurement; all200/selection48/
+report152 paired contrasts are reported. The analysis regression demonstrates
+that fixed-h0 weight gains need not imply a selected-system gain and rejects
+mismatched rollout identities. Five diagnostic/driver tests passed.
+Node3 unit alfworld-validity-credit-diagnostics-v1 is verified active, waiting for
+both primary endpoints. Source: runs/source-snapshots/alfworld-validity-credit-diagnostics-v1.
+No new score yet; live branch-ablation inference continues normally as of16:41UTC.
+
+
+## 2026-10-04 单分支主比较完成，辅助组恢复中
+
+单分支v1在第四变体推理ReadError后整体FAILED；前三份200题native报告已完整落盘，
+经checked_native_report校验后保留，未按分数选择：空78%，原h11278%，
+仅禁用错误物品阻拦85.5%。主比较+7.5pp[+4,+11.5]，15改善/0退步，
+PRIMARY_PARTIAL_RESULT.json明确primary_complete_auxiliary_failed，原FAILED不删除。
+这支持该分支在当前固定MA64/复用开发题条件下有害；不是学习成绩或>92%证据。
+
+只恢复缺失的without_guard辅助组，runs/alfworld_h112_branch_ablation_v2，
+node4 unit alfworld-h112-branch-ablation-v2；沿用冻结推理源码及config，
+resume.py和所有复用报告/输入固定SHA。额外跑without_guard+fresh_no_patch共400回合；
+原3组完整600回合保留，fresh_no_patch只作跨次波动诊断，不覆盖原空对照。
+辅助差异跨服务会话，必须披露。失败尝试环境成本上限800，另加恢复400。
+
+原GPU smoke队列因前置失败而退出，0训练启动；新unit
+alfworld-joint-budget-gpu-smoke-v1-queue-recovery等待branch v2 COMPLETE/RELEASED，
+训练spec和源码不变，QUEUE_RECOVERY.json记录修订。后续credit study与diagnostics
+服务仍active等待，不需重启或重复启动。两臂配置比对通过：数据完全相同，
+除奖励模式外只有路径/实验名/截止时间差异；ARMS_COMPARABILITY_AUDIT.json。
+总目标保持active。下一步完成辅助组、核验GPU smoke、继续32轮两臂与基线诊断。
+
+
+### Mechanism localization from completed one-branch reports
+
+MECHANISM_TRACE_AUDIT.json:15 rescued tasks,14 with the targeted blocker;
+13 previously reached task step limit,1 completed unsuccessfully,1 invalid action.
+Families: two-object3, simple4, cool5, heat1, clean2. This is post-hoc trace
+interpretation, separate from the prespecified primary causal contrast.
+
+A misleading surface trace was investigated: task324 requests `take pan 1 from
+stoveburner 4` while holding pot1; that request is inadmissible. Calling the
+unchanged upstream process_action on the actual preceding admissible list maps
+it to `put pot 1 in/on stoveburner 4`. The learned guard examines final_action
+after stock normalization, then rejects wrong-object placement. Thus raw tool
+requests alone do not identify what the guard saw. NORMALIZATION_MECHANISM_PROBE.json
+pins code/report hashes and records this CPU replay; no environment reward changed.
+This supports a future recovery-preserving semantic patch contract, but that
+method is not implemented or claimed effective. First finish the already frozen
+validity-credit comparison; syntactic/runtime validity alone cannot detect this
+kind of harmful but executable hook. No new GPU experiment was added from this probe.
+
+
+### Prospective success verification, before any>92% candidate
+
+Frozen runs/alfworld_ma_goal_validation_v1/protocol.json. Historical point target
+requires at least185/200 at the predeclared primary endpoint. Bind the chosen
+weights/harness before verification; never switch using diagnostic outcomes.
+Verify with inference seeds20261005/20261006 against unchanged W1+h2 under the
+same runtime/token/temperature contract. Publish both seed results and a question-
+clustered paired interval; pooled candidate accuracy>92% and positive paired lower
+bound are required for supported inference superiority. Repeat training with a
+new seed before calling the gain robust. All200/report152 remain development data;
+unseen-task claims require a separately audited unopened cohort. Costs and failed
+attempts remain disclosed. No new compute was launched by this validation protocol.
+It has not been triggered: current best new learned primary score remains88%.
+
+
+## 2026-10-04 17:10 辅助对照完成，GPU预算修复验证已启动
+
+branch_ablation_v2/COMPLETE与FINAL_AUDIT已核验协议/报告SHA及GPU释放：
+原h11278%，仅禁用错误物品阻拦85.5%，删除整钩子86.5%。
+主比较+7.5pp[+4,+11.5]；整钩子相对单分支+1pp[-1,+3]，不支持额外收益，
+亦非等价证明。辅助差异跨服务会话；空harness重测78→77.5%，-0.5pp[-2,+1]。
+原3组600完整episode复用；恢复新增400，失败尝试最多800不得漏记。
+这是固定权重的人工机制实验，不是新学习模型达标成绩。
+
+GPU smoke队列自动接续成功：17:08启动node3 editor/node4 solver，
+units alfworld-joint-budget-gpu-smoke-v1-editor/solver。两节点MainPID均已核验active，
+日志显示真实AReaL训练引擎初始化，尚无训练完成结论。
+后续credit-study驱动仍等待精确两轮/各1actor与4critic更新、各16唯一轨迹核验。
+通过后自动执行control32轮→固定终点评估→treatment32轮→固定终点评估，
+再由node3诊断服务执行固定h0和W1+h2重测。继续监控，勿重复启动或改冻结源。
+
+
+## 2026-10-04 17:25 GPU预算修复验证通过，正式对照训练已启动
+
+runs/alfworld_joint_budget_gpu_smoke_v1/FINAL_AUDIT.json已核验：H/W均完整2步，
+各1次Actor、4次Critic更新；各16条唯一生成/消费轨迹，16个配对环境结果；
+无额外采样、无第0轮回绕故障，保存后正常退出并释放GPU。
+最终Actor梯度范数H1.6631/W0.7823，有限非零；Critic梯度也有限非零。
+这证明预算修复在真实原生训练中收尾成功，不是准确率提升证据。
+累计本研究路径训练消费2968+32=3000条，未将生成数重复加上。
+
+自动接续control32轮已启动：node3 validity-credit-control-editor-v1，
+node4 validity-credit-control-solver-v1，MainPID与joint_native均核验在线。
+root runs/alfworld_validity_credit_study_v1/control。仍用原H0/MA64起点，
+不继承smoke权重；control奖励team，treatment奖励validity_gated只改非法H奖励。
+主终点固定round32、selection48规则不变；当前尚无新准确率。
+顺序：control训练/评估→treatment训练/评估→node3固定h0和W1+h2诊断。
+驱动alfworld-validity-credit-study-v1与诊断队列保持active；继续监控失败/真实进度。
+
+
+### CPU recovery-contract feasibility probe while control trains
+
+runs/alfworld_recovery_contract_probe_v1 pins source/patch hashes and12 constructed
+states:3 target types crossed with simple/heat/cool/clean task families, carrying
+a distractor with an admissible put-away action away from the destination.
+Native compile_hook/run_hook executes initialization, observation update, hint,
+and before-action hook in sequence. h112 blocks12/12; h0,h64,h2,the guarded
+round40 selected patch,and branch-disabled h112 block0/12. No rewrite/force effects.
+Zero environment episodes and zero training trajectories. This is a post-hoc CPU
+counterexample suite, not a test of accuracy or proof of semantic correctness;
+the native runner suppresses runtime errors, which may also yield no effect.
+
+Interpretation: a small behavioral check can detect the known h112 defect, but
+the current88% selected patch already passes. Therefore adding only this check
+cannot explain/solve the remaining gap to92%. It is a candidate regression guard,
+not an asserted successful learning method. Frozen credit-control training is
+unchanged; do not add semantic filtering to either existing arm mid-run.
+
+
+### Fixed-h0 compatibility interaction in the completed guarded matrix
+
+H0_COMPATIBILITY_INTERACTION.json under alfworld_ma_improvement_study_v2 pins
+four existing reports. At initial weights h0-minus-empty=11pp; after continuation
+it is3pp. The paired question difference-in-differences is-8pp,95%[-15,-1]pp.
+This is a post-hoc exploratory contrast, not a new primary endpoint or an isolated
+causal mechanism. It strengthens the question of retaining compatibility with a
+strong fixed harness during Solver adaptation. It does not prove that adding
+anchor rollouts will help. The currently running validity-credit arms remain
+unchanged. As of17:49UTC control H/W both committed9 steps, healthy, and resumed
+after the round8 checkpoint save; no new evaluation result exists.
+
+### 2026-10-04 — Same-weight likelihood discrepancy in credit-control warmup
+
+Research question: can high teammate importance clipping be explained solely by
+actor updates? A post-hoc CPU audit of all 24 trajectories per role in the first
+three critic-only warmup rounds is saved in
+`runs/alfworld_validity_credit_study_v1/WARMUP_LIKELIHOOD_AUDIT.json`, with a
+reproducible adjacent script and input SHA-256 hashes. Both roles have zero
+fixed-reference KL on these records and no actor update during warmup.
+
+Engineer behavior/proximal trajectory ratios already exceed the clipping bounds
+in 18/24 records (14 below 0.5, 4 above 2); Solver ratios do so in 0/24.
+Engineer median token count is 2760 and median per-token log-ratio is -0.000413;
+median summed log-ratio is -1.011. These Engineer ratios weight Solver advantages,
+not Engineer advantages. Warmup weights do not update either actor.
+
+Conclusion: actor parameter changes alone cannot explain the discrepancy.
+Backend numerical error, sampling transforms, token alignment, and implementation
+issues remain unresolved alternatives. This is not evidence of an accuracy
+effect. A candidate follow-up is a fixed-weight replay of identical tokens through
+both probability paths, followed by a separately preregistered correction
+experiment only if warranted. No GPU job or additional environment episode was
+launched, and neither frozen reward-credit arm was changed. By 18:00 UTC both
+control learners had committed 14/32 steps, with healthy latest diagnostics.
+
+### 2026-10-04 18:44 UTC — Validity-credit control completed its frozen budget
+
+Both control learners completed all 32 rounds: each consumed/generated exactly
+256 unique role trajectories, performed 29 actor updates and 64 critic updates,
+published final checkpoints, and released training GPUs. Re-running
+`audit_training(control, 32, 3)` matched `control/TRAINING_AUDIT.json`, including
+ordered metric hashes and complete paired outcome coverage. No training failure
+or extra cyclic generation occurred. The control arm adds 512 consumed role
+trajectories; the current research branch path total is 3512 including the
+previous 2968 and the 32-trajectory budget smoke. Treatment is not yet trained.
+
+There were 20 invalid patches among 256 paired training episodes, with 14 team
+successes despite invalid patches. This verifies exposure to the hypothesized
+credit-assignment issue in the control run, but does not establish its accuracy
+effect. Fixed-round32 candidate generation/evaluation started automatically in
+`validity-credit-control-evaluate-v1`; no endpoint performance result is available
+yet. Both arms' frozen selection rules remain unchanged.
+
+### 2026-10-04 19:00 UTC — Control selection48 finished; evaluation200 started
+
+The fixed-round32 control generated eight proposals, seven valid. On selection48,
+proposal03 scored44/48, incumbent h0 scored42/48, and empty harness40/48. The
+automatic selector chose proposal03, meeting the predeclared two-success margin.
+`control/matched/SELECTION_AUDIT.json` verifies every report's exact question and
+sample coverage, decode seeds, binary rewards, token budget and accuracy. Nine
+unique harnesses were evaluated (the invalid proposal shares empty-harness
+results), costing432 completed environment episodes. Input/report hashes and the
+selected artifact are bound in the audit. The original200 endpoint request uses
+the selected patch and empty harness at the frozen Solver checkpoint; its process
+is running. Selection performance is not endpoint performance, and no final
+accuracy claim or treatment comparison is yet available.
+
+### 2026-10-04 — Control200 result and summary-only recovery
+
+Frozen round32 proposal03 scores175/200=87.5%; empty harness163/200=81.5%.
+Versus historical W1+h2=92%, paired difference is-4.5pp,95%[-10,+0.5]pp
+(10 improved,19 regressed). Versus reused branch start90%, difference is-2.5pp,
+95%[-6.5,+1.5]pp. These are exploratory single-training-seed development results;
+the experiment does not meet the goal. Treatment comparison is still pending.
+
+Native evaluation completed all400 environment episodes, but the outer summarizer
+failed because prepare_arms copied initial_COMPLETE without its full reports.
+Recovery validated both endpoint reports' full200 coverage, seeds and token
+budgets, copied the unchanged parent's initial reports into both arms, and executed
+only the exact frozen summarization block. Input hashes, original failure hashes,
+and the recovery script are retained. Zero additional model calls, environment
+episodes or training trajectories were used. Original failure files remain.
+
+prepare_arms now carries both initial reports. wait_files accepts only exact
+failure hashes backed by immutable recovered-result hashes; new failures remain
+fatal. Six driver/audit tests pass, including changed-failure and changed-evidence
+rejection. A separate recovery snapshot changes only this orchestration module;
+treatment still launches from the original learning/evaluation snapshot.
+
+The first recovered diagnostic waiter hit a shared-directory traversal permission
+error. Its log/failure record is preserved, and permissions for the specific pinned
+report path were repaired and verified using the real uid1009/gid1008 service
+identity before restarting it. Treatment H/W, recovery driver, and diagnostic
+waiter are now all confirmed active. Fixed endpoints and comparison rules are
+unchanged; no score-triggered retraining or reselection occurred.
+
+### 2026-10-04 20:39 UTC — Treatment training and manipulation audit complete
+
+Treatment completed32 rounds with256 generated/consumed trajectories per role,
+29 actor and64 critic updates per role, no budget overflow or training failure.
+An independent call to audit_training matched the automatic TRAINING_AUDIT.
+Both arms now consumed1024 role trajectories; branch total including prior2968
+and smoke32 is4024. Fixed-round32 treatment candidate evaluation is active.
+
+BOTH_TRAINING_AUDIT.json pins both training audits and records that invalid patches
+were20/256=7.81% for control and31/256=12.11% for treatment. Among invalid patches,
+team successes were14 and19 respectively. Invalid-patch Engineer reward sum was14
+for control and0 for treatment, while Solver retained environment success rewards.
+Thus the reward manipulation executed correctly, but observed training invalidity
+did not improve. These descriptive single-training-seed counts do not establish
+an accuracy effect; final treatment evaluation and prespecified diagnostics remain
+pending. No training conditions or endpoint-selection rules were changed.
+
+### 2026-10-04 20:57 UTC — Treatment selection48 retained incumbent h0
+
+All eight generated proposals were valid. Best new proposal03 scored40/48,
+incumbent h0 scored39/48, and empty harness35/48. Because the new candidate gained
+only one success, the fixed two-success replacement rule retained h0. Other new
+candidate scores were36,36,37,25,35,34,39 successes for proposals00,01,02,04,05,06,07.
+The chosen endpoint is therefore the round32 treatment Solver with original h0.
+
+`treatment/matched/SELECTION_AUDIT.json` validates all report coverage, seeds,
+binary rewards, token limits and scores. Ten unique harnesses cost480 completed
+environment episodes versus control's432; this48-episode difference comes from
+the control's invalid candidate sharing the empty report. Both arms still sample
+eight new candidates and use identical selection rules; inference cost is not
+claimed equal. Treatment200 evaluation has started using the locked selection.
+Selection-set scores do not establish the final treatment effect.
+
+### 2026-10-04 21:16 UTC — Validity-credit primary result is negative
+
+Treatment selected h0 with its round32 Solver scores156/200=78%, compared with
+control selected proposal03 at175/200=87.5%. Paired treatment-minus-control is
+-9.5pp,95%[-15,-4]pp (8 improved questions,27 regressed). Empty-harness accuracy
+also drops81.5% to73%: -8.5pp,95%[-14.5,-2.5]pp. On report152 the corresponding
+differences are-10.53pp and-8.55pp; these remain reused development questions.
+
+PRIMARY_AUDIT.json independently verifies both endpoint reports' full coverage,
+seeds, binary rewards, token budgets, pinned hashes, round32 selection and release
+records; the recomputed primary comparison matches PRIMARY_RESULTS.json. Both
+arms used1024 total role trajectories. Full branch training cost is4024 including
+previous failures/smoke. Selection plus primary evaluation cost1712 environment
+episodes (control432+400, treatment480+400), with no recovery rerolls.
+
+Conclusion: this single-seed experiment does not support zeroing invalid Engineer
+credit as a useful improvement. Correctly applying the reward mask is insufficient
+to improve either invalid rate or deployed performance. Empty-harness degradation
+means a patch-only explanation is insufficient; the already-prespecified fixed-h0
+and contemporary W1+h2 matrix is the next experiment to separate Solver change,
+harness compatibility and inference variation. Question bootstrap is not
+training-seed robustness. No superior candidate exists and the overall goal is
+not achieved. Diagnostic service is active; no new training method is launched yet.
+
+### 2026-10-04 21:28 UTC — Fixed-weight probability replay launched
+
+Question: can the stored Engineer proximal/behavior mismatch be reproduced at
+unchanged initial weights, and does batch ordering materially change it? The
+training-dynamics audit finds finite inspected metrics but mean Solver peer-weight
+clipping around68–70%. In critic-only warmup,18/24 Engineer trajectories already
+exceed the factor2 cap, motivating a numerical/implementation diagnostic.
+
+Protocol and input hashes are frozen in alfworld_fixed_weight_probability_replay_v1.
+Eight original first-round single-call Engineer trajectories are scored twice by
+the native FSDP backend, original order then cyclic shift. Initial model, temperature
+and precision follow the original trainer; optimizer=None. This uses node4 GPUs0–3,
+16 trajectory rescoring calls,0 new environment episodes/generation/updates.
+Alignment and input-integrity tests:2 passed. Service launched; results pending.
+This posthoc diagnostic cannot establish an accuracy effect. Node3 continues the
+prespecified fixed-h0/contemporary-baseline matrix independently.
+
+### 2026-10-04 21:31 UTC — Probability replay configuration recovery
+
+v1 failed before workers/scoring: scheduling_strategy is nonoptional. Failure/log
+hash retained,0 rescored trajectories/updates/environment episodes. v2 uses default
+scheduling strategy and local unused rollout credential placeholders. Structured
+configuration preflight passed. Original cohort/model hashes, estimator and order
+are retained in a new frozen snapshot/protocol. Recovery service launched; pending.
+
+### 2026-10-04 21:33 UTC — Probability replay directory recovery
+
+v2 failed before worker creation because cluster.fileroot did not exist; FAILED
+and RELEASED retained,0 scoring/updates/environment episodes. v3 precreates engine
+and name_resolve directories, reuses frozen v2 code and unchanged model/cohort
+hashes, and has launched as alfworld-fixed-weight-probability-replay-v3. Pending.
+
+### 2026-10-04 21:38 UTC — Communication recovery and descriptive weight audit
+
+v3 stalled during fourth-worker configuration: localhost health200, node-IP
+ConnectionError on that port. Stopped owned unit after this diagnosis; GPU release
+verified,0 model engines/scoring/updates/environment episodes. v4 uses the same
+frozen v2 source/cohort/weights, with controller AREAL_HOST_IP=127.0.0.1 and required
+directories precreated. Running; no estimator change.
+
+IMPORTANCE_GROUP_AUDIT.json pins all256 proximal/receipt pairs per arm/role.
+All232 actor-update-phase trajectories contain lagged versions. Engineer weights
+(applied to Solver) average0.8204/0.8653 control/treatment; lower clipping133/232
+and129/232. Success/failure weights average0.848/0.754 versus0.827/0.961. Weighted
+team-success fractions70.69→73.07% and71.55→68.39% are descriptive reward reweighting,
+not actual advantage/gradient effects or causal accuracy evidence. No new episodes.
+
+### 2026-10-04 21:41 UTC — Control diagnostic and RTensor recovery
+
+Control diagnostic600 episodes completed: selected89%, fixed h087.5%, empty81%,
+each200 questions. These retests do not replace original primary87.5%/81.5%.
+Treatment diagnostic is now running; complete contrasts await all cells.
+
+Probability v4 performed the first8-trajectory native forward but returned
+RTensors, causing CPU summary.detach failure. Preserve8 rescored trajectories
+in COST.json,0 retrieved results/updates/environment episodes; GPUs released.
+v5 materializes results using native RTensor.localize, with unchanged weights,
+cohort and estimator. Frozen snapshot and service launched; results pending.
+
+### 2026-10-04 21:45 UTC — Fixed-weight discrepancy reproduced; peer-weight ablation frozen
+
+Replay v5 and independent AUDIT completed:7/8 initial Engineer trajectories clip
+at factor2; max replay-minus-original logsum difference1.3494e-6; cyclic batch
+permutation changes no token logp. Optimizer=None; release verified.16 completed
+rescoring trajectories plus8 failed-v4 forward trajectories=24 total,0 generation,
+updates or environment episodes. This does not isolate every backend/sampling
+cause and does not prove an accuracy effect.
+
+New question: does removing this trajectory-scale peer weighting improve final
+MA-SAO performance? alfworld_peer_weight_ablation_v1/protocol.json freezes a
+32-round512-role-trajectory unit-weight arm, team reward unchanged, same original
+control initialization/seed/data/optimizer budget and round32 selection rule.
+Existing control primary87.5% is reused transparently; this is one nonconcurrent
+training realization, not seed robustness. Raw ratios/cohort validation/PPO own
+ratios/KL/critic remain intact. Default bounded mode is unchanged.7 tests passed.
+Native smoke and resource-gated launch remain pending. Historical92% threshold
+and prospective superiority-validation requirements remain unchanged.
+
+### 2026-10-04 21:51 UTC — Native gates and persistent ablation driver launched
+
+Frozen peer-weight-ablation-v1 source prepared;11 relevant tests passed. Cache
+isolation changed the expected path, so the old cache-root assertion first failed
+and was updated to require the output-local runtime-cache. Validation addendum
+records24 synthetic full-context trajectories (2 actor,6 critic steps;0 checkpoints
+or environment episodes), then32 fresh role-trajectory unit smoke (16 joint episodes)
+and512 main role trajectories. Smoke weights are not reused for main training.
+
+Node4 memory service is live with H0,32768 context plus1024 critic-prefix tokens.
+Persistent study driver independently audits the memory result and source hashes,
+waits for node3 diagnostic completion/release, runs2-round smoke, verifies actual
+unit weights/raw-ratio diagnostics and exact native update ledgers, then trains
+32 rounds and evaluates the frozen endpoint. All specs and driver inputs prepared
+and pinned. Main training has not started; no claimed new accuracy result.
+
+### 2026-10-04 21:52 UTC — Control match audit and live native check
+
+CONTROL_MATCH_AUDIT.json verifies byte-identical ordered data and identical
+learning specs except peer_weight_mode; other differences are run paths, names,
+deadlines and pinned provenance. LEARNING_SOURCE_DIFF.txt contains the complete
+four-module learning-code diff. Native memory service remains live; first critic
+updates have appeared, but required2 actor/6 critic steps and release are pending.
+No main training or new accuracy result is claimed.
+
+### 2026-10-04 21:54 UTC — Fixed-h0 diagnostic isolates a Solver-associated deficit
+
+Control/treatment diagnostic1000 episodes completed. Fixed h087.5→78% gives
+-9.5pp,paired95%[-15,-4] (7 improve,26 regress); empty81→73% gives-8pp
+[-14,-2]; selected systems89→78% gives-11pp[-16.5,-6]. Partial report hashes
+and comparisons are saved. Same fixed h0 does not remove degradation, so
+selected-harness choice alone cannot explain it. Single training realization
+and reused-development limitations remain. Contemporary baseline now running.
+
+Unit-ablation full-context check completed2 warmup critic updates;2 actor and
+remaining4 critic updates/release still pending. Both validation/driver services
+remain live; no main unit training has started.
+
+### 2026-10-04 21:59 UTC — Secondary diagnostic prepared before training
+
+SECONDARY_PROTOCOL.json corrects the fixed-h0 diagnostic upper bound from200 to
+400 episodes because native matrix evaluation includes an empty-harness control.
+Primary selection/budget/endpoints remain unchanged. If selected harness equals
+h0 by hash, reuse primary h0/empty reports and incur0 extra episodes; otherwise
+run fixed h0 plus empty once. Compare against prior control fixed h0 and preceding
+contemporary W1+h2, preserving historical92%. Secondary service is queued behind
+PRIMARY_COMPLETE.json. Main training has not begun.
+
+### 2026-10-04 22:06 UTC — Full-context modified Actor gate passed
+
+Four ranks each completed2 actor/6 critic updates at32768 context plus1024 critic
+prefix tokens. Actor gradients5.4123/2.9354 were finite and parameter samples
+changed; fixed-reference outputs remained bitwise equal. Peak actor119.073GiB,
+critic98.250GiB. All worker GPUs released and filler preserved. Driver independently
+recomputed the native audit, published MEMORY_COMPLETE with source hashes, and
+advanced to waiting for node3 diagnostics. Cost24 synthetic trajectories,0 new
+environment episodes/checkpoints; unit smoke and main training still pending.
+
+### 2026-10-04 22:10 UTC — Credit study final audit; unit smoke launched
+
+All diagnostic report hashes, coverage, seeds, token budgets and18 paired
+comparisons independently verified in FINAL_AUDIT.json. Fresh W1+h2 scores90%,
+empty87.5%; treatment78% is-12pp versus fresh baseline,95%[-18,-6],9 improve/
+33 regress. Historical92% remains the target. Original primary87.5% control and
+78% treatment are retained. Fixed-h0 and empty deficits persist, so patch choice
+alone is insufficient; no single training mechanism is causally established.
+
+Cost:1024 role trajectories for both arms (branch cumulative4024 before peer
+ablation);912 selection+800 primary+1400 diagnostic=3112 evaluation episodes,
+separate from training episodes. Single-seed/reused-development limitations apply.
+
+Diagnostic services ended normally and released node3. Driver automatically
+launched peer-weight smoke Engineer/node3 and Solver/node4; both native processes
+are live. Actual unit metrics/update/ledger gates precede the main32-round run.
+
+### 2026-10-04 22:25 UTC — Native unit-weight smoke passed; main32 rounds launched
+
+Independent SMOKE_FINAL_AUDIT confirms16 generated=16 consumed per role,1 actor/
+4 critic updates each,2 rounds applied peer mean1/clip0/effective fraction1. Raw
+ratios remain logged; Solver raw clipping75% in both rounds. Both roles ended
+cleanly and released GPUs. Cost32 role trajectories/16 joint episodes; cumulative
+branch consumption4056 before main training, with24 synthetic memory trajectories
+separate. Smoke weights are not used to initialize the main arm.
+
+Driver launched main Engineer/node3 and Solver/node4 services, both live. Frozen
+32 rounds/512 role trajectories,3 critic warmup rounds,29 actor/64 critic updates
+per role, unchanged team rewards and original control initialization. Only peer
+weighting changes to unit. Automatic endpoint and secondary workflows remain
+queued. Execution validation is not an accuracy improvement claim.
+
+### 2026-10-04 22:45 UTC — Prospective verification analysis implemented
+
+goal_validation_analysis.py validates both prespecified inference seeds, native
+question coverage, rewards, per-question seeds and token budgets, then averages
+within question before paired cluster bootstrap. Bootstrap seed20261080,10000
+draws are recorded before any candidate verification.4 tests passed, including
+anticorrelated seed outcomes that must remain in the same question cluster,
+missing/mismatched seeds, duplicate questions and inference-pass versus overall
+goal-completion separation. No candidate validation or new episodes launched.
+Current unit-weight training continues with its first scheduled checkpoint save.
+
+
+### Peer-weight ablation halfway audit — 2026-10-04T23:07:28.837463+00:00
+
+Both roles completed 16/32 rounds and resumed after checkpoint saving.
+HALFWAY_AUDIT.json binds the first 16 parsed metric rows per role and verifies
+applied teammate weights=1, clipped fraction=0, effective fraction=1, and unit
+mode=1 in every audited round. Both health assessments are healthy. Consumed
+256 role trajectories so far (128 per role); endpoint accuracy is unavailable.
+The fixed round-32 selection/evaluation protocol remains unchanged.
+
+
+### Peer-weight ablation training complete — 2026-10-04T23:43:12.956267+00:00
+
+Both roles finished exactly32 rounds, each generated=consumed256 trajectories.
+Independent MAIN_FINAL_TRAINING_AUDIT.json reproduces the driver audit and
+checks applied unit teammate weights in all32 metric rows per role. Native
+endpoint evaluation started under alfworld-peer-weight-unit-evaluate-v1.
+New research training cost:512 main +32 smoke role trajectories;24 synthetic
+memory trajectories recorded separately. Branch cumulative consumed research
+role trajectories=4568. Invalid patches25/256 (9.765625%);18 such episodes
+had team success. These are training diagnostics, not endpoint accuracy.
+The fixed round32 endpoint and original selection protocol remain unchanged.
+
+
+### Unit-peer selection completed — 2026-10-05T00:01:05.590218+00:00
+
+SELECTION_AUDIT.json validates all10 reports on48 tasks (480 episodes),
+seeds/token limits, report hashes, release, and frozen incumbent guard.
+Best new proposal03=39/48, incumbent h0=39/48, empty=32/48. Retain h0
+because no new proposal exceeds it by at least2 successes. The final round32
+all200 h0/empty evaluation started (native PID3804129). No all200 score yet.
+Because selected=h0, the prespecified secondary diagnostic will reuse these
+primary reports and add zero environment episodes.
+
+
+### Unit-peer ablation completed, negative — 2026-10-05T00:19:25.683614+00:00
+
+FINAL_AUDIT.json validates native all200 reports, summary bindings, primary
+and fixed-h0 paired comparisons, normal release, and zero-reroll secondary reuse.
+Selected h0=168/200(84%), empty=145/200(72.5%). Versus original control87.5%/81.5%,
+deltas=-3.5pp[-8,+1] and-9pp[-14.5,-3.5]. Fixed-h0 diagnostic control87.5%
+gives-3.5pp[-8.5,+1.5]. Historical92% gap=-8pp[-13.5,-2.5].
+No support for unit teammate weights as a performance remedy. One nonconcurrent
+training realization and reused development tasks; question bootstrap does not
+establish seed robustness. Removing weights also changes average scaling, so
+this cannot isolate the source of the earlier likelihood mismatch or its causal
+impact on accuracy. Costs:512 main+32 smoke role trajectories,24 synthetic memory
+trajectories separately;480 selection+400 primary+0 secondary environments.
+Branch cumulative consumed research role trajectories4568. Goal remains unmet.
+
+
+### Anchor retention next question — 2026-10-05T00:23:24.071998+00:00
+
+Created runs/alfworld_anchor_retention_study_v1/DESIGN.json after the completed
+negative unit-weight experiment. Planned fresh paired arms share joint/joint/
+Solver-only schedule; only the applied harness on Solver-only rounds differs
+(sampled proposal versus fixed h0). Engineer updates must be suppressed there
+in both arms; shadow generations remain counted. At48 rounds, per-arm consumed
+H+W=640, generated=768, environment episodes384. This is not budget-matched to
+the earlier32-round control. Pure input/routing helpers in joint_anchor.py pass
+7 tests (fresh IDs, exact retained input order, exposure mapping, intervention
+separation, invalid input rejection). Native integration and gates remain pending;
+no new GPU training or evaluation launched.
+
+
+### Anchor schedule controller integration — 2026-10-05T00:25:59.560762+00:00
+
+Extended joint_schedule, large_train, and joint_health for joint_joint_anchor.
+Existing/helper tests30 passed; two new stateful CPU controller tests passed.
+At48 rounds Engineer29 Actor/64 Critic updates, Solver45 Actor/96 Critic
+updates; inactive Engineer parameter/optimizer/normalizer/scheduler snapshots
+remain unchanged. Source rows are reconstructed and checked, consumed H+W640
+per arm. These are CPU controller tests, not native distributed GPU evidence.
+Workflow routing, worker peer-weight configuration, and native gates remain
+pending; zero new GPU runs. One initial test-append shell invocation used
+unavailable bare python and failed before writing; rerun with the established
+venv interpreter succeeded.
+
+
+### Anchor workflow integration — 2026-10-05T00:28:51.826217+00:00
+
+JointWorkflow now pins h0 by hash, routes the actual environment harness, retains
+the original proposal and applied patch, and cross-checks Editor outcome routing.
+Both arms use unit peer weights on Solver-only rounds; bounded on joint rounds;
+the paired proximal exchange remains. Worker environment propagation is wired.
+Spec validation rejects unpinned anchor/source inputs and routing without the
+matching schedule. Related tests50 passed plus3 subtests; latest source-pin and
+stateful controller tests2 passed after validation changes. Native smoke/GPU
+evidence is still pending; zero new GPU runs.
+
+
+### Anchor memory validation launched — 2026-10-05T00:32:20.215209+00:00
+
+Frozen source runs/source-snapshots/alfworld-anchor-retention-v1 with
+ANCHOR_SOURCE_MANIFEST.json. Materialized worker boundary tests4 passed,
+all joint-update tests9 passed. Added a separate scheduled-budget/routing audit;
+its failure-case tests remain pending. Native full-context memory validation
+alfworld-anchor-memory-v1 launched on node4 after verifying only filler owned
+GPU processes. Predeclared cost24 synthetic trajectories,0 environment episodes,
+0 formal training trajectories. Formal/smoke runs not launched yet.
+
+
+### Anchor protocol frozen and runs prepared — 2026-10-05T00:35:49.378266+00:00
+
+Audit failure-case tests7 passed: wrong applied patch/identity, extra outcomes,
+failure marker, inactive Actor update, wrong peer mode rejected. Source v2
+changes only offline audit and tests relative to memory-running v1; terminal
+Actor and memory engine code identical. Frozen protocol.json specifies two
+6-round smoke arms (160 consumed/192 generated total) and two48-round formal
+arms (1280 consumed/1536 generated total), fixed endpoint/selection48/h0 guard,
+primary bootstrap seeds20261081/82 and fixed-h0 diagnostic seed20261083.
+prepare_runs.py created and validated immutable specs/data for all four runs.
+Do not rerun preparation or rewrite frozen source/configs. Only native memory
+validation is running; driver and smoke launch still pending.
+
+
+### Anchor driver queued; memory network recovery — 2026-10-05T00:40:47.942738+00:00
+
+Driver/diagnostic scripts and config hashes recorded in DRIVER_MANIFEST.json;
+paired datasets byte-identical and all spec differences restricted to routing
+arm/run identities/deadlines. Fixed group-write permissions on prepared roots.
+Original memory validation stalled before model initialization: worker0 configured,
+ports15206/15578 health200 on127.0.0.1 but unreachable via controller10.1.0.35.
+Stopped only own waiting driver and memory service; gpu_release_audit confirms
+no foreign research GPU process and filler intact. Zero original forward/update/
+environment trajectories. Evidence and recovery driver hash recorded in
+MEMORY_NETWORK_RECOVERY.json. New separate memory_recovery run uses unchanged
+frozen source and controller AREAL_HOST_IP=127.0.0.1. Waiting driver recovered
+under alfworld-anchor-study-recovery-v1; original evidence/configs preserved.
+No smoke/formal trajectories yet.
+
+## 2026-10-05T01:01:22.648337+00:00 anchor 内存验证通过，对照组原生联调已启动
+
+32768 token 内存验证已通过：每 rank Actor 2 次、Critic 6 次更新，梯度有限且非零，
+reference 输出一致性审计通过；memory_recovery/result.json 确认 GPU 释放与 filler 保留。
+24 条合成验证轨迹单列，不计入环境研究训练。MEMORY_COMPLETE.json 已由驱动发布。
+当前驱动 alfworld-anchor-study-recovery-v1 PID3832655 active；smoke_control 的
+node3 Editor PID2135770、node4 Solver PID3845623 均经 systemctl 确认 active，
+两端正在初始化 rollout 服务。尚无联调 TRAINING_AUDIT、正式终点或新准确率。
+下一门禁为两组各 6 轮原生联调：实际补丁路由、inactive Engineer 更新隔离、
+peer 权重规则、生成/消费成本、模型及 GPU 释放全部通过，才进入正式比较。
+冻结协议、输入和源码不变；保留原始网络故障记录，不因观察超时重启任务。
+
+
+## 2026-10-05T01:13:33.041949+00:00 anchor 对照联调首个 Solver-only 回合通过指标与路由审计
+
+前3轮已提交：Editor累计1Actor/4Critic，Solver累计2Actor/6Critic。第3轮
+Editor无Actor/Critic更新指标、无ValueNorm指标，Solver按计划1Actor/2Critic；
+双方peer权重均为1。该轮8份实际环境补丁、原始提案、双方回执和奖励来源一致。
+证据：runs/alfworld_anchor_retention_study_v1/SMOKE_CONTROL_FIRST_SOLVER_ONLY_AUDIT.json，
+包含固定前三轮指标快照与回执哈希。前缀24环境、48生成角色轨迹、40消费，
+其中8条Editor影子提案单列。此为原生指标证据，不宣称参数逐位审计或完整smoke通过。
+两个训练角色与驱动仍运行；继续剩余联调及释放审计，未启动正式比较、无新准确率。
+
+## 2026-10-05T01:22:20.023279+00:00 anchor smoke 因继承 ValueNorm 计数审计缺陷失败
+
+Checkpoint audit omitted inherited ValueNorm update count 128. Editor native training completed but wrapper falsely failed; peer failure interrupted Solver final checkpoint save.
+
+修正 joint_health.py：预期累计数=初始critic统计updates+本次排程critic_steps；
+2个回归案例通过，并继续拒绝额外更新。原生学习算法未修改，冻结v2源保持原样。
+原始smoke_control保留：48环境、96生成、72条已提交消费，保守按80条计成本。
+两节点研究GPU已释放，filler保留。恢复需新根目录及新冻结源，重新运行完整配对smoke。
+证据 runs/alfworld_anchor_retention_study_v1/VALUE_NORM_AUDIT_FAILURE.json；当前无活跃研究训练。
+
+## 2026-10-05T01:24:55.619876+00:00 anchor 审计修复冻结为 v3，恢复研究 v2 已启动
+
+当前运行根 runs/alfworld_anchor_retention_study_v2，源码 runs/source-snapshots/alfworld-anchor-retention-v3。
+仅修正初始Critic继承ValueNorm累计数的检查，学习算法及输入逐字节不变；63项测试通过。
+RECOVERY_MANIFEST.json 固定输入、参数等价性证据；原始 v1 失败记录不改写。
+已复用32768 token验证：实际Actor/Critic引擎文件哈希不变，零新增memory计算。
+驱动 alfworld-anchor-study-r2-v1 PID3868829；对照smoke Editor node3 PID2154960、
+Solver node4 PID3868981，均经systemctl确认active。完成两组smoke并审计后自动正式配对比较。
+此前成本按4568+失败smoke80=4648消费轨迹保守结转；全部新实验完成预计6088。
+原失败smoke为72已提交消费、96生成、48环境，最后Solver未提交更新的成本差异单列。
+无新准确率结论，历史92%目标及预先定义的验证协议不变。
+
+## 2026-10-05T01:48:44.844271+00:00 anchor 对照smoke完整通过，固定H0实验组smoke已启动
+
+当前 runs/alfworld_anchor_retention_study_v2；源码 anchor-retention-v3。
+独立重算对照TRAINING_AUDIT通过：6轮，Editor 3Actor/8Critic、Solver 5Actor/12Critic；
+最终ValueNorm为136/140（均含初始128），路由、团队奖励、影子提案及资源释放符合协议。
+证据SMOKE_CONTROL_FINAL_AUDIT.json。新增80消费/96生成角色轨迹、48环境；
+含此前失败保守计成本后累计4728消费，实验组新增另计。
+固定H0实验组服务已启动并核实active：node3 Editor2173233，node4 Solver3890349，
+驱动3868829继续运行。两组smoke通过后自动执行正式48轮配对实验；无新准确率。
+
+## 2026-10-05T02:11:58.941758+00:00 两组anchor联调完整通过，正式对照48轮已启动
+
+当前根 runs/alfworld_anchor_retention_study_v2，冻结源码 anchor-retention-v3。
+PAIRED_SMOKE_FINAL_AUDIT.json独立重算两组完整审计：两组均Editor3Actor/8Critic、
+Solver5Actor/12Critic；最终ValueNorm136/140（含初始128）；补丁路由、奖励、
+影子提案及资源释放全部通过。两组共160消费/192生成角色轨迹、96环境；
+含之前失败80保守收费后累计4808消费，正式新增单列。
+正式control已从原H0/MA64及对应critic重新初始化，未使用smoke权重；
+node3 Editor2191253、node4 Solver3911557均active，驱动3868829。
+48轮、32joint+16Solver-only，每组640消费/768生成/384环境；固定final48评测。
+control训练评测后自动anchor训练评测及固定h0诊断。尚无正式准确率；不挑中途检查点。
+
+## 2026-10-05T02:40:45.341112+00:00 anchor正式control前12轮独立审计通过
+
+证据 runs/alfworld_anchor_retention_study_v2/CONTROL_ROUND12_AUDIT.json：
+Editor5Actor/16Critic、Solver9Actor/24Critic，累计ValueNorm144/152（初始128）；
+两端检查点、更新排程、96环境回执及奖励来源一致。前缀160消费/192生成角色轨迹，
+其中32Editor影子轨迹，未来在途轨迹不混入。此前4808消费+此前缀160=4968，后续另计。
+node3 Editor2191253、node4 Solver3911557、驱动3868829继续active。
+未评测中途检查点；固定48轮终点、两组比较及92%目标不变。
+
+## 2026-10-05T03:04:55.677281+00:00 anchor正式control前24轮独立审计通过
+
+证据 runs/alfworld_anchor_retention_study_v2/CONTROL_ROUND24_AUDIT.json。
+Editor13Actor/32Critic、Solver21Actor/48Critic，ValueNorm160/176（初始128）；
+24轮指标、192环境回执、实际补丁及奖励来源、检查点均通过核验。
+此前缀320消费/384生成角色轨迹、64Editor影子轨迹，未来在途工作不混入。
+包含此前失败保守计费的分支累计5128消费，后续另计。
+node3 Editor2191253、node4 Solver3911557、驱动3868829持续运行。
+仅执行训练审计，未评测中途检查点；固定第48轮主要终点不变。
+
+## 2026-10-05T03:31:11.983892+00:00 anchor正式control前36轮独立审计通过
+
+证据 runs/alfworld_anchor_retention_study_v2/CONTROL_ROUND36_AUDIT.json。
+Editor21Actor/48Critic、Solver33Actor/72Critic，ValueNorm176/200（初始128）；
+36轮指标、288环境回执、补丁路由与奖励来源、检查点通过核验。
+前缀480消费/576生成角色轨迹，其中96Editor影子轨迹；未来在途工作另计。
+含此前失败保守计费累计5288消费。Editor2191253、Solver3911557、驱动3868829
+经systemctl确认持续运行。未评测中间检查点，保持final48和后续配对比较。
+
+## 2026-10-05T03:58:51.913134+00:00 anchor正式control完整48轮训练独立审计通过
+
+证据 runs/alfworld_anchor_retention_study_v2/CONTROL_FINAL_TRAINING_AUDIT.json。
+独立重算与驱动TRAINING_AUDIT完全一致：Editor29Actor/64Critic，Solver45Actor/96Critic；
+最终ValueNorm192/224（均含初始128）。完整384环境的补丁路由、奖励来源、
+生成/消费账本及训练资源释放记录通过；640消费、768生成、128Editor影子轨迹。
+含既有失败保守计费后累计5448消费角色轨迹，后续实验另计。
+驱动3868829与control评测4005561均经systemctl确认active。
+selection-47实际request/config均使用globalstep47的最终Solver及8份最终Engineer提案；
+48题、seed6000045、temperature1、solver_tokens4096。当前尚无all200主终点结果。
+固定h0实验组正式训练尚未开始；保持既定顺序与选择规则，不以中途结果调参。
+
+
+## 2026-10-05T04:10:06.230642+00:00 anchor control选择完成，保留h0
+
+CONTROL_SELECTION_AUDIT.json独立重算10份原生48题报告，覆盖及分数一致。
+最佳新补丁45/48，h0为44/48，空补丁43/48；未达到至少多2题门槛，保留h0。
+全部8候选有效，选择成本480环境；proposal05为0/48，仍保留其结果。
+200题主评测request使用final47 Solver及h0，seed6000045、temperature1、4096tokens；
+目前未完成主终点，不将选择分数当作准确率或超过92%的证据。
+
+## 2026-10-05T04:26:42.257959+00:00 control原生200题完成，包装层GPU释放检查失败
+
+原生h0=182/200(91%)、空补丁=174/200(87%)；逐题覆盖、seed、token预算及准确率核验通过。
+selection480+主评测400环境均保留。内层RELEASED将PID4029906列为foreign，
+此前gpu_process_samples明确将其识别为filler；外层及重新采样均foreign=[]且filler active。
+驱动与control evaluate已经failed，anchor未启动；不得继续声称任务仍在运行。
+证据CONTROL_NATIVE_RESULT_RELEASE_FAILURE_AUDIT.json。原失败文件和报告保持不变，
+下一步恢复编排并复用原生结果，不重新抽样或改写失败历史。尚未完成两组比较。
+
+## 2026-10-05T04:29:43.890026+00:00 control离线恢复完成，正式anchor已启动
+
+原始200题h0=182/200(91%)、空补丁=174/200(87%)，完整覆盖、逐题seed/token、
+哈希绑定及分数均核验。相对历史92%为-1pp，配对95%CI[-5.5,+3.5]，9改善/11退化；
+未达到总目标，不将选择集93.75%当主成绩。
+recover_control_endpoint.py离线发布control/matched_COMPLETE.json并绑定matched_RECOVERED.json；
+原始根FAILED.json、control/matched_FAILED.json及内层RELEASED均保留，未重跑评测。
+第一次离线断言发现原生config额外默认evaluation_mode/monitor_interval字段，确认原生代码后
+显式纳入校验；无模型调用或部分终点发布。恢复新增训练0、评测0。
+ORCHESTRATION_RECOVERY.json固定恢复脚本、原失败、结果与全部原输入哈希。
+原driver.py及冻结v3源码不变，driver_recovery.py只执行未开始的anchor然后原定比较/诊断。
+新驱动alfworld-anchor-study-r2-recovery-v1 PID4033201；anchor Editor node3 PID2283910，
+Solver node4 PID4033353，经systemctl确认全部active。原驱动failed属历史记录；
+监测新的RECOVERY_FAILED.json判断恢复分支异常。保持原48轮/640消费预算和最终选择规则。
+当前已完成分支消费5448，anchor在途新增另计；两组全部完成预计6088。
+
+## 2026-10-05T04:40:09.849809+00:00 anchor首个三轮排程核验通过
+
+ANCHOR_FIRST_CYCLE_AUDIT.json核验两角色已提交前3轮指标；Editor0Actor/4Critic，
+Solver0Actor/6Critic（仍处warmup）。第三轮Editor不更新Actor/Critic且无ValueNorm更新指标，
+两端peer为unit。关联ANCHOR_FIRST_ROUTING_AUDIT的8/8实际h0和16奖励回执。
+前缀40消费/48生成/24环境/8影子，累计已审计消费5488；后续在途工作另计。
+尚未审计检查点或参数逐位不变，不主张效果改善。驱动4033201、Solver4033353、
+Editor2283910经systemctl确认运行；完整48轮终点不变。
+
+## 2026-10-05T05:00:57.873556+00:00 anchor正式实验组前12轮独立审计通过
+
+ANCHOR_ROUND12_AUDIT.json核验Editor5Actor/16Critic、Solver9Actor/24Critic；
+检查点及ValueNorm144/152（初始128）通过。96环境、192角色回执、实际路由及奖励一致。
+前缀160消费/192生成/32Editor影子轨迹；累计已审计消费5608，未来在途另计。
+驱动4033201与Solver4033353经systemctl确认继续active；保持final48评测，无新准确率。
+
+## 2026-10-05T05:26:40.684705+00:00 anchor正式实验组前24轮独立审计通过
+
+ANCHOR_ROUND24_AUDIT.json核验Editor13Actor/32Critic、Solver21Actor/48Critic；
+检查点及ValueNorm160/176（初始128）通过。192环境、384角色回执、实际路由及奖励一致。
+前缀320消费/384生成/64Editor影子轨迹；累计已审计消费5768，未来在途另计。
+驱动4033201与Solver4033353经systemctl确认继续active；保持final48评测，无新准确率。
+
+## 2026-10-05T05:51:28.000495+00:00 anchor正式实验组前36轮独立审计通过
+
+ANCHOR_ROUND36_AUDIT.json核验Editor21Actor/48Critic、Solver33Actor/72Critic；
+检查点及ValueNorm176/200（初始128）通过。288环境、576角色回执、实际路由及奖励一致。
+前缀480消费/576生成/96Editor影子轨迹；累计已审计消费5928，未来在途另计。
+驱动4033201与Solver4033353经systemctl确认继续active；保持final48评测，无新准确率。
+
+## 2026-10-05T06:15:35.904515+00:00 anchor正式48轮训练独立审计通过，终点评测启动
+
+ANCHOR_FINAL_TRAINING_AUDIT.json独立重算与驱动一致，两组训练预算相同。
+Editor29Actor/64Critic、Solver45Actor/96Critic；ValueNorm192/224（初始128）。
+384环境路由和奖励、640消费/768生成/128影子轨迹及训练释放记录通过。
+分支累计消费6088（包含失败保守计费），恢复无新增评测。
+Engineer和Solver服务成功退出；驱动4033201持续运行，anchor评测PID4126635 active。
+固定final48选补丁及200题主评测正在运行；目前仅control成绩91%/87%，anchor无准确率。
+
+## 2026-10-05T06:30:13.238620+00:00 anchor选择完成，保留h0，配对主评测配置一致
+
+ANCHOR_SELECTION_AUDIT.json重算全部9份原生48题报告，对应10逻辑变体。
+最佳新补丁43/48，h0为42/48，空补丁40/48，未达到多2题门槛；7/8提案有效，
+无效proposal06按既定规则复用空补丁报告，实际选择成本432环境。两组选择共912环境。
+两组主评测使用相同h0及相同200题、seed、temperature、token/并发预算，final47 Solver。
+实验组200题已提交，无准确率结果。两组均选h0，后续固定h0诊断可复用主结果。
+
+## 2026-10-06：复用历史SAO，完成训练加速和单项MA-SAO调优
+
+按用户新优先级，不启动新的SAO对照训练、不增加训练种子或铺开消融。
+已在途的种子1000043先按原48轮方案完成：H0组合185/200（92.5%），
+无提示181/200（90.5%）；相对历史92%差+0.5个百分点，配对95%区间[-3, 4]。
+原人工提示扩展暂缓，未更改或抹除原冻结设计。
+
+### 加速先行
+
+原Qwen3.5训练使用PyTorch gated-delta-rule回退。隔离安装FLA0.5.2和Triton3.7.1，
+不修改活动虚拟环境。FLA与旧Triton3.6组合被Hopper反向正确性guard拒绝；
+升级后完整32K首次Actor反向OOM。保留两次失败，仅将固定reference存储
+由FP32改为BF16后，W0/H0完整32K原生验证通过；Actor/Critic master weights仍为FP32。
+前向、梯度、初始logprob/value误差、实际参数更新和GPU释放均通过预设检查。
+最新定向CPU测试45项通过。
+
+- 完整32K合成Actor+2Critic稳态更新：346.94→39.17秒，8.86倍。
+- 真实联合训练相同稳态轮次均值：96.90→49.56秒，1.96倍。
+- 成功尝试从两角色启动到全部完成：101.09→60.00分钟，1.68倍。
+- 真实轨迹token长度不同，并减少中间checkpoint保存；不能把所有端到端收益
+  归因于FLA，不能把8.86倍写成整轮或整次实验加速。
+- 成功尝试墙钟不含加速验证、失败首尝试、驱动输入重哈希与评测。
+
+### 唯一新训练候选及预先固定终点
+
+同种子1000043、H0/W1和MA64 critics起点、数据、640消费/768生成/384环境预算，
+Engineer LR 1e-7→5e-7，Solver LR 1e-6→5e-7；其余KL0.02、K2、3 active warmup、
+joint_joint_anchor调度和上下文/token预算保持。两项LR和运行时作为一个整体方案，
+不做组件归因。仅保存并评估final48，8提案、选择48题、至少比H0多2题才能替换。
+
+首尝试因rollout冷编译超过300秒启动等待失败，零提案/环境轨迹/优化更新，
+失败与释放记录保留。仅增加可选rollout_setup_timeout=1800，默认行为不变；
+恢复分支从同一初始权重和fresh Adam开始，不从部分优化器状态恢复。
+恢复训练Editor29 Actor/64 Critic、Solver45 Actor/96 Critic更新，全部48轮审计通过。
+
+### 主结果与结论
+
+| 系统 | all200 |
+| --- | --- |
+| 历史SAO W1+h2 | 184/200，92% |
+| 同种子原MA-SAO + H0 | 185/200，92.5% |
+| 新MA-SAO + 自动proposal06 | **187/200，93.5%** |
+| 新Solver + 空策略 | 181/200，90.5% |
+
+8个Engineer提案中5个有效。proposal06选择集48/48，H0为46/48，达到固定门槛；
+主成绩不是选择集100%。无人工修改或提示拼接，主评测harness_error_episodes=0。
+选择共7个独立策略×48题，主评测2×200题，总计736次新增环境任务。
+相对历史SAO：+1.5个百分点，95%配对区间[-1.5, 5]，7题改善/4题退化。
+相对同种子原MA-SAO：+1个百分点，区间[-2.5, 4.5]，8题改善/6题退化。
+同一新Solver下，自动策略相对空策略为+3个百分点，区间[0, 6.5]；
+没有新增同一新Solver配H0的200题消融，不能单独证明Engineer训练贡献。
+
+**本轮获得高于历史92%的自动策略点估计，但预设优势验证未通过。
+“MA-SAO优于独立交替SAO”仍未确立，也没有被这一配置逻辑证伪。**
+单训练种子、历史对照、重复开发200题、整体方法包调整均限制解释。
+不根据200题结果继续挑checkpoint或扫描种子，不用自适应筛选后的区间冒充确认性证据。
+完整原生报告、选择规则、输入/提示哈希、题目/种子/token和配对统计已独立复核；
+服务全部成功退出，两节点无剩余研究GPU进程，filler正常。
+
+- [加速验证](../runs/alfworld_training_speed_v4/COMPLETE.json)
+- [原配置主结果](../runs/alfworld_explicit_hint_training_replication_v1/repeat/matched_COMPLETE.json)
+- [候选结果](../runs/alfworld_ma_balanced_fast_v1r2/RESULT.json)
+- [独立复核与墙钟数据](../runs/alfworld_ma_balanced_fast_v1r2/INDEPENDENT_AUDIT.json)
+- [完整实验结论与模型入口](../runs/alfworld_ma_balanced_fast_v1r2/CONCLUSION.md)
+
+## 2026-10-07：MA长期曲线及传输故障恢复
+
+研究顺序改为先观察并调优长期平台，再冻结方案比较相同样本量，最后归因。
+历史固定h2的W2延长0/20/40/60/80步为63.5/71/79.5/38/49%，
+重新核验全部10份报告；结论是先恢复再崩落，而非SAO已稳定收敛到92%。
+
+MA从自动策略93.5%的round48出发，明确一次fresh Adam边界；
+后续每96轮通过FP32 model-only DCP和原生逐rank Adam分片续训，
+保留ValueNorm及原H0/W1 reference。CPU下一更新一致性及H0/W0完整32K
+GPU往返验证通过。每48轮评测，至少192额外轮才判断观测平台；
+最大768额外轮/24小时不是收敛保证。全部中间点保留，不挑最佳点冒充终点。
+
+v1r3正式训练完成30轮后发生Solver到环境controller的HTTP ReadError，
+两角色梯度有限，未到第48轮checkpoint。保留400已消费角色轨迹，
+248提案、246完整环境结果、491完整角色回执（11条未提交更新）的失败成本。
+不将其作为性能下降，也不假装从未保存的优化器继续。
+禁用该层keepalive，沿用已有controller到worker的实现；
+不重试非幂等动作POST，不将传输异常转换为模型失败奖励。
+28项定向测试及13个subtest通过。
+
+v1r4从同父权重、同种子、同数据重新启动，复用已通过的原生handoff验证。
+02:30 UTC确认两节点原生进程进入初始化，尚无新增优化更新或评测成绩。
+源码和设计独立冻结，v1r3全部失败记录保留。
+
+当前为两个独立Actor和两个独立Critic，Critic有额外协作上下文但无参数共享；
+不能把93.5%归因于共享团队Critic。用户同意先完成此冻结方案的长期曲线，
+之后才根据价值估计质量等诊断选择一个有依据的改进。
+
+- [冻结恢复设计](../runs/alfworld_ma_convergence_v1r4/DESIGN.json)
+- [阶段门控](../runs/alfworld_ma_convergence_v1r4/RESEARCH_PROGRAM.json)
+- [失败成本](../runs/alfworld_ma_convergence_v1r3/FAILED_COST.json)
+
+### 04:41 UTC：首个长期指定终点持平
+
+v1r4完成96额外轮训练，消费1280角色轨迹、生成1536角色轨迹、
+768环境episode。Editor64/128及Solver96/192次Actor/Critic更新、
+每rank原生Adam步骤通过审计。训练奖励按24轮窗口为
+151/192、159/192、152/192、150/192，并非持续单调上升。
+
+先评总round96（local48）：保留父自动proposal06，187/200=93.5%；
+空策略183/200=91.5%。相对历史92%配对差+1.5pp[-2,5.5]，
+相对父93.5%差0pp[-2.5,3]。只有一个新增点，不能宣称平台或整体继续提升。
+总round144（local96）正在评测，保持冻结长训练及停止规则。
+
+用户再次明确三个问题：同rollout的SAO/GRPO、SAO延长曲线、MA延长及更高平台。
+前两项保留已测答案及局限，不为迎合方向改写为SAO普遍更好或已达绝对上限；
+新增资源集中于第三项。新增最终结果核验器13项测试通过，
+不修改运行中的冻结源码，真实曲线完成后再运行独立核验。
+
+### 05:02 UTC：总round144达到97%，继续观察而非高点停止
+
+第二个预定终点（local96、总round144）为194/200=97%，
+同Solver空策略185/200=92.5%。8个提案全部有效，
+proposal07选择集48/48，继承proposal06为46/48，达到固定多2题门槛。
+提示来自本次Engineer自动输出，无人工改写，未根据all200选提示。
+最终提示SHA256为`3e4ac25391bbb1e69c5831f76e8e7ade217ab3ac3766bd3cee2eda5723adc4fa`。
+
+相对历史SAO92%：+5pp，配对95%区间[2,8.5]，11题改善/1题退化。
+相对父93.5%：+3.5pp，区间[1,6.5]，7题改善/0题退化。
+原生矩阵、指定检查点、选择规则、compact回执及配对统计已复核。
+这支持当前候选继续训练能够提升，但只有一个97%点，
+尚无稳定平台证据；重复开发评测和历史对照限制仍在。
+第二个96轮块按冻结协议继续，不在高点停止或改写停止规则。
+
+- [总round144结果](../runs/alfworld_ma_convergence_v1r4/block-01/round0096_COMPLETE.json)
+- [完整曲线](../runs/alfworld_ma_convergence_v1r4/CURVE.json)
+
+### SAO Weight退化机制与Harness-only问题：只读复核
+
+用户要求继续监控MA，同时解释普通SAO的Weight collapse，以及固定Weight只进化
+Harness的可能结果。没有为此启动额外GPU实验，也没有修改在途MA配置。
+
+现有证据支持特定SAO续训配置损害Solver能力，但没有唯一根因：
+固定同h2，W1为92%、W2为63.5%；空策略W1为87%、W2约50%，
+所以不是只换了坏提示。W2恢复的initial/extra20/40/60/80固定h2报告，
+截断率均0、Harness错误均0，工具错误总数分别1/0/1/1/2；
+extra40到extra60的79.5%到38%退化不是大规模工具格式错误或token耗尽。
+
+重新读取原W2和恢复W2各80轮metrics：原W2 Actor训练奖励日志按20轮窗口
+约88.3/87.5/79.4/63.1%，恢复约71.7/83.1/71.3/40.6%
+（首窗口Actor指标不含5轮Critic-only warmup，不等于全部episode均值）。
+没有支持“熵单调降到零”的现象，恢复末段记录的熵反而上升；
+梯度和value loss也未直接给出唯一崩塌原因。
+普通配置Actor LR2e-6、Critic1e-5、batch8、K1、无固定reference KL，
+累计策略漂移和终局奖励下的价值/信用分配误差是待验证解释，不是已证实归因。
+旧多轨迹递归状态污染确实存在，但独立轨迹修复后仍再次退化，
+不能把全部collapse归于该问题。h2在W2阶段固定，不能直接归因于队友持续变化。
+
+固定W1的已有H1/H2为90.5/92%，差+1.5pp[-1.5,5]，是短程正向点估计，
+尚无固定优质W1、仅训练Harness的长期平台结论。
+Engineer自身也曾在更晚检查点出现候选质量/有效率下降；
+保留旧Harness可以保护已部署组合，但不能等同于Engineer持续学习。
+后续若做Harness-only，必须区分候选分布质量与incumbent选择后的系统曲线；
+不抢占当前MA收敛实验资源。
+
+当前MA调度明确为两轮H+W联合更新、一轮仅W更新，而非长块H/W交替。
+同episode中H先提案、W再执行是因果执行顺序，不代表分阶段训练。
+两个Critic参数独立，仅增加协作上下文。
+第二块96轮已完成并通过审计：累计H Actor128/Critic256，
+W Actor192/Critic384；4个rank计数一致，实际从前块恢复Adam而非重置。
+
+### 07:13 UTC：总round192为96%，保留已有自动策略
+
+第二块local48终点192/200=96%，同Solver空策略180/200=90%。
+8个新提案全部有效，但未达到替换门槛，按selection规则保留总round144的proposal07。
+相对历史SAO92%差+4pp，配对95%区间[1,7]。
+当前93.5/93.5/97/96%的完整曲线不支持单调上升叙事，
+但97%后的下一点仍高于历史92%；平台判据仍未满足。
+空策略从92.5%回到90%，不能把组合提升全归因于Solver权重单独变强。
+总round240正在评测，不依据此波动热改训练或抢先做组件消融。
+
+### 07:41 UTC：总round240回落到94.5%，未达平台
+
+第二块local96终点189/200=94.5%，空策略185/200=92.5%，继续保留proposal07。
+相对历史SAO差+2.5pp[-1,6.5]，相对父93.5%点估计仅+1pp。
+第二块两个终点均重新验证原生矩阵、选择及配对统计。
+当前总round48/96/144/192/240为93.5/93.5/97/96/94.5%，
+最后四点范围3.5pp；满足最低192额外轮但不满足平台规则，
+末端区间也未通过优势门槛。第三块按冻结方案启动，
+97%只能作为观测最高点，不能替代长期结论。
+
+### 09:46 UTC：总round288为93%，继续记录回落
+
+第三块local48终点186/200=93%，空策略184/200=92%，保留proposal07。
+相对历史SAO为+1pp[-2.5,4.5]。完整曲线高点97%后为96/94.5/93%，
+最后四点范围4pp，仍未满足平台规则；总round336正在评测。
+
+仅分析已有日志，没有新增消融：三个训练块平均固定reference KL，
+H约0.0027/0.0063/0.0103，W约0.0024/0.0039/0.0051；
+Critic原始MSE没有越过健康阈值。round240和288选择集新提案最佳47/48，
+incumbent46/48，未达到多2题门槛，不能根据200题结果反向替换。
+Solver空策略并未同步大幅崩落，候选分布质量也非单调上升；
+需要在完整曲线后区分Weight漂移、Harness配合和选择限制，
+不能据健康loss断言泛化稳定，也不能把相关诊断冒充因果解释。
+
+### SAO原始轨迹复核：环境步数耗尽与动作语义退化
+
+在node3以原文件owner读取extra40/60两终点的4份原生报告，重新配对200题，
+保存原报告SHA256及行为统计，未新增GPU轨迹或训练。
+固定h2从159/200到76/200：88题由成功转失败，5题反向改善；
+88个退化样本中69个运行到50次环境交互仍未成功。
+空策略从166/200到92/200：78题退化、4题改善，退化中72个走满50步。
+这与4096-token截断是不同限制；原统计truncated_fraction=0并不排除环境步数耗尽。
+
+两例逐动作比对：
+- 无策略task240原7步完成拿取并放置toiletpaper，extra60输出不存在的
+  `toiletp_paper` / `toiletp_paperhanger`，随后反复导航到50步失败。
+- 固定h2的task247原4步完成拿creditcard并使用desklamp，extra60拿卡后
+  循环搜索shelf1..5，还输出`go to desk (if exists)`，50步失败。
+
+extra60固定h2的124个失败episode终止状态包括98个completed、
+25个agent invalid action、1个invalid_tool_arguments；
+completed是流程结束而非任务成功。工具JSON错误少不能推出动作语义正确。
+这些证据定位了已观察到的失败行为，不证明高学习率、KL缺失、
+Critic误差或数据打包中的某一项是唯一参数更新根因。
+
+- [只读行为审计及来源哈希](../runs/alfworld_ma_convergence_v1r4/SAO_FAILURE_MODE_AUDIT.json)
+
+### 用户要求改为每轮H/W联合更新：独立冻结新候选
+
+核验旧第四块70轮：H47/W70次Actor更新，H在联合轮次梯度非零，
+不是后期完全冻结H；实际为旧锚定对照继承的2:3混合调度。
+用户明确要求两者一起更新，因此不再默认该配比最佳。
+
+在旧块73轮时仅停止CPU协调器，两个原生角色服务均保持active。
+新的边界执行器完成旧第四块及总384/432评测，不启动第五块；
+若原平台规则未满足，标记用户指定换方案而非收敛。
+旧源码、数据、优化规则及已生成结果均不改写。
+
+新simultaneous候选从同一93.5%父round48起步，不选97%高点初始化；
+每轮H/W和两个Critic均更新，去掉anchor路由和Solver-only轮次，
+bounded队友权重用于全部轮次。保持原学习率、KL、奖励、原始reference、
+任务/prompt顺序、选择/评测及平台规则。
+每96轮H/W各96Actor/192Critic，消费1536而非1280角色轨迹；
+生成1536、环境768不变。多20%消费与队友权重规则变化均明确披露。
+
+新增审计拒绝隐藏的H/Critic停更和anchor路由；结论审计支持明确用户边界，
+不会把中止当作平台。包括真实输入准备、任务顺序、每轮双更新和Adam状态的
+59项定向测试通过。新设计、源码快照、输入/原生验证哈希已冻结，
+CPU协调器启动核验并等待旧实验FINAL_AUDIT和资源释放，尚无新训练成绩。
+
+- [新候选设计](../runs/alfworld_ma_simultaneous_convergence_v1/DESIGN.json)
+- [新候选执行器](../runs/alfworld_ma_simultaneous_convergence_v1/driver.py)
+- [旧边界请求](../runs/alfworld_ma_convergence_v1r4/REQUESTED_BOUNDARY.json)
+
+### 用户指定从97%原生检查点继续，并核查高分是否对应能力提升
+
+用户在新93.5%起点候选尚未开训时改为保留总round144的97%点。
+立即停止该CPU协调器，核查无STARTED、无block、零研究轨迹；
+保留冻结文件并写明[取消原因](../runs/alfworld_ma_simultaneous_convergence_v1/CANCELLED_BEFORE_TRAINING.json)。
+旧混合实验仍只完成第四块收尾，不再第五块，也不热改已运行的训练。
+
+新[97%起点方案](../runs/alfworld_ma_simultaneous_from97_v1/DESIGN.json)从旧block01末的
+完整原生状态恢复两个Actor/Critic、ValueNorm和Adam，H初始步数64/128、
+W96/192。没有新增Adam重置，不使用HF舍入值代替FP32 learner恢复；
+原H0/W1 reference保持不变。从source768续接，全部轮次H/W均更新。
+首块期末应为H160/W192次累计Actor更新，Critic分别320/384；
+每新块1536消费、1536生成、768环境episode，继承成功谱系1920消费另列。
+
+平台门槛相对于新144起点，至少再192轮，最早总336；不能仍从48计数。
+源代码、设计、HF权重、原生metadata和逐rank指纹已冻结，CPU协调器已核验为active，
+仅等待输入核验、旧边界审计和node3固定交叉验证后才占GPU训练。
+70项定向测试通过，且更严格的Adam审计已通过旧前三块真实状态。
+这是用户选择观察高点初始化的探索性试验，不能掩盖选择偏差和此前研究成本。
+
+原97%逐题核查：同W144空策略185/200、自动P144为194/200，改善9题、退化0题；
++4.5个百分点的题目配对95%区间[+2,+7.5]。7个改善目标涉及物体变换后放置，
+2个涉及取两个物体；真实消息包含拿取提示、先清洗/加热/冷却及阻止过早放置等。
+strict197仍为191/197对183/197。空策略W48到W144仅+2个百分点，
+区间[-1.5,+5.5]，不能把全部组合收益归因于Weight学习。
+
+选中策略与Engineer的原始生成receipt对象、规范化patch哈希及checkpoint一致，
+不是事后手写提示。对两个Engineer检查点的8组生成消息逐一比对完全相同；
+合法提案5/8变为8/8，但新候选中仍有35/48的低分提案。
+因此“一个自动策略有效”与“Engineer整个提案分布因RL变好”必须分开。
+核验请求摘要采用系统原有canonical contract digest，而不是JSON文件字节哈希；
+审计程序初次用错摘要类型被断言拒绝，修正后重新执行，不修改原始证据。
+
+在node3排队启动一次[固定交叉验证](../runs/alfworld_peak97_crossplay_v1/protocol.json)，
+复用原推理seed，对W48/W144交叉空策略、初始H0、P48、P144并重测对角线；
+8个逻辑系统、1600环境episode，零训练轨迹。诊断不重新选择续训起点，
+不替代完整续训曲线，也不开展多训练种子扫描。
+
+进一步逐项检查split的实际ID集合：train240与selection48/report200无任务ID交叉，
+但selection48全部包含在report200，不能将二者表述为独立选择集和测试集。
+保留首份行为计算，另生成增加该发现和敏感性统计的v2审计。
+排除selection48后，新策略146/152=96.05%、空策略141/152=92.76%，5改善/0退化；
+差+3.29个百分点，题目配对95%区间[+0.66,+6.58]。
+再排除3个训练目标文本重合项，143/149对139/149，4改善/0退化，
+差+2.68个百分点，区间[+0.67,+5.37]。这表明原始收益不只发生在被用来选策略的
+48题中，但仍是事后开发集诊断；总144轮检查点由完整200题曲线挑出，
+不构成新独立测试或多训练种子稳健性证据。
+
+### 12:41 UTC进展：固定交叉验证完成，97%起点续训仍等待旧最终评测
+
+交叉验证完成1600环境episode、零新增训练轨迹，并释放node3资源。
+重新核验两个原生矩阵、八份原生报告、compact逐行/哈希和环境成本，全部一致。
+W48在空/H0/P48/P144下分别90/91.5/95/95%，
+W144分别91.5/92.5/95/96.5%。原97%组合复测96.5%，而原93.5%组合复测95%；
+不再把原来单次+3.5个百分点差值当成已经复现的训练收益。
+新旧完整组合差+1.5个百分点，4改善/1退化，配对95%区间[-0.5,+4]。
+固定P48时两种W均95%，固定W144时P144比P48高1.5个百分点、区间[-1,+4]。
+
+固定W144，新策略相对空策略+5个百分点，10改善/0退化、区间[+2,+8]；
+排除选择48题后仍6改善/0退化，+3.95个百分点、区间[+1.32,+7.24]。
+这支持自动策略的实际开发集效用，不足以证明Engineer生成分布整体改善、
+独立Weight学习优势或未选择的确认性泛化优势。
+
+旧混合方案已完成总384轮评测：94.5%，空策略同94.5%。
+最近四点94.5/93/94.5/94.5%已触发原观测平台条件，但预定总432轮末评还在运行，
+最终停止标签及全曲线审计需等该端点完成。97%原生续训协调器已完成输入核验，
+等待旧FINAL_AUDIT后自动开始；此时无STARTED、无训练block，不能称已经续训。
+
+本次状态询问期间，旧总432轮末评随后完成：带P144为95%，空策略95.5%。
+最后四点93/94.5/94.5/95%，跨度2个百分点，按预定规则停止为
+`operational_development_plateau`；原97%最高点不是稳定平台高度。
+终点对历史92%差+3个百分点、9改善/3退化，题目配对95%区间[0,+6.5]；
+优势门槛要求下界严格大于0，因此没有通过，不能提前进入确认性样本效率结论。
+旧边界结束后FINAL_AUDIT尚未生成且无审计进程；直接执行完整审计并通过，
+核对全部固定端点、选择、预算及四块原生Adam连续性，解除97%续训队列依赖。
+新执行器自身包含最终审计，不依赖旧边界的附着监控脚本来完成该收尾。
+
+## 按研究问题组织的实验报告（2026-10-07）
+
+术语更正：原MA-SAO已经在联合学习，只是H:W更新比为2:3；
+新候选提高到1:1，并同时改变原第三轮的队友校正。不能描述成
+“原来不是联合训练，现在才联合训练”，也不能将其视为纯更新频率消融。
+以下按科学问题归类；配置变体与失败尝试仍保留在各自原始记录中。
+未完成实验只能报告设计和状态，不能把希望得到的效果写成结论。
+
+### 实验1：相同Engineer rollout下，SAO是否优于GRPO？（已完成）
+
+**研究问题。** SAO相对GRPO的优势是否在匹配策略训练样本量后仍然成立？
+
+**实验设计。** 从相同H0出发，匹配192条Engineer训练轨迹；
+分别在固定W1、W0下评测保存的策略。这里匹配的是Engineer消费预算，
+不是全部环境交互、计算量与checkpoint选择过程完全相同。
+当前复用已有实验，不重复训练。
+
+**实验结论。** W1上SAO90.5%、GRPO88%，差异区间跨零；
+W0迁移上SAO74%、GRPO83.5%。只支持W1设定下SAO点估计略高，
+不支持SAO普遍优于或不差于GRPO，也不能将不显著差异当成统计等效。
+
+### 实验2a：退化后的SAO能否通过延长Solver训练恢复并超过92%？（该分支已完成）
+
+**研究问题。** 后期下降是暂时波动，还是在已测延长预算内仍无法恢复？
+
+**实验设计。** 从真实退化W2出发，固定h2，只续训Solver；
+测额外0/20/40/60/80步，同时评测带h2与空策略。
+这次恢复有fresh Adam边界，并修正独立轨迹打包；
+不是从92%点继续完整H/W交替周期，也不是精确优化器续跑。
+
+**实验结论。** 固定h2为63.5/71/79.5/38/49%，空策略为49/74.5/83/46/44.5%：
+先恢复、后再次崩落，没有回到92%。这否定了“在这段预算内持续缓慢恢复”的描述，
+但不证明所有SAO配置都已收敛，也不证明92%是SAO的绝对上限。
+来源：[延长训练结果](../runs/alfworld_w2_recovery_v2/COMPLETE.json)。
+
+### 实验2b：固定较强Solver，Engineer再训练一阶段是否继续提升？（用户要求补做）
+
+**研究问题。** 只观察固定h2后W2的退化，不能推出固定优质W1时Engineer也不能
+继续学习。检验在W1不变时，H2再经一完整SAO阶段后的候选质量和部署效果。
+
+**实验设计。** 从历史H2-step31 Actor/Critic出发，W1固定为原step79权重，
+恢复一阶段32 native step、batch6、192消费轨迹，27 Actor/32 Critic更新，
+原LR2e-6/critic1e-5、K1及5步Critic预热。没有保存的Adam，
+明确fresh Adam；采用已有普通SAO后端修复和已验证内核加速，不加入MA/KL/ValueNorm。
+训练使用同W1的原训练失败证据，新sample编号384起，不重放旧生成轨迹。
+只评最终extra32点，续训前后分别生成8组完全匹配的prompt与推理seed，
+比较selection24 mean@2的完整提案均值/合法率及相同门槛下的部署选择。
+主200题评测before/after、历史h2、空策略及新最好合法候选；
+保留非法槽、负结果和未被替换的候选，不能把回退h2当学习成功。
+只有一个新训练阶段，没有独立多训练seed扫描。
+
+**实验结论。** 当前尚无结果。前一条“实验2已完成”仅适用于固定h2续训W，
+不涵盖本分支，也不等于SAO两角色都已达到不可提升的上限。
+为优先得到结果，在当前MA96轮原生块完整结束后插入node3的单阶段实验，
+仅暂停CPU调度器，不中断原生learner；之后恢复原MA流程。
+
+### 实验3：MA-SAO长期训练能否形成高于历史SAO的稳定平台？（已完成旧调度）
+
+**研究问题。** 不先限制相同rollout，观察MA-SAO能达到多高、是否能保持，
+而不是只比较一个最好的短程点。
+
+**实验设计。** 从93.5%的MA第48轮检查点续训，保留2:3更新配比、
+原始reference和超参数；每48轮固定评测，完整报告至总432轮。
+第48轮有一次已披露的fresh Adam边界，此后原生保持状态。
+预定平台规则要求至少192额外轮、最近四点范围不超过2个百分点，
+且三个间隔没有至少0.5个百分点的新纪录。
+历史SAO92%仅作参考，不是同初始化、同预算的因果对照。
+
+**实验结论。** 最高97%，最后四点93/94.5/94.5/95%，终点95%，
+满足观测开发平台规则，但不是稳定97%或持续单调上升。
+终点对历史92%为+3个百分点、95%配对区间[0,+6.5]，
+未通过预先要求下界严格大于0的优势门槛。
+末期空策略95.5%，不能简单归结为Solver一直变差。
+来源：[完整曲线及审计](../runs/alfworld_ma_convergence_v1r4/FINAL_AUDIT.json)。
+
+### 实验4：97%的高点来自真实策略效用，还是权重、搜索与测量波动？（已完成诊断）
+
+**研究问题。** 区分一个保存的Harness有效、Solver能力提高、
+Engineer整个提案分布改善，以及单次高分的波动。
+
+**实验设计。** 固定W48/W144，与空策略、初始H0策略、P48/P144交叉，
+共八个系统、1600环境episode，使用原推理seed重测对角组合。
+不新增训练种子，不据此重新挑续训检查点。
+检查真实动作与提示、生成receipt、训练/选择/报告ID，并报告排除选择48题后的敏感性。
+
+**实验结论。** 原97%组合复测96.5%，原93.5%组合复测95%；
+新旧完整组合差+1.5个百分点、区间[-0.5,+4]，训练增益尚不明确。
+固定W144，新策略比空策略高5个百分点，10改善/0退化、区间[+2,+8]，
+排除选择48题后仍6改善/0退化，支持该自动Harness的实际开发集效用。
+固定旧P48时W48/W144都为95%；同组生成输入下合法提案5/8到8/8，
+但仍有低质量候选，不能宣称Engineer整体生成能力已经稳定提高。
+selection48全部在report200内，且97%检查点是看过完整开发曲线后选择的；
+复测和事后子集分析都不是新的独立测试确认。
+来源：[交叉验证](../runs/alfworld_peak97_crossplay_v1/COMPLETE.json)、
+[行为及数据重合审计](../runs/alfworld_peak97_crossplay_v1/BEHAVIOR_AUDIT_v2.json)。
+
+### 实验5：提高Engineer更新比重并统一协作校正，能否改善高点后的稳定性？（进行中）
+
+**研究问题。** 在既有联合学习框架内，旧2:3配比是否限制了协同学习与高点保持？
+检验的是一个调度候选，不是“联合训练是否优于非联合训练”。
+
+**实验设计。** 按用户要求从总144轮的97%点恢复双Actor/Critic、ValueNorm及原生Adam，
+保留原H0/W1 reference。每96轮由H64/W96次Actor更新变为H96/W96，
+即H更新增加50%，W更新次数不变；Critic随各自角色更新。
+消费轨迹由1280变1536（+20%），生成1536和环境768不变。
+同时将原Solver-only第三轮的单位队友权重改为bounded校正，
+因此结果不能单独归因于H更新频率。按冻结设计从source768续接，
+平台最低192新增轮从144起算，最早总336才有资格判断。
+
+**实验结论。** 已启动原生恢复与训练流程，尚无新主评测，结论未定。
+既不能说1:1已优于2:3，也不能说已经把97%变成更高平台。
+选择观察高点初始化的偏差和额外20%消费成本均须保留。
+来源：[冻结设计](../runs/alfworld_ma_simultaneous_from97_v1/DESIGN.json)。
+
+### 实验6：稳定候选在相同样本量下，是否仍优于交替SAO？（待开展）
+
+**研究问题。** 更高的绝对高度是否也意味着更高样本效率，而不是仅靠更多训练或更强初始化？
+
+**实验设计。** 在获得并冻结较好的长期候选后，对齐初始化或明确计入继承训练成本；
+预先区分消费角色轨迹、生成轨迹、环境episode和候选搜索/评测预算，
+在匹配预算点比较MA-SAO与交替SAO。已有SAO仅在合同匹配时复用，
+当前不因该问题额外启动SAO或多训练种子扫描。
+
+**实验结论。** 尚未开展，不能用当前长期高点或1536对1280的调度结果，
+声称MA-SAO在相同rollout下已经更好。它与实验3的长期高度问题是两个不同问题。
+
+### 工程实验：训练加速是否成立且保持既定更新流程？（已完成）
+
+**研究问题。** 能否降低实验墙钟，而不是通过少训练、截短上下文或改变奖励来“加速”？
+
+**实验设计。** 启用经过验证的FLA/Triton内核，仅降低固定reference存储精度，
+保留Actor/Critic FP32 master、32K上下文与原更新流程；
+进行完整原生梯度、内存和状态恢复验证，并分别测合成优化器与真实训练。
+
+**实验结论。** 合成稳态更新8.86倍，真实稳态轮次1.96倍，成功训练总墙钟1.68倍。
+真实轨迹长度及保存频率也影响墙钟，不能将8.86倍写成端到端RL加速，
+也不能把速度收益当作MA-SAO效果优越的证据。
+
+### 2026-10-07 15:04 UTC：明确后续三项优先级
+
+用户规定先完成固定Solver续训Engineer的SAO瓶颈检验，再完成高点起步的
+MA-SAO长期高度/稳定性检验，最后才开展WHALE的同样本量复现与评测。
+较低优先级的MA同预算分析和机制消融暂不插队。
+
+优先项1的H3已完成23/32 native step，仍无主评测成绩。
+一次新增192条Engineer轨迹不足以证明绝对上限；正、负结果都需要区分
+候选分布、保存策略效用和开发集不确定性。
+优先项2仍使用用户之前指定的真实高点：原曲线与冻结设计是97.0%、总144轮，
+而非本条用户提到的97.5%。不修改原始分数或检查点身份。
+正在等待的MA首块96轮已完整结束，核验原生Adam累计H160/W192次Actor更新通过，
+两个Critic状态也保留。H3实验完成并释放GPU后恢复同一MA协调器。
+最终MA研究同时参考本次固定W1新结果，不能无视更强SAO而只对比历史92%。
+
+优先项3尚未启动。WHALE预算需与明确的SAO阶段/初始化口径绑定，
+不能只匹配“1024”这个数而省略候选评分环境成本。
+如使用当前助手的可调用后端作为proposer，需授权入口、隔离会话、
+实际模型身份和token成本记录；强proposer替换的系统收益不能全归因于算法。
+已有WHALE适配尚无完整验证的基线结果，之前8-12小时顺利估计/12-24小时规划
+仅是条件性工期，并非完成或优势承诺。
+
+## 2026-10-07：固定W1继续Engineer完成，补齐SAO续训结论与完整实验报告
+
+**研究问题。** 固定历史较强W1，从H2再训练一个历史大小的Engineer阶段，
+能否改善候选质量和任务成功率，解决此前只检验Solver方向的证据缺口？
+
+**实验设计。** 从真实H2-step31 Actor/Critic继续32 native step、batch6、
+192条消费，前5步Critic预热；W1零更新。H2没有Adam，显式fresh Adam；
+使用修正普通SAO后端，无MA/KL/ValueNorm。只评最终extra32，不搜索中间终点。
+前后各8个匹配prompt/seed候选，selection24 mean@2、同一旧h2 incumbent
+与2个百分点替换门槛。新最好合法候选即使未被选中也必须主评。
+
+| 指标 | 续训前/对照 | 续训后/新候选 |
+| --- | --- | --- |
+| 合法候选 | 2/8 | 8/8 |
+| 八槽平均成功率 | 88.8021% | 89.5833% |
+| 最好新合法候选的选择分 | 93.75% | 93.75% |
+| 部署选择 | 旧h2 | 同一旧h2 |
+| 部署系统主200题 | 89% | 89%，同一物理报告别名 |
+| 旧h2对新最好合法候选 | 89% | 86.5% |
+| 空策略对新最好合法候选 | 86.5% | 86.5%，逐题行为不同 |
+
+**实验结论。** 格式合法性改善，但没有可靠的任务效果提升。
+候选均分差+0.78125pp，95%区间[-4.4271,+5.7292]；
+新最好候选对旧h2为-2.5pp，区间[-7,+2]，8改善/13退化；
+对空策略为0pp，区间[-4.5,+4.5]，10改善/10退化。
+前后部署和旧h2共用策略与物理评测，其零差异不能解释为两个模型统计等效。
+本次89%复测不覆盖历史92%，也不降低MA目标。
+与固定h2续训Solver的恢复后再退化结合，只能说明当前两种续训方案和追加预算
+没有可靠突破，不能声称Engineer/Solver完全不能学习或已证明SAO绝对上限。
+
+训练与成本独立审计通过：32 native/27 Actor/32 Critic，27次Actor梯度均非零；
+192条声明消费、198条记录生成、503089个训练生成token；
+1120个训练奖励episode、1176个选择/主评episode。
+六条额外生成来自异步预取，无法任意指定重复记录中哪一条实际被消费。
+所有候选、原生主评、哈希、选择别名和配对统计复核后，FINAL_AUDIT已持久化为passed。
+
+H3于15:58完成并释放GPU，原MA协调器恢复。16:19实查，首个96轮新MA原生块
+已完整保存，Actor Adam step H160/W192、Critic320/384审计通过；
+正在评新增48轮（总192轮）端点，尚无新完成成绩。原24小时墙钟不延长。
+WHALE尚未启动，不在报告交付时把整个研究目标标记完成。
+
+已整理独立的十二问题实验报告，保留SAO–GRPO限制、两个SAO续训方向、
+原始MA和负面消融、人工提示验证、旧MA完整432轮曲线、97%行为与交叉归因、
+新调度进行中状态、加速倍率边界及后续匹配预算计划。
+
+- [完整实验报告](./ALFWORLD_SAO_MA_SAO_EXPERIMENT_REPORT_2026-10-07.md)
+- [H3完整结果](../runs/alfworld_fixed_w1_h3_v1/COMPLETE.json)
+- [H3最终审计](../runs/alfworld_fixed_w1_h3_v1/FINAL_AUDIT.json)
+- [MA恢复收据](../runs/alfworld_fixed_w1_h3_v1/MA_RESUMED.json)
+
+## 2026-10-07：七小时交付窗口、MA早期下降及WHALE正式运行
+
+用户于16:37:12UTC要求：H3真正新候选200题及WHALE结果须在23:37:12UTC前完成，
+MA提供早期结果，之后可以继续。不得再以MA完整收敛为WHALE启动前提。
+已重新核验H3 `after_candidate` 原始200题、输入/策略/模型和SHA：173成功，
+86.5%，格式合法率100%，harness错误episode为0；不是旧h2的178/200别名。
+
+MA首个新96轮保存完整；每轮两侧都更新，Actor H160/W192、Critic320/384。
+总144/192/240轮带策略为97/93/92%，空为92.5/90.5/89%。
+总240相对父点-5pp，95%[-8.5,-2]，0改善/10退化；对历史92%为0pp，
+[-3.5,+3.5]，6改善/6退化。两份恢复端点原始200题及compact/SHA独立核验。
+新候选选择仍保持原门槛：总240最好新候选47/48、incumbent46/48，
+未多两题，保留总192已选策略。不能称已稳定提升或最终收敛。
+
+首次总240主评被本次pytest进程2379604创建的GPU上下文触发watchdog，
+发生在任何episode前；是我们的CPU测试隔离失误，非模型collapse。
+原协调器2059883退出，原失败及foreign_workload证据全部保留。
+后续CPU命令/测试入口均屏蔽CUDA，恢复只重试原矩阵，不重训、不重选。
+增强审计只接受相同配置、已绑定的特定故障及0旧rollout，相关23测试通过。
+原生续训协调器另存并核验运行，等待WHALE完整资源释放后接block02；
+其边界/恢复审计共35测试通过，保持原24h截止，不重置Adam。
+
+WHALE v7曾完成224个Solver episode/7个RSFT批，随后将合法零奖励的
+AGENT_INVALID_ACTION误判为基础设施错误。旧23727.45秒、3553逻辑成功调用、
+112663个RSFT响应token、60个Adam小步保留；没有MH或最终200题，
+不能当成完整基线。现在区分模型无效动作与真正基础设施错误，并在校验前保存报告。
+
+v8启动在旧node4私有评测目录上遭遇node3读取权限错误，未进入smoke/研究训练。
+v9将同字节输入复制给现有research group1008读取，没有改旧目录权限或证据。
+它实际完成32K context/4096 response、warm Adam两步后恢复第三步、
+完整FP32/Adam指纹、有限梯度及vLLM重载验证；1822.47秒，0研究episode。
+FLA0.5.2/Triton3.7.1只注入learner；缺causal-conv1d的统一warning
+不等于FLA chunk kernel未使用，实际模块逐层分别选择kernel。
+
+为避免384候选重复启动环境且串行评分，v10只调整host评分路径：
+同一迭代共享Solver、独立命名原生worker、最多8候选并发，所有slot/seed、
+反馈边界和官方Pareto选择保持。56测试/48subtest通过；真实两个worker
+同两题共4个显式无模型调用的CPU episode也通过，不能计作模型分数。
+比较完整非评分AST、native配置、模型及依赖后显式复用v9原生组件证明，
+不是伪造v10的新GPU smoke；组件门控收据与原GPU证据都绑定SHA。
+
+node3正式v10服务已核验active，原W0+h0的初始开发10题结果6/10=60%。
+该10题不是core200，也不是训练后效果；不得外推为WHALE最终性能。
+计划两周期各320 RSFT+192 MH，合计640/384，固定本地H0 proposer、无外部API。
+22:52:12UTC后不启动新批/新迭代；若不足预算，必须明确partial，
+不能冒充“性能差提前停”。性能停止只在完整周期后检验预声明的20pp下降。
+仍未取得WHALE最终200题结果。MA会在其原始200题核验及双节点释放后自动继续。
+
+论文级报告同时补充真实本地SAO实现：native路径gamma=lambda=1；
+不能把未调用的length-adaptive辅助函数写成已启用。名称不构成完整原论文复现。
+全部当前结果仍属单训练分支、重复开发评测，不改写历史92%目标。
+
+- [MA早期结果](../runs/alfworld_ma_simultaneous_from97_v1/EARLY_RESULT.json)
+- [MA原生续训协调器](../runs/alfworld_ma_simultaneous_from97_v1/resume_after_whale.py)
+- [WHALE v10冻结设计](../runs/alfworld_whale_sao_matched_v10/DESIGN.json)
+- [原生GPU证明](../runs/alfworld_whale_sao_matched_v9/gpu-smoke/SMOKE_COMPLETE.json)
+- [组件一致性与验证](../runs/alfworld_whale_sao_matched_v10/COMPONENT_VALIDATION.json)
+- [论文级报告](./ALFWORLD_SAO_MA_SAO_EXPERIMENT_REPORT_2026-10-07.md)
+
+### WHALE真实吞吐不足及原生64-episode边界
+
+v10首批32episode为25成功、552个成功调用、9个Adam小步。
+原生计时1250.31秒在最终串行8-rank文件SHA之前取值；
+请求18:06:59到COMMITTED18:34:05约1626秒，不能把1250当完整墙钟。
+第二批27/32成功、555个成功调用、9个Adam小步也已完整保存。
+19:01左右在第二份native COMMITTED后暂停协调器342251，64条研究样本保留，
+没有第三份报告；不把暂停记录成算法退化，也不抛弃这两批成本。
+
+v11只做等价执行修正：将全局64个成功调用的小批分片至8个FSDP rank；
+每rank以全局response-token数/8归一化，确保平均梯度仍是原全局token均值；
+padding调用有真实forward但loss-mask为0，并独立计入物理计算量。
+2-rank CPU FSDP在1/3/5/7条不等长调用、跨小批和尾部padding下，参数/Adam/
+loss/token均通过数值对比。首次测试Gloo选择了不可连通的节点地址，改为
+本机loopback后通过，未改变目标。46项测试与35subtest通过。
+
+完整文件SHA改为并行，不跳过任何字节：真实8份旧rank-state在39.58秒复算，
+与全部原摘要一致。另将重复的空载vLLM重载检查改为实际下一次使用后的验证；
+使用前仍标pending，不制造成功式回退。计时移至最后哈希之后。
+v11固定复用64条原始报告与最后FP32/Adam，剩576条和384个MH提案预算不变。
+新source和config冻结，新的真实32768/4096 warm-Adam门控在node4运行，
+还要求对v9合成loss与grad norm的relative1e-3/absolute1e-6检查；
+在通过前不得把新的训练路径或完整预算标记成功。
+原截止/性能停止规则不因吞吐不足而改写，存在无法在窗口内满额的风险，
+必须据实报告实际样本量与主200，而不是把时间限制伪称性能早停。
+
+### WHALE v11数值门控结果与v12批量修订
+
+v11真实32K/4096、warm Adam、FP32恢复/vLLM重载通过，1210.03秒。
+但预声明的跨多步relative1e-3/absolute1e-6门槛失败，原失败收据未删除或覆盖。
+随后另行事前声明的固定权重全梯度probe不做optimizer step：原路径重复
+gradient relative RMS0.0027486333，分片相对参考0.0032532655；
+规则`min(.01,max(.001,2×repeat))`给出0.0054972666，三次loss逐值相同，
+该78.19秒诊断通过。结论限定于同权重目标与梯度误差，不称多步轨迹等价。
+
+v11恢复原64题和Adam18，连续保存三个32题批，最终160题/Adam43。
+新批native elapsed686.26、474.26、447.63秒均含完整文件hash。
+曾试图在128题边界暂停，但第5批报告已出现，守卫拒绝丢弃后来样本；
+随后等待第5份native保存才暂停。该拒绝证据保留，没有回滚到128题。
+
+因实际模型/状态I/O仍占主要时间，在未看到任何MH或最终200分数前冻结v12：
+第一段32/32/32/32/32/160，第二段160/160，保留160条前缀和Adam43，
+计划仍为640个Solver episode与384个MH提案、320/640题处交替。
+段内online刷新频率改变，必须作为学习超参数修订披露，不能叫纯运行时等价。
+环境并发32→64；H0和Solver各8个replica、每模型每GPU显存0.4，
+分端口跨整个MH段常驻，迭代反馈/选择顺序和Pareto规则不变。
+
+双模型真实服务门控通过：128并发请求、每个32767prompt+1生成token，
+首token逐请求不同，耗时293.05秒。0研究环境episode、0optimizer update，
+128次合成调用单列。六个native计算/恢复函数AST与分片helper SHA不变，
+显式复用v11原生证明而不是伪造新的native smoke。48测试/38subtest通过。
+v12续训/最终审计脚本还用真实160题/Adam43前缀验证，并确认错误batch布局被拒。
+RSFT准入截止22:52:12不变；MH迭代准入改为23:12:12，主评保留25分钟。
+用户23:37:12硬截止不延长，尚无WHALE最终200或完整交替结果。
+
+- [v11门控修订](../runs/alfworld_whale_sao_matched_v11/VALIDATION_AMENDMENT.json)
+- [160题真实原生边界](../runs/alfworld_whale_sao_matched_v11/THROUGHPUT_PAUSED.json)
+- [v12冻结设计](../runs/alfworld_whale_sao_matched_v12/DESIGN.json)
+- [128路双模型服务证明](../runs/alfworld_whale_sao_matched_v12/DUAL_SERVING_VALIDATION.json)
+
+### WHALE首个完整320+192周期完成，第二周期继续
+
+v12第一个160题后缀134成功，2495个成功调用、79092个响应token，
+39次原生更新将Adam43连续推进到82，完整native751.58秒。
+独立核验前后全部320题的ID/seed、真实成功调用与原生步数；
+39个梯度norm均有限非零，范围[0.3391,1.8376]，没有优化器重置。
+
+22:14左右首个MH段完成8次适应性迭代/192个提案，125合法并实际评分，
+104组不同actions；55个输出截断、11个缺完整patch标记、1个语法错误。
+全部slot的seed与上一迭代开发反馈逐一核验通过。开发从原6/10升至9/10，
+但该9/10在本段搜索之前已有，8次选择均保留初始h0；不能把RSFT后的改善
+归于MH。47个合法候选的逐题reward/turns与h0相同，仍保留实际评分成本。
+未触发预声明20pp退化停止，第二个320题Solver阶段继续。
+主200仍未产生，完整640/384预算尚未完成，硬截止和准入边界不变。
+
+- [320题原生核验](../runs/alfworld_whale_sao_matched_v12/NATIVE320_AUDIT.json)
+- [192提案独立核验](../runs/alfworld_whale_sao_matched_v12/MH0_AUDIT.json)
+
+### WHALE实际640/216边界：同预算要求尚未完成
+
+第二个Solver段两个160题批分别130和135成功，Adam82→121→159；
+native完整耗时729.60和737.92秒。所有640条真实报告和159个连续原生步数核验，
+v12新增116次更新的grad norm均有限非零，范围[0.3391,1.8544]。
+
+第二MH段只在23:12:12准入截止前开始了一次迭代：24提案、6合法，
+开发10/10，依旧保留h0。随后按冻结的报告预留规则停止，
+23:14左右冻结最终640题Solver+h0并开始主200，没有看主评后再选模型。
+实际640个Solver episode、216个提案、131个合法；一个完整交替周期，
+加第二个完整Solver段和1/8个MH段。距384提案目标差168，
+不能称完成用户要求的同样本复现，也不能说是性能差提前停止。
+主200在进行中；该时间/预算失败必须和最终准确率一起交付。
+
+- [640题与原生连续性核验](../runs/alfworld_whale_sao_matched_v12/NATIVE640_AUDIT.json)
+- [实际搜索预算核验](../runs/alfworld_whale_sao_matched_v12/SEARCH_BUDGET_AUDIT.json)
+- [主评前冻结的模型/策略](../runs/alfworld_whale_sao_matched_v12/execution/FINAL_SELECTION.json)
+
+### WHALE主200完成：81.5%，但未完成要求的完整同预算复现
+
+主200原始结果在23:31UTC前完成并独立核验：163/200=81.5%，
+strict197为160/197=81.2183%。相对历史SAO W1+h2的92%，
+差-10.5pp，配对95%[-16.5,-4.5]，9改善/30退化；
+对W1+h1的90.5%差-9pp，[-15.5,-2.5]，14改善/32退化；
+对原W0+h0的85%差-3.5pp，[-8.5,+1]，8改善/15退化。
+开发10/10不能替代主200，未得到超越原系统或SAO的证据。
+
+最终实际640个Solver episode、216个提案（131合法、85无效），
+529个成功episode提供9972个SFT调用、316420个响应token、159个Adam小步。
+实际物理forward17744、响应token位置562943，含23个masked padding调用。
+环境成本640训练+1330MH评分+10初始开发+200主评=2180episode；
+Solver生成1411074token，proposer生成693416token、prompt2681646token。
+v12执行7989.83秒但继承160题旧前缀，不是完整训练从零的墙钟。
+
+原始任务/seed/token、最终选择先于评测、全部640条原生连续性、
+216个适应性提案及成本、原始200与配对统计均已核验。
+最终审计明确sample_budget_fully_consumed=false、主评按时完成=true。
+**未完成640/384同预算复现**，少168个提案；时间截断不是性能停止。
+双节点资源真实释放并写入MA的SHA绑定边界，原生续训协调器接续，
+不重训首块、不重置FP32/Adam/ValueNorm、不延长原24h截止。
+
+- [WHALE最终核验结果](../runs/alfworld_whale_sao_matched_v12/RESULT.json)
+- [原始200题](../runs/alfworld_whale_sao_matched_v12/execution/final200/report.json)
+- [最终审计](../runs/alfworld_whale_sao_matched_v12/TERMINAL_AUDIT.json)
+- [MA资源交接证据](../runs/alfworld_ma_simultaneous_from97_v1/WHALE_RESOURCE_BOUNDARY.json)
+
+23:31 UTC，MA恢复边界通过，block02两个角色的续训已启动；
+原首块不重训，原24小时截止保持。当前公开MA主评仍为97%→93%→92%，
+不能在新端点评测前宣称下一块改善或平台更高。
+
+## 2026-10-08：四项机制消融修订与冻结代码验证
+
+用户要求不再追加分阶段SAO，而将第四项改为“每轮均同时更新Engineer和Solver”。
+新研究为完整MA、去队友权重、去协作上下文、去ValueNorm、每轮共同更新，共五配置。
+上下文和ValueNorm不合并；训练只用种子1000043，仍以原始200题和固定144轮为主终点。
+
+新的调度消融只改变Engineer更新开关，不改采样顺序、第三轮unit队友矫正和Critic输入。
+每臂均1152个共享episode、2304条生成轨迹；完整臂和三项删除消费H/W768/1152条，
+Actor93/141次、Critic192/288次；每轮共同更新消费1152/1152条，
+Actor141/141次、Critic288/288次。因此总消费增加20%，不冒充同更新量或同算力。
+过去从97%出发的每轮更新还改了第三轮队友权重，不能代替本次单一机制对照。
+
+新源快照从原v1的319个已核验运行文件复制，仅覆盖指定运行文件和测试，新增控制程序。
+冻结源上115项CPU测试和3个子测试通过；尚不代表新的原生门控或正式训练已完成。
+历史路线实际schema核查通过：H0/W1 Actor、1152条有序输入、48+96轮更新预算、
+原始194/200报告均吻合。历史MA64 Critic/ValueNorm、round48的Adam重置、
+24对16个候选槽和历史峰值选择仍是差异，不把旧97%当作新消融的因果对照。
+
+完整MA必须先完成、汇报和审查，然后才放行四组消融；低于或等于94%时标记较大历史差距，
+核查实际路径而非按分数择优重跑。新程序包含资源稳定性门控、错误停止、信号记录及共享40h上限。
+旧attempt02已经在零开训状态取消；原22轮中断及全部成本仍保留。
+最近的17:43 UTC只读资源检查仍显示双节点被占用，未停止其他人的任务。
+
+继续使用已实测约1.955倍的训练加速，不声称新测得额外加速，不采用改变输出的更快生成布局。
+资源可用后预计先3--4小时获得原生检查和完整MA结果，再11--16小时做完四组消融与评测；
+总计约14--20小时，不包含排队和基础设施恢复时间。
+
+- [修订实验协议与预算](../runs/alfworld_ma_mechanisms_single_seed_v2/PROTOCOL.md)
+- [冻结代码测试记录](../runs/alfworld_ma_mechanisms_single_seed_v2/CODE_TESTS.log)
+- [旧准备取消回执](../runs/alfworld_ma_mechanisms_single_seed_v1_attempt02/CANCELLED_BEFORE_TRAINING.json)
+
+### 18:11 UTC：附着式控制程序与资源等待已实际运行
+
+冻结输入、模型权重和每臂单一配置差异的完整复核通过，代码核验已落盘。
+node3实际UID1009/GID1008的CUDA隐藏CPU服务核验通过，共享目录可写；
+这项检查没有GPU计算、训练或环境episode。
+
+18:10:44 UTC启动控制程序，PID3224405；18:11验证进程身份及有效心跳。
+当前`waiting_for_resources`，两节点未同时释放，新的原生和正式训练开始回执均为0。
+程序等待稳定窗口后先做两次原生检查，再只运行完整MA；完成后停在结果/路线复核门，
+由助手汇报和核查，再放行四组消融。资源等待不等于已经开始训练。
+
+- [代码及输入核验](../runs/alfworld_ma_mechanisms_single_seed_v2/CODE_VALIDATION.json)
+- [远端执行身份核验](../runs/alfworld_ma_mechanisms_single_seed_v2/REMOTE_EXECUTION_PREFLIGHT.json)
+- [监控启动核验](../runs/alfworld_ma_mechanisms_single_seed_v2/MONITOR_START_AUDIT.json)
+- [实时状态](../runs/alfworld_ma_mechanisms_single_seed_v2/PROGRAM_MONITOR.json)
+
+### 2026-10-09 02:37 UTC：原生调度验证通过，正式MA遭外部SIGTERM
+
+稳定空闲门控通过后，完整MA与每轮共同更新分别完成六轮原生检查。
+完整臂H/W Actor1/3、Critic8/12、消费32/48；每轮共同更新3/3、12/12、48/48。
+两项审计均通过，合计96个共享episode、192条生成/176条消费轨迹；
+这不是组件性能比较，也没有用校准检查点初始化正式臂。
+
+正式完整MA在02:20:30启动，02:22在模型加载阶段中断。
+无已提交正式指标、轨迹/环境回执或检查点，不能报告训练分数或伪称Adam续训。
+node3在02:22:19.718捕获UID0/PID1148490的SIGTERM；同一时刻sudo日志记录
+`hongyuanzhu`账号以root执行指向MA训练模块的Python命令，早于我们自己的清理操作。
+该账号随后在02:26启动12K上下文压力测试，02:31确认占用两节点全部16张GPU。
+不能判断是人工、自动脚本还是另一会话发起；node4发送者及以往中断来源仍不确定。
+
+原控制程序已退出，故障、成本、信号链和通过的原生结果全部保留，未自动重启。
+02:37启动独立只读资源观察，不改动其他任务，也不在检测到空闲时直接绕过故障门。
+正式恢复仍需稳定、无清理冲突的资源窗口和显式恢复记录。
+
+- [中断结果及原生成本](../runs/alfworld_ma_mechanisms_single_seed_v2/full/INTERRUPTED.md)
+- [来源证据与归因限制](../runs/alfworld_ma_mechanisms_single_seed_v2/full/SIGNAL_PROVENANCE.json)
+- [中断报告核验](../runs/alfworld_ma_mechanisms_single_seed_v2/full/INTERRUPTION_REPORT_AUDIT.json)
+- [只读资源观察](../runs/alfworld_ma_mechanisms_single_seed_v2/post-interruption-watch/PROGRAM_MONITOR.json)
+
+### 2026-10-09 02:55 UTC：新窗口触发显式恢复准备，未重复原生校准
+
+只读观察在02:45:42取得连续三次双节点空闲后退出，02:47和02:54复查仍无GPU计算进程。
+既有用户授权是释放后继续，因此准备一次独立v2 attempt02，不清除原故障或启动回执。
+并未取得排他预约，亦未声称此前外部终止原因已经修复；启动前仍需稳定资源门控。
+
+恢复驱动23项针对性测试通过，覆盖14个输入的位置等价、原生证据继承、
+原始绝对截止时间、已开始尝试拒绝重放、证据篡改拒绝和失败后不再重试。
+只改变运行目录及服务唯一后缀，冻结训练源码不动，不改变种子、优化器初始化、
+数据、角色机制、候选数量或测评协议。复用两项原生检查的96个episode证据，
+但不使用其检查点；旧v1与v2失败尝试仍是额外成本，不能当作Adam续训。
+
+本条记录的是准备阶段，尚无正式新训练成绩。完整MA完成后仍停在结果审阅门，
+不能为了追求97%而按成绩换初始化或重跑。截止时间仍为2026-10-10 10:10:44 UTC。
+
+- [恢复验证](../runs/alfworld_ma_mechanisms_single_seed_v2/RECOVERY_CODE_VALIDATION.json)
+- [新空闲窗口证据](../runs/alfworld_ma_mechanisms_single_seed_v2/post-interruption-watch/RESOURCE_WINDOW.json)
+
+### 2026-10-09 03:00 UTC：独立v2 attempt02启动输入复核和资源门控
+
+实际准备通过：14个JSON输入、10份角色配置保持科学等价，继承原生检查和冻结源摘要，
+历史1152条有序训练输入复核通过，原生重执行episode为0，原绝对截止时间未改变。
+node3既有训练服务接口以UID1009/GID1008完成新目录读写检查；没有改动sudo授权或其他用户任务。
+
+02:59:17启动附着式恢复程序，控制PID3401882，有界监督PID3401880。
+03:00:23核验时仍在输入摘要复查，尚无正式full/STARTED或首轮提交证据；
+首轮通知观察PID3402105已启动并有心跳。后续自动等待三次双节点稳定空闲再运行完整MA。
+没有重新执行原生校准，没有把启动中的模型误报为训练结果，也没有放行四个消融。
+
+- [恢复协议](../runs/alfworld_ma_mechanisms_single_seed_v2_attempt02/PROTOCOL.md)
+- [实际准备回执](../runs/alfworld_ma_mechanisms_single_seed_v2_attempt02/PREPARATION_AUDIT.json)
+- [启动存活核验](../runs/alfworld_ma_mechanisms_single_seed_v2_attempt02/MONITOR_START_AUDIT.json)
+
+### 2026-10-09 03:08 UTC：用户取消再次被kill后的恢复授权
+
+用户在03:07:51 UTC明确表示，若对方再次kill我们的任务，可以不用重启。
+当前正常运行的attempt02不停止；如果再次终止，则结束剩余队列，保留日志、
+已有检查点和实际成本并汇报，不自动重启，也不另建显式恢复尝试。
+正常完成完整MA并通过结果审阅后，仍可按既有方案运行四项消融。
+现有零自动重试设置已核实，本次没有修改冻结训练代码或科学配置。
+
+- [持久用户指令](../runs/alfworld_ma_mechanisms_single_seed_v2_attempt02/NO_RESTART_AFTER_TERMINATION.json)
+
+### 2026-10-09 03:18 UTC：attempt02在两轮Critic预热后被SIGTERM终止，不再恢复
+
+正式开始回执为03:05:07 UTC。双方在03:12提交首轮，03:13:01与03:13:08分别提交第二轮；
+本地协调器03:13:12.386记录signal15，03:13:23持久化失败并退出。
+首轮通知虽然成功，其含义仅为中间里程碑，不能覆盖后来发生的中断。
+
+最终核验H/W均为2个已提交轮次、0次Actor更新和4次Critic更新，仍处于Critic预热。
+保留22个共享环境结果，按轮为8、8、6；44条生成角色轨迹中32条进入已提交更新。
+已记录生成action tokens为Engineer57564、Solver17102；
+已消费轨迹中的action tokens为42300、14313。未落盘的在途成本未知，不能记为0。
+没有新HF检查点、没有原200题成绩、没有正式消融结果，不能作算法优劣结论。
+
+03:17自有监督/控制/角色进程和观察进程均确认退出，远端自有服务关闭，两节点资源已释放。
+本次信号发送者未识别，不复用前次账号归因；远端终止记录可能属于本地退出后的自有清理。
+依照用户03:07:51指令，结束剩余队列，不再重启、另建恢复尝试或启动等待空闲后续训的观察。
+所有日志、两项已通过原生校准及此前失败成本保留，没有修改其他用户任务。
+
+- [中断结果报告](../runs/alfworld_ma_mechanisms_single_seed_v2_attempt02/full/INTERRUPTED.md)
+- [成本及信号核验](../runs/alfworld_ma_mechanisms_single_seed_v2_attempt02/full/INTERRUPTED.json)
+- [终止处置回执](../runs/alfworld_ma_mechanisms_single_seed_v2_attempt02/STOPPED_BY_USER_POLICY.json)
+
+### 2026-10-09 08:08 UTC：按新授权实现12轮配对断点和空闲后恢复，尚无正式新结果
+
+用户07:30重新授权每12轮完整保存，成功提交下一份后删除上一份，保留评测节点；
+训练被kill后等待两节点连续空闲30分钟再提交。07:40进一步明确首次空闲即可启动，
+不必先等30分钟。两条新指令覆盖旧暂停/不再恢复限制，旧指令及所有中断成本保留。
+
+周期保存包括双方同一已提交轮次的Actor/Critic、原生Adam、ValueNorm、
+worker RNG/LR和已提交输入/指标/调度游标。新配对先完成文件大小、元数据摘要、
+优化器采样指纹/步数及ValueNorm/调度检查，再原子提交LATEST，最后删除旧恢复代及废弃半成品。
+这些检查不是所有大型tensor逐字节重读；载入时另执行原生优化器指纹比对。
+保存时不重启健康的推理服务；真实中断后重新启动推理服务，废弃未提交异步工作并计成本，
+不宣称逐位相同的采样续跑。96/144轮HF Actor和Critic都保留以兼容原审计。
+
+第一版113项测试通过，但原生等待器仍未获得可用窗口。我们在零原生attempt状态下
+主动结束等待，补齐最终断点已完成但完成回执缺失、半成品回收和分布式任务启动期门控。
+第二版[120项针对性测试](../runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/CPU_VALIDATION.log)
+通过，含真实CPU原生DCP/Adam/RNG恢复后下一步更新一致性，以及四种角色/调度的计数恢复。
+
+新的[附着式控制程序](../runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/BOOTSTRAP_STARTED.json)
+正在输入绑定，后续为实际12轮保存、主动停止自有校验进程、恢复至15轮的原生验收。
+验收权重不得作为正式初始化。此时仍没有新144轮、200题或四项消融结果，
+不能把系统测试写成算法性能证据。没有暂停、终止或修改其他用户进程。
+
+### 2026-10-09 08:37 UTC：用户主动暂停原生恢复验收，后续改为至少两小时冷却
+
+08:34:57.344 UTC用户要求暂停并改成两小时间隔。向身份核实后的自有主控制PID3514619
+发出SIGINT，使其退出并清理自有角色，不走SIGTERM后的30分钟重试路径；
+控制器以130退出。只读观察PID3518079亦停止。node3对应自有服务为inactive/not-found，
+MainPID=0；本地与远端之后的GPU检查均无计算进程，没有修改其他用户工作。
+这是主动暂停，不应统计成一次未知外部kill。
+
+原生校验attempt-0001最终提交H/W各12轮，Actor更新5/9、Critic更新16/24，
+96个共享环境结果、192条生成角色轨迹；未落盘在途工作仍未知。
+当时正在完整原生保存，但LATEST配对提交不存在，因此**这些12轮不能作为已可恢复的进度**。
+未删除部分保存、旧attempt或成本；下一次必须重新完成12轮保存/中断/恢复至15轮的原生验收，
+不能把这次校验权重或其未完成保存用于正式初始化。
+
+新时序为首次不早于10:34:57.344 UTC，且两节点新鲜资源检查通过；
+以后非计划中断至少冷却7200秒再检查资源，而非旧31次检查/30分钟连续空闲规则。
+用户指令按固定最低间隔解释，不要求两小时持续空闲，校验计划内重启也不额外等待两小时。
+每12轮保存、同代双角色验证、滚动删除及96/144保留不变，原绝对截止时间不延长。
+新控制器与最新指令独立持久化，原科学/执行快照、既有授权及输入摘要不覆盖。
+
+- [用户最新指令](../runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/USER_PAUSE_AND_DELAY.json)
+- [暂停实际状态及成本](../runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/PAUSED_STATE.json)
+
+08:50更新：两小时执行层控制器在冻结rolling12-v2运行时上通过30项针对性测试，
+包括时间边界和异常恢复门控；不是新的大模型原生恢复成功证据。
+已启动并核实附着式等待PID3543367，心跳正常、无原生子进程，
+原attempt仍为0001，正式full/STARTED仍不存在。等待到10:34:57.344 UTC后才进行资源准入，
+继而重新执行原生验收；校验通过后仍须报告、再提交正式MA。
+该等待器不会每两小时打断健康训练，也不替代每12轮完整保存。
+
+- [30项测试及摘要绑定](../runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/TWO_HOUR_CODE_VALIDATION.json)
+- [实际等待启动核验](../runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/TWO_HOUR_STARTUP_VERIFIED.json)
+
+### 2026-10-09 11:22 UTC：两小时等待后完成真实原生恢复验证，准备提交正式full
+
+延迟窗口10:34:57.344 UTC到期后，两节点均通过资源/启动器准入。
+attempt-0002从0训练至12，完成双角色完整配对保存后主动停止；
+attempt-0003实际载入12轮Adam/ValueNorm/RNG及已提交输入游标，再训练至15。
+原生门控11:16:20 UTC通过，控制进程正常退出，远端两次自有服务已为inactive/not-found。
+
+独立检查加载/完成回执及指标摘要匹配，双方恢复next_sample_index=96，
+未重置Adam、未重复预热，最终global_step精确为0至14。
+H/W Actor步数7/12、Critic步数20/30、消费轨迹80/120，与预声明预算一致。
+现仅有15轮最新大型原生状态；12轮旧代及首次暂停半成品已不在恢复目录，
+但轻量历史、所有原始attempt、三份COST记录均保留。
+
+三次attempt分别记录96、96、24个新共享结果，合计216；生成角色轨迹合计432。
+120是后两次构成的成功逻辑路径，不是包括暂停在内的全部物理成本。
+未落盘的在途工作仍未知。校验权重不进入正式MA，不能由此作算法优劣判断。
+
+11:22新鲜检查双节点没有GPU计算进程或识别到的分布式启动器。
+按既有授权进入完整MA控制实验，仍从共同H0/W1及普通SAO raw Critics出发，
+fresh Adam/ValueNorm、seed1000043、固定144轮主终点与96轮诊断、12轮完整保存；
+完整结果审阅后再启动四项消融。未改变绝对截止时间、两小时中断冷却或科学配置。
+
+- [原生门控](../runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/ROLLING_NATIVE_GATE.json)
+- [校验结果说明](../runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/rolling-canary/RESULT.md)
+- [报告和新鲜资源检查](../runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/NATIVE_GATE_REPORT_AND_ADMISSION.json)
+
+### 2026-10-09 11:28 UTC：正式full144原生训练启动，未产生最终评测
+
+full/attempts/attempt-0001在11:26:14.504 UTC启动，控制PID3626493，
+恢复位置0，使用共同H0/W1与普通SAO raw Critics，不载入原生校验或历史97%的权重状态。
+11:28核实本地控制存活、远端自有服务active/running（MainPID1302169），
+双方指标文件尚无已提交轮次，当前为模型加载阶段。
+
+预算和机制开关不变：144轮主终点、96轮诊断、batch8、seed1000043、
+逻辑生成1152个共享episode/2304条角色轨迹，H/W Actor步数93/141、Critic步数192/288。
+这些是预声明最终预算，不是当前完成量。每12轮完整保存、两小时中断冷却，
+完整控制先报告再启动四项消融；所有中断额外成本均保留。
+
+此前实际原生保存测得12轮H/W约258.8/259.1秒，15轮约289.9/269.5秒，
+只包含各角色保存阶段，不代表启动、HF导出、完整训练或评测总耗时。
+独立检查滚动删除日志显示，首次暂停半成品和旧12轮代均在新完整配对提交后被删除，
+最终15轮状态及轻量历史、全部原始attempt成本仍在。
+
+- [正式原生启动核验](../runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/FULL_NATIVE_START_VERIFIED.json)
+- [正式进度心跳](../runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/PROGRAM_MONITOR.json)
+
+### 2026-10-09 15:39 UTC：训练完成后144轮selection中断，按两小时策略恢复评测而非重训
+
+144轮共同训练完整结束，14:22:34训练审计通过1152个共享episode；
+最终原生配对断点和双方COMPLETE回执均已验证。96轮评测已有完整结果。
+15:01用户询问时，控制PID3626493正在运行144轮的48题Harness筛选。
+随后控制和评测PID3792500均退出，附着式shell返回1；推理日志约15:03:12同时结束，
+原控制与评测均没有写出FAILED、RELEASED或Python traceback。
+15:04:50首次核验两进程不存在、两节点释放。信号/发送者仍未知，不以时间相关性作外部归因。
+
+144轮原8个提案和原incumbent/no_patch均保留，重复patch去重后9个独立Harness，
+应完成432个selection episode。原始日志包含144次开始、82个完整结果，
+62个在途episode没有完成结果；未生成任何完整Harness report或144轮SELECTED。
+恢复绑定344个既有证据文件，复用全部82条完整结果、原候选和原96轮结果，
+不重训、不增抽候选、不重跑完成题、不按成绩决定重试。
+
+新的评测层仅扩展“控制进程已退出但未写终止回执”的可审计恢复入口，保留原ReadError入口，
+并复用既有逐episode缓存和严格任务/seed/模型/Harness一致性检查。
+只在新的空闲检查通过后写明确标记postmortem的资源释放观察，不将其冒充原进程finally回执。
+同时解决了rolling目录转换与旧全路径身份比较不兼容的审计问题，
+只允许由原spec及已记录PREPARED确定的路径/恢复元数据变化，学习率/seed等变化仍拒绝。
+从原frozen源码复制的独立评测revision通过67项测试及13项子测试，原训练快照不改。
+
+新等待器遵循保守的15:04:50+7200秒门槛，即最早17:04:50 UTC，
+且两节点必须重新通过资源/启动器准入。15:36时两个节点已有其他分布式任务，
+没有暂停或修改它们；到期仍占用会继续等待。
+15:39已核验自有等待PID3819570及信号跟踪PID3819566存活，无GPU子进程，
+尚未创建恢复评测attempt-02。此控制只恢复剩余selection并进行原main200，然后汇总/审计完整MA；
+四项消融仍需实际完整结果报告后才能放行。原绝对截止时间不延长。
+
+- [固定中断证据及恢复时序](../runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/evaluation_resume01/SCHEDULE.json)
+- [实际等待启动核验](../runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/evaluation_resume01/STARTUP_VERIFIED.json)
+- [67项冻结运行时测试](../runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/evaluation_resume01/CPU_TESTS.log)
+
+### 2026-10-10：完整MA144固定终点93.0%，历史路径与原始失败轨迹完成核验
+
+05:15 UTC资源准入后，仅恢复原144轮selection的未完成部分。
+82条已完成结果逐字节复用，原8个提案不变，7个有效；
+05:40 UTC选定proposal01并冻结，随后main200于05:55 UTC完成。
+96轮诊断为180/200（90.0%），同一Solver空Harness为178/200（89.0%）；
+144轮预声明主终点为186/200（93.0%），空Harness为179/200（89.5%）。
+不在96和144之间按main200成绩择优。
+
+selection最终432个逻辑episode、494次物理开始，差额为首次中断的62个未完成尝试；
+复用82条完整结果、重复完成题0、新增候选0。保留原不完整尝试及未知在途token成本。
+正式训练仍是唯一一次144轮、1152个共享episode；没有因评测/报告故障重训。
+原生恢复校验的216个物理共享episode及更早失败成本是额外开销，不计入正式逻辑预算。
+
+原评测恢复控制返回1的准确原因是CPU失败样例报告读取了历史紧凑摘要；
+摘要每题只含身份、reward、tokens，没有messages。历史原始matrix和200条完整轨迹尚在，
+已验证原matrix、固定Solver/Harness，以及原始报告的紧凑投影与97%摘要完全相同。
+新的报告专用快照仅修改历史轨迹解析与审计复用，不改既有训练/评测快照。
+67项针对性测试在工作树和精确报告快照均通过，旧FAILED及所有已评分文件摘要保持不变；
+旧历史路径审计保留，新的复核独立落盘。没有伪造轨迹、忽略失败题或放宽原始消息要求。
+
+新93%对历史97%：新系统改善1题、退化9题，差−4个百分点，
+配对问题bootstrap95%区间[−7,−1]个百分点。历史差异包括已训练MA64 Critics/ValueNorm、
+48轮处Adam重启、24/16提案机会和开发集峰值/固定终点之别；
+Actor起点、1152条有序训练数据及声明的MA段更新预算已核对。
+这些差异不是已识别的单一原因，不能据此归因某一组件或声称跨种子显著性。
+新系统14个失败中12个重复相同行动至少4次，13个达到50模型调用；
+历史6个失败中对应为6和5。9个正向与1个反向差异题均披露，
+示例270、329、342、356按固定规则选择；反向题为305。
+
+四项消融仍未完成，不能写成“所有组件均必要”。原10:10:44 UTC截止时间不延长；
+06:12时两节点空闲、剩约4小时，后续只能在原窗口内继续推进并保留断点。
+
+- [完整MA结果](../runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/RESULT.md)
+- [历史路径复核](../runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/BASELINE_PATH_AUDIT.json)
+- [原始配对失败样例](../runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/failure-cases-vs97/CASES.md)
+- [独立CPU报告恢复证据](../runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/full/postprocess_resume01/COMPLETE.json)
+
+### 2026-10-10 06:18 UTC：报告完整基线后启动without_peer，仍服从原截止时间
+
+06:15已完成并记录93%完整基线的结果/路径审查和报告放行；
+原评测的1082个固定文件重新验hash、四份端点matrix及82条缓存复用均通过独立核验。
+基线发布版本的状态/日志/算法文档另存摘要相同的只读证据副本，不因后续状态更新丢失原版本。
+
+首项without_peer由原冻结rolling12-v2代码及已验证的两小时驱动启动，
+06:18检查控制PID4062818、本地Solver4063504和node3自有服务MainPID1731201均存活。
+两角色已提交轮次仍0；该记录仅证明原生启动/加载，不是性能结果。
+共同初始化、seed、144轮预算、12轮保存及原10:10:44 UTC截止时间不变。
+其余without_context、without_value_norm、always_joint均未启动；
+没有把原先CPU报告错误作为理由重训full或改变初始化，也不声称余下四组能在当前窗口内完成。
+
+- [真实原生启动回执](../runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/WITHOUT_PEER_NATIVE_START_VERIFIED.json)
+- [基线放行记录](../runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/BASELINE_RELEASE.json)
+
+### 2026-10-10 07:15 UTC：without_peer24轮保存并发故障、实际双节点复现及单发布者修复
+
+06:52:12 Solver原生日志首先报COMMITTED.json.tmp→COMMITTED.json重命名FileNotFoundError；
+随后原生退出清理产生CancelledError，最终外层控制于06:52:33.772817退出1。
+控制信号追踪未记录外部kill，原FAILED正确保留为blocked_error、retry_after_idle_allowed=false。
+两节点及自有远端服务已释放，未修改其他用户进程。
+
+24轮配对断点已成功发布且通过原验证器：192个已提交共享episode，
+H/W Actor13/21、Critic32/48；两角色指标覆盖0–23，原科学摘要不变。
+实际记录199个共享结果和398条角色回执，多出的7个预取结果未提交；
+未落盘在途工作仍未知。没有96/144评测，没有把24轮当成完成的消融分数。
+
+首次直接SSH的锁探针因登录GID1009无写权限而失败，明确保留原因，没有放宽文件权限。
+改用既有原生UID1009/GID1008接口，在node4持有排他flock期间，
+node3确实同时取得同一共享文件的排他锁，证明当前fuse.hf3fs上的锁不能承担跨节点互斥。
+修复不是仅随机化临时文件名：新快照只让Solver发布共享所有权/提交/历史/最新指针及执行保留策略，
+Engineer只确认完整且摘要匹配的发布结果；各角色自己的完整原生payload仍分别保存。
+
+工作树及精确rolling12-v3快照的66项断点/原生/时序测试通过；
+校正驱动和两小时时序的28项测试通过，两套存在重叠，不按94项独立测试计数。
+真实两节点CPU回调完成合成12、24轮配对、相同摘要确认和旧12轮删除。
+合成payload不构成新GPU训练验收；Actor/Critic/目标/数据/seed/预算/原生恢复路径不变，
+原科学pins和真实GPU恢复门控已在原冻结源码中重新通过。
+执行修订单独记录，原协议、快照、失败回执与24轮证据均不覆盖。
+
+新CPU等待控制4102113（追踪4102109）和只读观察器4102927在07:12–07:15验证存活，
+尚未创建attempt-0002。最早恢复为08:52:33.772817 UTC，再检查资源和原门控，
+从24轮Adam/ValueNorm/RNG/数据游标状态继续；只读观察器会核验首次新36轮配对。
+原10:10:44.379806 UTC截止时间不变，余下执行窗口最多约78分钟。
+完整MA186/200=93.0%继续有效，其余三项尚未启动；未完成四项组件必要性证据。
+
+- [跨节点锁探针](../runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/without_peer/commit_recovery01/CROSS_NODE_FLOCK_PROBE.json)
+- [实际24轮状态审计](../runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/without_peer/commit_recovery01/SAVED24_AUDIT.json)
+- [实际双节点CPU发布验收](../runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/without_peer/commit_recovery01/two-node-cpu/RESULT.json)
+- [校正恢复绑定](../runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/without_peer/commit_recovery01/PREPARED.json)
+
+### 2026-10-10 08:17 UTC：用户取消自动重启和H200训练，保存交接材料
+
+08:16 UTC用户要求暂停自动重启、不要使用H200，后续明确希望GitHub保存完整代码、
+实验结果和数据，并考虑HF私有存储保存中间恢复状态和checkpoint。
+原控制/追踪/只读观察进程初检时已不存在，attempt-0002未创建。
+持久取消门控和禁止H200指令已记录；两个自动恢复入口均实际验证为抛出取消异常，
+两节点GPU/分布式启动器为空、对应原生服务inactive/not-found。
+未修改无关CPU服务或其他用户任务。
+
+当前最终科学结果仍只有共同初始化full144的186/200（93.0%），
+without_peer保留24轮、192个已提交共享episode和199个实际落盘结果，没有消融主成绩。
+所有原始失败、科学配置及源码快照保留，原研究截止时间不延长。
+归档工具只进行本地CPU/文件操作，排除凭据、验证压缩包成员、保存19组模型/恢复状态清单；
+允许的硬链接用于防止原目录项被删除后丢失文件，不修改原文件内容/权限；
+不同所有者的只读HF文件不能硬链接时明确记录并复制，而不是放宽源权限。
+本地包、Git提交、同盘副本均不是远端备份，本次没有执行GitHub push或HF上传。
+
+- [交接与恢复注意事项](./MA_SAO_HANDOFF_2026-10-10.md)
+- [本地归档目录](../runs/ma_sao_handoff_20261010T081628Z/)
+
+### 2026-10-12 02:56 UTC：新授权的10分钟采样、两小时条件恢复
+
+用户重新授权：每10分钟读取node3/node4状态，两小时内均为空闲或已核验的利用率维持程序时，
+自动继续原有后续训练。不是立即开训，不把更早的手工检查或历史状态当作空闲计时。
+两节点各8张H200须完整可观测；其他GPU进程、分布式启动器、无法归属的GPU活动、
+权限/SSH故障均重置窗口。至少13次有效采样、实际跨越7200秒，漏检或时钟跳变重新计时。
+第一轮探测尚未完成的耗时不算空闲信用；达标后再次核验当前资源。
+
+新授权单独保存，绑定原三个暂停文件的摘要；旧文件不删除、不改写，旧恢复入口仍拒绝执行。
+原10月10日截止时间已过，因此只对这个新入口增加明确的运行期授权：
+原spec内的截止时间、全部科学字段和原checkpoint的science_digest保持逐项一致，
+新attempt仅在已有排除科学摘要的rolling_recovery字段内携带授权与准入回执。
+仍保留每阶段8小时和无进展停止保护；范围仅为剩余四项固定144轮及原96/144评测，
+不是新种子/新实验或任意延长已完成的full训练。
+
+新的idle2h-v1源码快照基于已验证的rolling12-v3，变更限于监控/授权模块、
+三个调用点文件和既有结果发布函数提取；Actor/Critic损失、优化器、数据、
+队友校正、Critic输入、ValueNorm、schedule、原生payload/恢复计算均不变。
+精确快照的179项CPU回归测试通过，覆盖7200秒/13样本边界、每600秒检查、
+最后一刻变忙、取消、检测错误、未知进程、重启不继承信用和科学摘要不变。
+11个关键恢复/提交/身份函数的AST与v3一致。
+原v2运行时代码重新完整校验395个科学pins（约83.99GiB），24轮原生状态和full144结果不变。
+本次没有新GPU canary，也没有把部署监控写成已完成24→36续训。
+
+执行顺序：without_peer从24轮恢复，再运行without_context、without_value_norm、always_joint；
+full144的186/200结果不重复。健康训练仍每12轮滚动保存、不主动重启。
+有明确终止/争用证据时，清理本次自有进程后重新观察两小时；
+未知代码错误或训练完成后的评测/报告中断保留证据并停止，不自动重训或重抽候选。
+控制器为会话托管CPU进程，不配置开机自启或脱离会话服务；新控制目录中的CANCELLED.json可以暂停。
+离散采样无法排除采样间短时作业，首次开训前后仍使用原资源安全检查。
+
+- [新授权](../runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/idle2h_20261012/AUTHORIZATION.json)
+- [执行和验证绑定](../runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/idle2h_20261012/PREPARED.json)
+- [精确源码测试及恢复不变性](../runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/idle2h_20261012/CODE_VALIDATION.json)
+- [原始输入和24轮状态复核](../runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/idle2h_20261012/ORIGINAL_PREREQUISITES_VERIFIED.json)
+- [实时监控状态](../runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/idle2h_20261012/STATUS.json)
+
+03:22:54 UTC首次实时样本为两节点空闲，CPU控制PID1137442与排他协调锁均已验证，
+计数1/13，尚无准入回执、worker或attempt-0002。下一次检查约03:32:54 UTC，
+满足所有后续样本与最终核验时，不早于05:22:54 UTC准入。
+这些是监控启动证据，不是已经完成两小时观察或已经恢复GPU训练。
+详见[启动验证](../runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/idle2h_20261012/STARTUP_VERIFIED.json)。
+
+### 2026-10-12 11:32 北京时间：改为独立只读GPU历史记录，不启动新训练
+
+用户先要求立即启动剩余消融，但实时检查发现node4有UID1002的真实GPU作业，
+而node3空闲；没有抢占其他人的资源，也没有创建新的训练attempt。
+用户随即改为要求不依赖对话的程序，每5分钟记录GPU利用率和占用程序、使用北京时间，
+以便后续请求启动时掌握历史。旧CPU自动等待器已退出，另保存CANCELLED记录阻止其重启开训。
+
+新增gpu_history模块复用原filler身份核验和pmon解析，记录双节点每卡利用率/显存、
+PID/UID/程序名及各卡进程分配。日志不包含完整参数、环境变量或令牌。
+每300秒采样，按Asia/Shanghai日期追加JSONL，最新状态原子写入，节点探测失败显式落盘。
+查询最近两小时要求至少25个有效样本、实际7200秒跨度、最新样本未过期；
+真实工作、错误、漏检、时钟跳变或进程重启都会中断连续空闲证据。
+程序只有观测功能，历史合格不自动触发训练，不结束或修改任何GPU进程。
+
+43项CPU测试通过；两台实际节点探测成功，node4的PID1138383被识别为其他真实工作，
+非已核验维持程序。后台进程按用户明确要求独立于本次会话运行，
+不安装开机自启，也不承诺主机重启或外部kill后自行恢复。
+所有原实验结果、失败记录、native24及full144状态保持不变。
+
+- [程序](../whale_local/sao_bridge/gpu_history.py)
+- [日志目录](../runs/gpu_history_node3_node4/)
+- [查询及停止方法](./PROJECT_STATE.md)
+
+### 2026-10-12 12:45 北京时间：新授权串行15卡，外部kill后不恢复
+
+用户授权停止node3/node4已核验维持程序，并采用单实验多卡、实验之间串行，
+优先without_peer24→144，然后without_context、without_value_norm、always_joint。
+后续明确要求外部kill后不重启，自身训练问题可以诊断修复后从原生断点继续。
+完整计划和14–20小时的保守排期见[项目状态](./PROJECT_STATE.md)。
+
+只对精确匹配UID、supervisor、systemd cgroup的filler执行操作。
+初次TERM后Restart=always仍自动拉起，未把超时算作成功；
+补充显式停止已核验service后，确认两节点MainPID=0、filler GPU PID清空。
+node3初次共享回执写入因登录UID权限失败，节点动作已完成；
+通过后续只读审计在协调节点持久化双节点证据。PID1138383始终保留。
+
+运行配置为Engineer4训练+4rollout，Solver4训练+3rollout，只使用node4 GPU1–7。
+四rank原生优化器、ValueNorm、RNG/已提交游标及原科学spec保持不变；
+实际服务副本变化单独记录，不能承诺生成轨迹逐token等价。
+为避免再次改变固定终点评测的服务副本数，训练释放资源后在node3用原8副本评测。
+不重跑Full144，不改候选数、选择集、主评测集或种子，也不以分数决定重试。
+
+工作树针对性248项测试通过，随后新增精确4+3配置、串行评测分派和不重启用例，
+新的serial专项36项通过。首份冻结快照在CPU测试收集阶段缺少一个测试helper和
+独立GPU记录模块，保留失败快照/日志，构建新快照而不原地改写；当时尚未启动GPU训练。
+正式启动须以精确冻结快照验证、原输入/检查点核验和实时15卡资源复查为前提。
+
+13:20北京时间补充：serial15-v2的attempt-0002启动失败，两个角色原生进程
+均code1退出，native verify_upstreams找不到打包遗漏的areal-local-network.patch；
+4份patch均未随只复制Python文件的脚本打包。COST确认无新增outcome、
+无新生成receipt、无新提交轮次，不能把这次计作已恢复训练。
+停止并持久取消原serial控制入口，保留所有失败证据；按用户允许自身故障修复续训，
+新建self_fix01控制和完整serial15-v3运行目录，所有非缓存运行文件均复制并哈希，
+在准入前实际执行原生upstream patch核验，添加回归测试。
+
+serial15-v3精确快照348项测试和13项subtests通过；395份原科学pin约83.99GiB
+再次完整哈希，24轮和Full144 native配对摘要保持不变。
+node3真实原生UID经既有systemd接口验证控制目录写入及全部patch核验通过。
+attempt-0003约13:14启动模型初始化，GPU0仍只有PID1138383，
+node4其余7卡和node3八卡分配符合授权；此时双角色恢复回执尚未出现，
+历史24行不能当作新增进度。新入口无自动失败重试循环，仍遵循外部kill不恢复。
+
+13:37:52北京时间补充：attempt-0003的Engineer与Solver都已实际恢复24轮原生状态，
+随后各完成12个新轮次，36轮新paired native已发布并通过完整元数据/分片核验。
+COMMITTED摘要为`4bbe5102598bcc336d8a88f4a5fb2cd3e9589625721671061566b37038681fe1`；
+此次首次真实GPU验证了单发布者修复后的跨节点续训和下一代checkpoint提交。
+Engineer四rank Actor/Critic Adam从13/32恢复，Solver从21/48恢复，
+没有重复预热、重置优化器或仅从HF权重恢复。
+核验包括全部分片大小、小文件哈希、优化器指纹/步数、ValueNorm、RNG和游标；
+未重新全量哈希大tensor。新配对发布后运行目录旧24轮payload按原策略退休，
+历史归档/硬链接仍保留，不能据此宣称物理空间全部释放。
+
+实际启动为13:14:30，保守完成窗口按原14–20小时排期换算至10月13日03:14–09:14。
+首批正常轮约44–48秒不包含checkpoint及评测开销，不用于宣布加速比。
+控制器及worker在13:38仍存活，PID1138383保留，独立GPU记录器最新采样13:38:17。
+尚未生成任何新的消融终点评分，后续仍按既定顺序完成训练、96/144评测和审计。
+证据见[首次新配对核验](../runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/serial15_20261012_self_fix01/FIRST_NEW_CHECKPOINT_VERIFIED.json)
+及[实际启动排期](../runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/serial15_20261012_self_fix01/TIMING_PLAN.json)。
+
+### 2026-10-12 14:32 北京时间：暂停实验，只读检查双节点
+
+用户先提出在第二项消融前加入原Full144延长训练及三系统曲线，随后明确撤回
+继续准备/启动的要求，要求暂停全部实验并查看node3/node4当前活动。
+未创建或启动延长训练；后续不据这条已撤回请求继续实现或运行。
+
+without_peer attempt-0003的SIGNAL记录为14:25:40、SIGTERM15；
+工具会话报告已由stop_bash停止。双角色最终metrics为76轮，
+完整paired native72核验通过，摘要
+`4f56da0f6203ae6711072f0c000f63fc7c1b46ab6ce10c747330d4c5c5967b2a`。
+按此前外部kill不恢复和此次明确暂停指令，没有自动重启。
+新增当前self_fix01的持久CANCELLED，实际使用冻结运行代码核验拒绝启动，
+旧两小时等待器和首个serial入口也保持取消。原Full144结果与native不变。
+
+14:31:57只读探测node3八卡均0%/0MiB，无GPU计算进程；
+node4 GPU1–7空闲，GPU0只有UID1002/hongyuanzhu的PID1138383，
+可见入口为O-Voxel Stage3训练，8092MiB，pmon三次SM为21/18/19%。
+node3原生训练service及两节点filler service均inactive/MainPID0，
+本地原控制器、worker和阶段观察器均已退出。未操作其他用户进程；
+独立5分钟GPU历史记录器仍存活，仅做只读记录。
+
+### 2026-10-12：代码、切分和当前进展的可验证交接
+
+用户要求将完整代码、算法、数据切分和实验结果提交GitHub，并在本地提供平台凭据文件；
+随后提供凭据，明确GitHub可以push，HF/W&B只做认证验证并给出checkpoint上传计划。
+全过程不启动训练、评测、HF上传或W&B run。
+
+新增[离线复算入口](../scripts/reproduce_ma_progress.py)及
+[交接说明](./REPRODUCE_MA_SAO.md)。Git证据包包含4225份文件、182643105字节，
+保留七个冻结执行快照及原始路径，所有payload大小和SHA256通过核验。
+系统Python无需额外包/GPU/API，实际重建了1152行训练ledger，
+从逐题记录重算Full96的180/178与Full144的186/179，并确认without_peer
+为76行metrics但native72配对元数据。37项打包/复算CPU测试通过。
+
+数据切分明确披露：训练任务ID0–239与main200无实例重叠，
+selection48则全部包含在main200；strict197额外排除291、414、467的goal关联。
+事后非selection152子集不替换原主终点，不包装成新未触碰测试。
+未改写原始协议、分数或选择记录。
+
+AReaL完整工作树补丁包含tracked与untracked修改；从干净基准
+3cf0dfbd2b0fbeabd6977184980e189d1567747a重建1180份文件并逐文件对照摘要，
+避免只提交vendor路径却遗漏本地运行代码。大型模型不进Git，
+19组模型库存约1051.84GiB；最近未完成状态更新为native72，而非旧交接的native24。
+
+三个凭据位于仓库外私有目录，未复制到Git或打印内容。
+GitHub文件实际为SSH私钥：成功认证xudongwu-0、读取coevolve/main，
+receive-pack dry-run通过；HF账户wxd02、W&B账户2373025856w只读认证成功。
+HF的wxd02/coevolve dataset查询404，没有创建仓库；W&B没有创建run。
+正式GitHub推送结果以远端commit核验为准，不把dry-run记成已发布。

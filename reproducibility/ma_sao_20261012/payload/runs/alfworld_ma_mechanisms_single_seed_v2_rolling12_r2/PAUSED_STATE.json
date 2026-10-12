@@ -1,0 +1,59 @@
+{
+  "status": "paused_by_user",
+  "at_utc": "2026-10-09T08:37:14.298499+00:00",
+  "at_unix": 1791535034.2985108,
+  "authority_sha256": "12926ac01e536b794030e5e3272affbcc23a04b40d203197305b4ac32fe51ceb",
+  "active_attempt": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/rolling-canary/full/attempts/attempt-0001",
+  "roles": {
+    "editor": {
+      "committed_rounds": 12,
+      "counts": {
+        "active_rounds": 8,
+        "inactive_rounds": 4,
+        "critic_only_warmup_steps": 3,
+        "actor_steps": 5,
+        "critic_steps": 16
+      },
+      "last_metric_at_unix": 1791534699.7918549,
+      "failed_receipt_present": false,
+      "release_receipt_present": false
+    },
+    "solver": {
+      "committed_rounds": 12,
+      "counts": {
+        "active_rounds": 12,
+        "inactive_rounds": 0,
+        "critic_only_warmup_steps": 3,
+        "actor_steps": 9,
+        "critic_steps": 24
+      },
+      "last_metric_at_unix": 1791534714.8002844,
+      "failed_receipt_present": false,
+      "release_receipt_present": false
+    }
+  },
+  "verified_paired_checkpoint": null,
+  "native_restore_gate_passed": false,
+  "formal_training_started": false,
+  "cost": {
+    "resume_round": 0,
+    "new_persisted_outcomes": 96,
+    "new_generated_role_receipts": {
+      "editor": 96,
+      "solver": 96
+    },
+    "new_committed_role_rounds": {
+      "editor": 12,
+      "solver": 12
+    },
+    "unpersisted_inflight_work_unknown": true
+  },
+  "owned_control_processes": {
+    "3514619": {
+      "proc_exists": false
+    },
+    "3518079": {
+      "proc_exists": false
+    }
+  }
+}

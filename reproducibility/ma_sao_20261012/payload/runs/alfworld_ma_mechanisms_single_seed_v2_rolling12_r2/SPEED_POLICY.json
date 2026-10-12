@@ -1,0 +1,13 @@
+{
+  "status": "reuse_measured_validated_acceleration",
+  "timing_evidence": "/mnt/3fs/xudong/coevolve/runs/source-snapshots/alfworld-ma-mechanisms-single-seed-v2/runs/alfworld_ma_balanced_fast_v1r2/INDEPENDENT_AUDIT.json",
+  "timing_evidence_sha256": "e89d98578eab34ee2e793015571fb35910bf14841003c00dc155954ab73f8c4a",
+  "warm_round_seconds_before": 96.90470144748687,
+  "warm_round_seconds_after": 49.56077077388763,
+  "measured_training_speedup": 1.9552702658640573,
+  "runtime": "FLA0.5.2/Triton3.7.1; BF16 fixed references, unchanged FP32 learner masters; four-worker full-file SHA.",
+  "rejected_generation_layout_probe": "/mnt/3fs/xudong/coevolve/runs/source-snapshots/alfworld-ma-mechanisms-single-seed-v2/runs/alfworld_ma_engineer_weights_w0_v1/throughput-probe/RESULT.md",
+  "rejected_probe_sha256": "1c8c86f2443e003e73b95f156a40cb8a091011984c656a934dc64dd556cca7e4",
+  "new_training_speedup_claimed": false,
+  "tokens_context_batch_rollout_layout_and_learning_budgets_reduced": false
+}

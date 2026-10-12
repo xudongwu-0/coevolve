@@ -1,0 +1,20 @@
+diff --git a/areal/utils/network.py b/areal/utils/network.py
+--- a/areal/utils/network.py
++++ b/areal/utils/network.py
+@@ -1,5 +1,6 @@
+ # SPDX-License-Identifier: Apache-2.0
+ 
++import os
+ import random
+ import socket
+ from ipaddress import ip_address
+@@ -23,6 +24,9 @@ def gethostip(probe_host: str = "8.8.8.8", probe_port: int = 80) -> str:
+     Raises:
+         RuntimeError: If no suitable address can be determined
+     """
++    override = os.environ.get("AREAL_HOST_IP")
++    if override is not None:
++        return str(ip_address(override))
+     try:
+         hostname = socket.gethostname()
+         infos = socket.getaddrinfo(hostname, None, socket.AF_UNSPEC, socket.SOCK_DGRAM)

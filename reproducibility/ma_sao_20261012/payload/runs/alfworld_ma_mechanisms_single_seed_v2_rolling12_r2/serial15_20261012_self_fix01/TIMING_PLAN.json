@@ -1,0 +1,159 @@
+{
+  "created_at_beijing": "2026-10-12T12:50:00+08:00",
+  "full_training_elapsed_seconds": 10540.583318948746,
+  "full_training_hours": 2.927939810819096,
+  "observed_round_times": {
+    "full": {
+      "editor": {
+        "rounds": 144,
+        "median_round_seconds": 46.39684247970581,
+        "mean_non_save_round_seconds": 48.02173826369372
+      },
+      "solver": {
+        "rounds": 144,
+        "median_round_seconds": 46.32464551925659,
+        "mean_non_save_round_seconds": 49.74148561737754
+      }
+    },
+    "without_peer": {
+      "editor": {
+        "rounds": 24,
+        "median_round_seconds": 43.28358483314514,
+        "mean_non_save_round_seconds": 44.454430439255454
+      },
+      "solver": {
+        "rounds": 24,
+        "median_round_seconds": 43.72212052345276,
+        "mean_non_save_round_seconds": 45.86185170303691
+      }
+    }
+  },
+  "remaining_rounds": {
+    "without_peer": 120,
+    "without_context": 144,
+    "without_value_norm": 144,
+    "always_joint": 144
+  },
+  "estimated_hours_including_two_endpoint_evaluations": {
+    "without_peer": [
+      3,
+      4.5
+    ],
+    "without_context": [
+      3.5,
+      5
+    ],
+    "without_value_norm": [
+      3.5,
+      5
+    ],
+    "always_joint": [
+      4,
+      5.5
+    ]
+  },
+  "total_hours_range": [
+    14.0,
+    20.0
+  ],
+  "estimated_not_measured15_gpu": true,
+  "minimum_gpus_per_arm_preserving_four_rank_learners_and_one_rollout_per_role": 10,
+  "two_simultaneous_arms_minimum_gpus": 20,
+  "available_gpus": 15,
+  "parallel_time_tradeoff": "No matched small-layout timing exists. For two balanced jobs, hypothetical speedup S of one large allocation over half allocation gives serial/parallel makespan=2/S; not an empirical penalty estimate.",
+  "serial_over_parallel_example_penalty_percent": {
+    "S=2": 0,
+    "S=1.8": 11.111111111111116,
+    "S=1.5": 33.33333333333333
+  },
+  "paired_native_gib": 384.358,
+  "rolling_commit_transient_pairs": 2,
+  "old_archived_checkpoints_untouched": true,
+  "endpoint_serving_replicas": 8,
+  "endpoint_host": "node3",
+  "actual_start_at_beijing": "2026-10-12T13:14:30+08:00",
+  "actual_start_unix": 1791782070.629626,
+  "completion_windows": {
+    "without_peer": {
+      "completion_window_beijing": [
+        "2026-10-12T16:14+08:00",
+        "2026-10-12T17:44+08:00"
+      ],
+      "estimated_not_guaranteed": true
+    },
+    "without_context": {
+      "completion_window_beijing": [
+        "2026-10-12T19:44+08:00",
+        "2026-10-12T22:44+08:00"
+      ],
+      "estimated_not_guaranteed": true
+    },
+    "without_value_norm": {
+      "completion_window_beijing": [
+        "2026-10-12T23:14+08:00",
+        "2026-10-13T03:44+08:00"
+      ],
+      "estimated_not_guaranteed": true
+    },
+    "always_joint": {
+      "completion_window_beijing": [
+        "2026-10-13T03:14+08:00",
+        "2026-10-13T09:14+08:00"
+      ],
+      "estimated_not_guaranteed": true
+    }
+  },
+  "initial_measured_progress": {
+    "checked_at_beijing": "2026-10-12T13:31:18+08:00",
+    "roles": {
+      "editor": {
+        "original_science_sha256": "651f644575c7b29ff34fed583a1ee76be8b120e979e5d5e23aaba44e1659caf5",
+        "restored_checkpoint": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/without_peer/recovery/round-0024-attempt-0001/COMMITTED.json",
+        "new_committed_rounds": 9,
+        "total_rounds": 33,
+        "all_new_numeric_metrics_finite": true,
+        "post_first_new_round_mean_seconds": 44.43826088309288,
+        "restored_native_optimizer_max_steps": {
+          "actor": [
+            13.0,
+            13.0,
+            13.0,
+            13.0
+          ],
+          "critic": [
+            32.0,
+            32.0,
+            32.0,
+            32.0
+          ]
+        },
+        "trainer_yaml_sha256": "4b26929868a54805a067a9c70c599a9a00684f853f685b2a21ba7e849906100c"
+      },
+      "solver": {
+        "original_science_sha256": "971a0a7855a5a7a2f1b4bbf155609544a7008991c8853d967c5881edf5aeca0d",
+        "restored_checkpoint": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/without_peer/recovery/round-0024-attempt-0001/COMMITTED.json",
+        "new_committed_rounds": 9,
+        "total_rounds": 33,
+        "all_new_numeric_metrics_finite": true,
+        "post_first_new_round_mean_seconds": 47.60173028707504,
+        "restored_native_optimizer_max_steps": {
+          "actor": [
+            21.0,
+            21.0,
+            21.0,
+            21.0
+          ],
+          "critic": [
+            48.0,
+            48.0,
+            48.0,
+            48.0
+          ]
+        },
+        "trainer_yaml_sha256": "ebe265e2cff13ba0c22c74302f307c06e0fe00b1bed113533acfaa7f0ff8229b"
+      }
+    },
+    "startup_at_beijing": "2026-10-12T13:14:30+08:00"
+  },
+  "forecast_not_tightened_from_only_nine_new_rounds": true
+}

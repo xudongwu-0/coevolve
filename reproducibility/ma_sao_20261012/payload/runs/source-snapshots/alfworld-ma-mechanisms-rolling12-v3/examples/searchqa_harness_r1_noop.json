@@ -1,0 +1,6 @@
+{
+  "schema_version": "harness-r1-patch-v1",
+  "benchmark": "searchqa",
+  "description": "Unmodified h0 control for infra timing and stochasticity calibration.",
+  "actions": []
+}

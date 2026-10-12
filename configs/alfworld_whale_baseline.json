@@ -71,11 +71,11 @@
     "whale_local/sao_bridge/alfworld_runtime.py": "6f9a5d02a88409bc07d77e4c738a38669914618a2a205caafc55de6cf2712a71",
     "whale_local/sao_bridge/alfworld_core_extend.py": "43d29b68d232a34d1839f32639511614f473deef00e447d7525c0ed43df21652",
     "whale_local/sao_bridge/common.py": "f0067b2b5c688a0e531bf9631928ea87942a4937bb8bfc95825f54ed430d288e",
-    "whale_local/sao_bridge/alfworld_domain.py": "4566575063afc4062544620f6bac728479d1ec2cce7d4a2fa1ae15e195ed73eb",
-    "whale_local/sao_bridge/alfworld_train_data.py": "d105694ecbcca66638854b41c9fc4f389ab6acaf5b3ec6178d4995412681c8f4",
-    "whale_local/sao_bridge/evaluation.py": "6981f923040285437e142cad95a0d916c71048a6ed2a985d3f1fb771946b805c",
+    "whale_local/sao_bridge/alfworld_domain.py": "283ce025ae4a2775c5b847142d3026a51ed36b4cd0b075e78c4c3835c756032c",
+    "whale_local/sao_bridge/alfworld_train_data.py": "dfda9e415d77130adeeb9ac14d262f02b4d9f2a3047063965e208667b0793400",
+    "whale_local/sao_bridge/evaluation.py": "e517f3f2c6c4c7ea3302b28c17c5e3ed4f7429208c852255ad5e9b4e7feeb360",
     "whale_local/sao_bridge/launch.py": "7ee6443aad1442d038586e96fd6fde70af53d131e5b3441721f0ac44f49e96cd",
-    "whale_local/sao_bridge/resources.py": "ab5fb0e970f0187ed0e7e877ad9a90bc70851c8bbbb8d15d876afa7d984aa30d",
+    "whale_local/sao_bridge/resources.py": "5ff7bbc1d9ae44e3edff61564a3369a581e2c2fb97f06bc611d904f81be61699",
     "third_party/harness-r1-upstream/code/life-harness/AgentBench/scripts/harness_r1_patch.py": "ec9aa22fc86a000f856b7bb94fdaf3f1cf945d99b56b6b56d30ad141115b26e6",
     "third_party/harness-r1-upstream/code/life-harness/AgentBench/src/server/tasks/alfworld/task.py": "f24eabadce87931502aa1e379f027141bfebfd0bbfa829ffeb93a6f13a3650cc"
   }

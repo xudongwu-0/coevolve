@@ -1,0 +1,14 @@
+{
+  "status": "completed",
+  "solver_model": "/mnt/3fs/xudong/coevolve/runs/alfworld_solver_fast_v4_s42/training/optimizer/engine/checkpoints/chengboliu/alfworld_solver_fast_v4_s42/w1/actor/epoch0epochstep79globalstep79",
+  "solver_weights_sha256": "a17ff627a5229b7a0c1c8c58cf7935ec23a640e383424da98f50023ec7fda42d",
+  "baseline_tasks": 240,
+  "baseline_accuracy": 0.8,
+  "failure_packets": 23,
+  "engineer_training_ready": true,
+  "state": "/mnt/3fs/xudong/coevolve/runs/alfworld_alternating_e15_w79_8h_v1/common/partner_w1/REFRESHED_STATE.json",
+  "state_sha256": "72556c953598321f8dc41e351738d85470a1cdabb7dc76275f75654dd1052744",
+  "elapsed_seconds": 464.995681763161,
+  "report_opened": false,
+  "interpretation": "Authentic current-partner greedy/per-turn-budget train evidence, not native total-token-budget evaluation."
+}

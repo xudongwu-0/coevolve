@@ -1,0 +1,11 @@
+{
+  "status": "training",
+  "arm": "without_peer",
+  "attempt": "/mnt/3fs/xudong/coevolve/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/without_peer/attempts/attempt-0003",
+  "progress": {
+    "editor": 76,
+    "solver": 76
+  },
+  "resume_round": 24,
+  "at_unix": 1791786340.0487347
+}

@@ -6,19 +6,54 @@ import math
 from pathlib import Path
 
 from .common import read_json, write_json
+from .joint_anchor import SCHEDULE as ANCHOR, MODES, is_anchor_round
 
 
 ROLES = ("editor", "solver")
 ALTERNATING = "alternating_blocks"
 
 
+def validate_component_ablation(spec: dict) -> str | None:
+    name = spec.get("component_ablation")
+    every_round = spec.get("editor_update_every_round", False)
+    if type(every_round) is not bool:
+        raise ValueError("Engineer update frequency must be a boolean")
+    if every_round != (name == "always_joint"):
+        raise ValueError("A component ablation changed more than its declared mechanism")
+    if name is None:
+        return None
+    variants = {
+        "full": ("bounded", True, True),
+        "without_peer": ("unit", True, True),
+        "without_context": ("bounded", False, True),
+        "without_value_norm": ("bounded", True, False),
+        "always_joint": ("bounded", True, True),
+    }
+    if not isinstance(name, str) or name not in variants:
+        raise ValueError("Unknown isolated MA component ablation")
+    context = spec.get("critic_cooperative_context", True)
+    normalization = spec.get("value_normalization")
+    if type(context) is not bool or type(normalization) is not bool:
+        raise ValueError("Critic context and ValueNorm switches must be explicit booleans")
+    actual = (spec.get("peer_weight_mode", "bounded"), context, normalization)
+    if actual != variants[name]:
+        raise ValueError("A component ablation changed more than its declared mechanism")
+    return name
+
+
 def schedule_name(spec: dict) -> str:
     name = spec.get("schedule", "simultaneous")
-    if name not in ("simultaneous", ALTERNATING):
+    if name not in ("simultaneous", ALTERNATING, ANCHOR):
         raise ValueError("Unknown joint update schedule")
     block = spec.get("schedule_block_size", 16)
     if type(block) is not int or block < 1:
         raise ValueError("Schedule block size must be a positive integer")
+    every_round = spec.get("editor_update_every_round", False)
+    if type(every_round) is not bool or (every_round and (
+        name != ANCHOR or spec.get("anchor_mode") != "sampled_control"
+        or spec.get("component_ablation") != "always_joint"
+    )):
+        raise ValueError("Every-round Engineer updates require the isolated sampled-control ablation")
     return name
 
 
@@ -26,6 +61,8 @@ def role_active(spec: dict, round_index: int, role: str | None = None) -> bool:
     role = spec["role"] if role is None else role
     if role not in ROLES or type(round_index) is not int or round_index < 0:
         raise ValueError("Invalid role or collection round")
+    if schedule_name(spec) == ANCHOR:
+        return role == "solver" or spec.get("editor_update_every_round", False) or not is_anchor_round(round_index)
     return schedule_name(spec) == "simultaneous" or (
         round_index // spec.get("schedule_block_size", 16)
     ) % 2 == ROLES.index(role)
@@ -36,6 +73,9 @@ def source_round(spec: dict, round_index: int) -> int:
         raise ValueError("Invalid collection round")
     if schedule_name(spec) == "simultaneous":
         return round_index
+    if schedule_name(spec) == ANCHOR:
+        from .joint_anchor import source_round as anchor_source
+        return anchor_source(round_index)
     block = spec.get("schedule_block_size", 16)
     return (round_index // (2 * block)) * block + round_index % block
 
@@ -66,7 +106,8 @@ def round_metadata(spec: dict, round_index: int) -> dict:
     return {
         "collection_round": round_index,
         "active_role": next((role for role in ROLES if role_active(spec, round_index, role)), None)
-        if schedule_name(spec) == ALTERNATING else "both",
+        if schedule_name(spec) == ALTERNATING else (
+            "both" if role_active(spec, round_index, "editor") else "solver"),
         "source_round": source_round(spec, round_index),
         "role_active": role_active(spec, round_index),
         "actor_update": actor_updates(spec, round_index),
@@ -109,6 +150,9 @@ def total_consumed(spec: dict, completed_rounds: int) -> int:
 
 def scheduled_rows(rows: list[dict], spec: dict) -> list[dict]:
     """Repeat inputs, never trajectories; each paired collection has a fresh ID."""
+    if schedule_name(spec) == ANCHOR:
+        from .joint_anchor import build_rows
+        return build_rows(rows, cycles=spec['steps'] // 3, batch_size=spec['batch_size'])
     if schedule_name(spec) != ALTERNATING:
         return copy.deepcopy(rows)
     output = []
@@ -130,6 +174,19 @@ def scheduled_rows(rows: list[dict], spec: dict) -> list[dict]:
 
 
 def validate_schedule(spec: dict, rows: list[dict] | None = None) -> None:
+    ablation = validate_component_ablation(spec)
+    if schedule_name(spec) == ANCHOR:
+        if (type(spec['steps']) is not int or spec['steps'] < 3 or spec['steps'] % 3
+                or spec.get('anchor_mode') not in MODES
+                or spec.get('critic_mode') != 'learned'
+                or not spec.get('terminal_episodes') or not spec.get('joint_root')
+                or (not spec.get('value_normalization') and ablation != 'without_value_norm')
+                or (spec.get('peer_weight_mode', 'bounded') != 'bounded' and ablation != 'without_peer')
+                or not spec.get('schedule_source_data')):
+            raise ValueError('Invalid anchor-retention schedule')
+        if rows is not None and scheduled_rows(read_json(Path(spec['schedule_source_data'])), spec) != rows:
+            raise ValueError('Anchor rows differ from the pinned source sequence')
+        return
     if schedule_name(spec) != ALTERNATING:
         return
     if (
@@ -198,7 +255,7 @@ def validate_metric_row(spec: dict, row: dict) -> None:
         ("ppo_actor", actor_updates(spec, step)),
         ("ppo_critic", role_active(spec, step)),
     ):
-        if scope == "ppo_critic" and schedule_name(spec) != ALTERNATING:
+        if scope == "ppo_critic" and schedule_name(spec) == "simultaneous":
             continue
         gradients = [v for key, v in metrics.items() if key.endswith(f"{scope}/update/grad_norm")]
         update_metrics = [key for key in metrics if f"{scope}/update/" in key]
@@ -209,13 +266,13 @@ def validate_metric_row(spec: dict, row: dict) -> None:
                 raise ValueError(f"{scope} omitted a finite nonzero scheduled gradient")
         elif update_metrics:
             raise ValueError(f"{scope} reported an update during an inactive/warmup round")
-    if schedule_name(spec) == ALTERNATING and not role_active(spec, step):
-        if any("joint_value_norm/" in key for key in metrics):
-            raise ValueError("Inactive critic reported a ValueNorm update")
+    if schedule_name(spec) != "simultaneous" and not role_active(spec, step):
+        if any("joint_value_norm/" in key or "joint_critic/" in key for key in metrics):
+            raise ValueError("Inactive critic reported a ValueNorm or raw value-learning update")
 
 
 def checkpoint_eligible(spec: dict, completed_rounds: int) -> bool:
-    roles = ROLES if schedule_name(spec) == ALTERNATING else (spec["role"],)
+    roles = ROLES if schedule_name(spec) != "simultaneous" else (spec["role"],)
     return all(update_counts(spec, completed_rounds, role)["actor_steps"] > 0 for role in roles)
 
 
@@ -229,12 +286,13 @@ def checkpoint_metadata(spec: dict, completed_rounds: int) -> dict:
         "critic_warmup_active_rounds": spec.get("critic_warmup_steps", 0),
         "critic_updates_per_active_round": spec.get("critic_updates_per_step", 2),
         **accounting(spec, completed_rounds),
+        **({"editor_update_every_round": True} if spec.get("editor_update_every_round", False) else {}),
         "optimizer_resets_between_blocks": False,
     }
 
 
 def validate_checkpoint_metadata(path: Path, spec: dict, completed_rounds: int) -> None:
-    if schedule_name(spec) == ALTERNATING:
+    if schedule_name(spec) != "simultaneous":
         receipt = path / "joint_schedule.json"
         if not receipt.is_file() or read_json(receipt) != checkpoint_metadata(spec, completed_rounds):
             raise ValueError("Scheduled checkpoint omitted or changed its update-count metadata")
@@ -268,7 +326,7 @@ def install_schedule(trainer, spec: dict) -> dict:
     perform the paired proximal handshake; those advantages are never optimized.
     """
     validate_schedule(spec)
-    if schedule_name(spec) != ALTERNATING or trainer.critic is None:
+    if schedule_name(spec) == "simultaneous" or trainer.critic is None:
         raise ValueError("Schedule gates require alternating joint actor/critic engines")
     for name in ("adv_norm", "reward_norm"):
         norm = getattr(trainer.config.actor, name, None)
@@ -279,7 +337,9 @@ def install_schedule(trainer, spec: dict) -> dict:
             raise ValueError("Inactive advantage computation cannot mutate running normalization")
     if trainer.config.saver.mode != "sync":
         raise ValueError("Schedule checkpoint receipts require synchronous saves")
-    state = {"round": 0, "actor_steps": 0, "critic_steps": 0}
+    start = spec.get("recovery_start_round", 0)
+    initial = update_counts(spec, start)
+    state = {"round": start, "actor_steps": initial["actor_steps"], "critic_steps": initial["critic_steps"]}
     calls = {"actor": 0, "critic": 0, "values": 0, "actor_lr": 0, "critic_lr": 0}
     actor, critic = trainer.actor, trainer.critic
     actor_update, critic_update = actor.ppo_update, critic.ppo_update
