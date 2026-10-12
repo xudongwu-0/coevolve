@@ -5772,3 +5772,17 @@ GitHub文件实际为SSH私钥：成功认证xudongwu-0、读取coevolve/main，
 receive-pack dry-run通过；HF账户wxd02、W&B账户2373025856w只读认证成功。
 HF的wxd02/coevolve dataset查询404，没有创建仓库；W&B没有创建run。
 正式GitHub推送结果以远端commit核验为准，不把dry-run记成已发布。
+
+### 2026-10-12 15:14:47 北京时间：GitHub首次交接发布核验完成
+
+主交接提交
+[d3fb85964c55c705518118d098057e46f8d28ac2](https://github.com/xudongwu-0/coevolve/commit/d3fb85964c55c705518118d098057e46f8d28ac2)
+已通过普通fast-forward推送到xudongwu-0/coevolve的main，没有force或amend。
+随后SSH `ls-remote`确认远端SHA与本地提交相同，工作树干净。
+从该提交导出的全新独立目录成功完成标准库离线复算，输出与包内回执一致。
+
+最终Git索引包含4807项，其中4225份payload和13份包元数据完整纳入，
+1249个不同blob核验没有凭据路径、已提供凭据值或已知密钥特征；
+最大普通文件31298663字节，没有模型张量。冻结证据的原始空白逐字保留，
+避免格式化破坏SHA256；当前代码的Git空白检查通过。
+三份历史训练取消门控仍有效；没有创建HF仓库、W&B run或上传模型。
