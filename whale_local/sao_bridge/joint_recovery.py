@@ -39,19 +39,26 @@ def validate_recovery_spec(spec: dict) -> None:
             raise ValueError("A nonzero collection cursor requires explicit paired recovery")
         return
     finalizing = isinstance(options, dict) and options.get("finalize_only", False)
+    from .concurrent_comparison import SCHEMA, validate_method
+    comparison = spec.get("comparison_schema") == SCHEMA
+    if comparison:
+        validate_method(spec)
+    interval = 36 if comparison else 12
     if (
         not isinstance(options, dict) or not spec.get("joint_root")
         or spec.get("preserve_optimizer_state", False)
-        or options.get("interval_rounds") != 12
+        or options.get("interval_rounds") != interval
         or not re.fullmatch(r"attempt-[0-9]{4}", options.get("attempt", ""))
         or type(finalizing) is not bool
         or type(start) is not int or not 0 <= start <= spec["steps"]
-        or (start % 12 and not finalizing)
+        or (start % interval and not finalizing)
         or finalizing != (start == spec["steps"])
         or bool(options.get("resume")) != bool(start)
         or not Path(options.get("root", "")).is_absolute()
     ):
-        raise ValueError("Invalid twelve-round paired recovery configuration")
+        raise ValueError("Invalid paired recovery cadence or continuation configuration")
+    if options.get("retain_generations", False) and not comparison:
+        raise ValueError("Retained generations require the new concurrent comparison")
     milestones = options.get("hf_rounds")
     if (
         not isinstance(milestones, list) or not milestones
@@ -285,6 +292,12 @@ def commit_pair(root: Path, generation: Path, completed: int, *, role: str = "so
         }
         if records["editor"]["data_sha256"] != records["solver"]["data_sha256"]:
             raise ValueError("Cannot commit different Engineer/Solver input ledgers")
+        retention = [
+            read_json(generation / role / "spec.json").get("rolling_recovery", {}).get(
+                "retain_generations", False) for role in ROLES
+        ]
+        if retention[0] != retention[1]:
+            raise ValueError("Both roles must agree on native checkpoint retention")
         previous = read_json(root / "LATEST.json") if (root / "LATEST.json").exists() else None
         if previous is not None and previous["completed_rounds"] >= completed:
             raise ValueError("Recovery cannot overwrite or regress committed training")
@@ -313,8 +326,9 @@ def commit_pair(root: Path, generation: Path, completed: int, *, role: str = "so
             "generation": generation.name, "completed_rounds": completed,
             "sha256": file_sha(committed), "at_unix": time.time(),
         })
-        _retire_previous(root, previous, generation)
-        retire_incomplete_generations(root, generation, completed)
+        if not retention[0]:
+            _retire_previous(root, previous, generation)
+            retire_incomplete_generations(root, generation, completed)
         return True
 
 

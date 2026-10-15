@@ -14,6 +14,9 @@ ALTERNATING = "alternating_blocks"
 
 
 def validate_component_ablation(spec: dict) -> str | None:
+    from .concurrent_comparison import validate_method
+    if validate_method(spec):
+        return None
     name = spec.get("component_ablation")
     every_round = spec.get("editor_update_every_round", False)
     if type(every_round) is not bool:
@@ -250,12 +253,14 @@ def consumed_row_ledger(spec: dict, rows: list[dict], completed_rounds: int) -> 
 
 
 def validate_metric_row(spec: dict, row: dict) -> None:
+    from .concurrent_comparison import SCHEMA
+    comparison = spec.get("comparison_schema") == SCHEMA
     step, metrics = row["global_step"], row["metrics"]
     for scope, expected in (
         ("ppo_actor", actor_updates(spec, step)),
         ("ppo_critic", role_active(spec, step)),
     ):
-        if scope == "ppo_critic" and schedule_name(spec) == "simultaneous":
+        if scope == "ppo_critic" and schedule_name(spec) == "simultaneous" and not comparison:
             continue
         gradients = [v for key, v in metrics.items() if key.endswith(f"{scope}/update/grad_norm")]
         update_metrics = [key for key in metrics if f"{scope}/update/" in key]
@@ -292,7 +297,8 @@ def checkpoint_metadata(spec: dict, completed_rounds: int) -> dict:
 
 
 def validate_checkpoint_metadata(path: Path, spec: dict, completed_rounds: int) -> None:
-    if schedule_name(spec) != "simultaneous":
+    from .concurrent_comparison import SCHEMA
+    if schedule_name(spec) != "simultaneous" or spec.get("comparison_schema") == SCHEMA:
         receipt = path / "joint_schedule.json"
         if not receipt.is_file() or read_json(receipt) != checkpoint_metadata(spec, completed_rounds):
             raise ValueError("Scheduled checkpoint omitted or changed its update-count metadata")
@@ -326,7 +332,9 @@ def install_schedule(trainer, spec: dict) -> dict:
     perform the paired proximal handshake; those advantages are never optimized.
     """
     validate_schedule(spec)
-    if schedule_name(spec) == "simultaneous" or trainer.critic is None:
+    from .concurrent_comparison import validate_method
+    if ((schedule_name(spec) == "simultaneous" and not validate_method(spec))
+            or trainer.critic is None):
         raise ValueError("Schedule gates require alternating joint actor/critic engines")
     for name in ("adv_norm", "reward_norm"):
         norm = getattr(trainer.config.actor, name, None)

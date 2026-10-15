@@ -20,6 +20,12 @@ from .resources import physical_gpu_string, require_research_node, stop_known
 class Launcher:
     def __init__(self, root: Path, budget=None):
         require_research_node()
+        from . import slurm_runtime
+        comparison = slurm_runtime.active()
+        if comparison:
+            from .concurrent_comparison import contained
+            boundary, _ = slurm_runtime.binding()
+            root = contained(root, boundary)
         self.root = root.resolve()
         self.root.mkdir(parents=True, exist_ok=True, mode=0o700)
         self.budget = budget
@@ -32,9 +38,12 @@ class Launcher:
         self._watchdog_error = None
         self._audit_lock = threading.Lock()
         cache = ROOT / "assets/runtime-cache" / os.uname().nodename
+        if comparison:
+            cache, ipc = slurm_runtime.runtime_directories(self.root)
         for name in ("triton", "torch", "vllm", "cuda", "areal", "flashinfer", "home"):
             (cache / name).mkdir(parents=True, exist_ok=True)
-        ipc = Path("/dev/shm") / f"sao-{os.getuid()}-{self.root.name}"
+        if not comparison:
+            ipc = Path("/dev/shm") / f"sao-{os.getuid()}-{self.root.name}"
         ipc.mkdir(mode=0o700, exist_ok=True)
         self.env = dict(
             # Children use the running interpreter's venv (a node-local tmpfs copy imports
@@ -62,6 +71,16 @@ class Launcher:
             GLOO_SOCKET_IFNAME="lo", NCCL_SOCKET_IFNAME="lo",
             AREAL_HOST_IP="127.0.0.1",
         )
+        if comparison:
+            rpc = slurm_runtime.rpc_directory()
+            rpc.mkdir(parents=True, exist_ok=True, mode=0o700)
+            self.env.update(
+                TMP=str(ipc), TEMP=str(ipc), XDG_CACHE_HOME=str(cache),
+                HF_HOME=str(cache / "huggingface"), MPLCONFIGDIR=str(cache / "matplotlib"),
+                NCCL_SHM_DISABLE="1", VLLM_ENABLE_V1_MULTIPROCESSING="1",
+                TORCHINDUCTOR_COMPILE_THREADS="1",
+                VLLM_RPC_BASE_PATH=str(rpc),
+            )
         self._watchdog = threading.Thread(target=self._watch, name="sao-resource-watchdog", daemon=True)
         self._watchdog.start()
 
@@ -270,6 +289,19 @@ class Launcher:
             raise ValueError("Server allocation does not match parallel replica count")
         if max_model_len < 1:
             raise ValueError("Server context length must be positive")
+        from . import slurm_runtime
+        comparison = slurm_runtime.active()
+        if comparison:
+            if tensor_parallel != 1:
+                raise ValueError("Comparison rollout replicas require one GPU each")
+            protected = {
+                "--distributed-executor-backend", "--mm-processor-cache-type",
+                "--mm-tensor-ipc", "--tensor-parallel-size", "--pipeline-parallel-size",
+                "--data-parallel-size",
+            }
+            if any(str(arg).split("=")[0].replace("_", "-") in protected
+                   for arg in server_args or []):
+                raise ValueError("Server arguments cannot override comparison IPC/replica settings")
         processes, urls = [], []
         try:
             for index in range(data_parallel):
@@ -282,12 +314,14 @@ class Launcher:
                      "--max-model-len", str(max_model_len), "--gpu-memory-utilization", "0.85",
                      "--tensor-parallel-size", tensor_parallel,
                      "--max-num-seqs", max_num_seqs,
-                     "--distributed-executor-backend", "mp",
+                     "--distributed-executor-backend", "uni" if comparison else "mp",
                      "--enable-auto-tool-choice", "--tool-call-parser", tool_call_parser,
                      "--generation-config", "vllm"]
                     + (["--gdn-prefill-backend", gdn_prefill_backend]
                        if gdn_prefill_backend else [])
                     + (["--language-model-only"] if language_model_only else [])
+                    + (["--mm-processor-cache-type", "lru", "--mm-tensor-ipc", "direct_rpc"]
+                       if comparison else [])
                     + list(server_args or []),
                     gpus=assigned, name=name + f"_replica{index}",
                     # Keep delayed worker rendezvous out of the shared ephemeral

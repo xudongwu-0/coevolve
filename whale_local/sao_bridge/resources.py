@@ -84,6 +84,10 @@ def runtime_gpu_counts(spec: dict) -> tuple[int, int]:
 
 
 def require_research_node() -> None:
+    from . import slurm_runtime
+    if slurm_runtime.active():
+        slurm_runtime.require_node()
+        return
     host = os.uname().nodename
     if host not in RESEARCH_HOSTS:
         raise RuntimeError(f"Research compute is authorized only on node3/node4, not {host}")
@@ -129,6 +133,9 @@ def is_filler(record: dict, worker: bool = True) -> bool:
 
 
 def audit() -> dict:
+    from . import slurm_runtime
+    if slurm_runtime.active():
+        return slurm_runtime.audit()
     import pwd
 
     expected_uid = pwd.getpwnam("bruli").pw_uid
@@ -245,6 +252,9 @@ def gpu_release_audit() -> dict:
         "filler_kind": state["filler_kind"],
         "filler_unit_active": state["unit"]["ActiveState"] == "active",
     }
+    if "slurm_allocation" in state:
+        result["slurm_allocation"] = state["slurm_allocation"]
+        return result
     if "resource_scope" in state:
         result["resource_scope"] = state["resource_scope"]
     if not result["filler_unit_active"]:
@@ -291,6 +301,13 @@ def operator_pause_audit() -> dict | None:
 def research_resources_released(release: dict) -> bool:
     if release.get("vanished_gpu_pids"):
         return False
+    if "slurm_allocation" in release:
+        from . import slurm_runtime
+        return (
+            slurm_runtime.active()
+            and release["slurm_allocation"] == slurm_runtime.require_node()
+            and not release["remaining_gpu_pids"] and not release["foreign_gpu_pids"]
+        )
     scope = release.get("resource_scope")
     if scope is not None:
         expected = {

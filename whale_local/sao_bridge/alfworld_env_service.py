@@ -154,7 +154,11 @@ def main() -> None:
     parser.add_argument("--concurrency", type=int, default=32)
     parser.add_argument("--startup-timeout", type=int, default=300)
     args = parser.parse_args()
-    if not PYTHON.is_file() or PYTHON.is_symlink():
+    global PYTHON
+    from . import slurm_runtime
+    if slurm_runtime.active():
+        PYTHON = slurm_runtime.worker_python()
+    elif not PYTHON.is_file() or PYTHON.is_symlink():
         raise RuntimeError("ALFWorld requires the copied isolated worker interpreter")
     run = args.run.resolve()
     run.mkdir(parents=True, exist_ok=False)

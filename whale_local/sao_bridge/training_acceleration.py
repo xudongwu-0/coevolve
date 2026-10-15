@@ -47,11 +47,15 @@ def relative_rms(actual, expected) -> float:
 
 
 def kernel_check(output: Path) -> dict:
-    from .resources import gpu_release_audit, require_research_node
+    from .resources import gpu_release_audit, require_research_node, research_resources_released
+    from .slurm_runtime import active
 
     require_research_node()
     before = gpu_release_audit()
-    if before["foreign_gpu_pids"] or not before["filler_unit_active"]:
+    released = research_resources_released(before) if active() else (
+        not before["foreign_gpu_pids"] and before["filler_unit_active"]
+    )
+    if not released:
         raise RuntimeError("Kernel benchmark requires released research GPUs")
     # Importing FLA queries CUDA capabilities and can create its own GPU context.
     import torch

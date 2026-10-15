@@ -258,6 +258,20 @@ def configure(spec: dict, run: Path) -> dict:
         max_model_len=context_tokens, max_num_seqs=spec["batch_size"] * 2, gpu_memory_utilization=0.7,
         enforce_eager=False, gdn_prefill_backend=spec.get("gdn_prefill_backend"),
     )
+    from .concurrent_comparison import validate_method
+    if validate_method(spec):
+        cfg["rollout"]["max_concurrent_rollouts"] = spec["max_concurrent_rollouts"]
+        cfg["vllm"]["distributed_executor_backend"] = "uni"
+        cfg["vllm"]["max_num_seqs"] = spec["vllm_max_num_seqs"]
+        cfg["vllm"]["gpu_memory_utilization"] = spec["vllm_gpu_memory_utilization"]
+        offload = spec.get("fsdp_offload_params", True)
+        if type(offload) is not bool:
+            raise ValueError("FSDP parameter offload must be boolean")
+        for name in ("actor", "critic", "ref"):
+            if cfg.get(name) is not None:
+                cfg[name].setdefault("fsdp", {})["offload_params"] = offload
+                cfg[name]["fsdp"]["memory_efficient_load"] = True
+                cfg[name]["fsdp"]["per_layer_optim_step"] = False
     # Most phases need only the final checkpoint. Solver-validation campaigns can
     # predeclare sparse checkpoints for held-out checkpoint selection.
     save_interval = int(spec.get("save_interval_steps", spec["steps"]))
@@ -279,12 +293,20 @@ def configure(spec: dict, run: Path) -> dict:
                  "MA_SAO_ANCHOR_SCHEDULE", *SCOPE_ENV):
         if name in os.environ:
             env[name] = os.environ[name]
+    from .slurm_runtime import ENV as COMPARISON_ENV
+    for name in (*COMPARISON_ENV, "NCCL_SHM_DISABLE", "VLLM_ENABLE_V1_MULTIPROCESSING",
+                 "TORCHINDUCTOR_COMPILE_THREADS", "VLLM_RPC_BASE_PATH", "TMP", "TEMP",
+                 "XDG_CACHE_HOME", "HF_HOME", "MPLCONFIGDIR"):
+        if name in os.environ:
+            env[name] = os.environ[name]
     if spec.get("joint_root"):
         context_enabled = spec.get("critic_cooperative_context", True)
         if type(context_enabled) is not bool:
             raise ValueError("Critic cooperative context must be a boolean")
         env["MA_SAO_COOPERATIVE_CONTEXT"] = str(int(context_enabled))
         env["MA_SAO_VALUE_NORM"] = str(int(spec.get("value_normalization", False)))
+    if validate_method(spec):
+        env["MA_SAO_FRESH_CRITIC_SEED"] = str(spec["fresh_critic_seed"])
     context = spec.get("central_context")
     if context:
         env["MA_SAO_CONTEXT_FILE"] = str(Path(context).resolve())
@@ -300,8 +322,11 @@ def main():
     parser.add_argument("--spec", type=Path, required=True)
     args = parser.parse_args()
     spec = read_json(args.spec)
+    from .concurrent_comparison import require_executable_spec
+    require_executable_spec(spec)
     validate_schedule(spec)
-    scheduled = spec.get("schedule", "simultaneous") != "simultaneous"
+    scheduled = (spec.get("schedule", "simultaneous") != "simultaneous"
+                 or bool(spec.get("rolling_recovery")))
     from .joint_anchor import SCHEDULE as ANCHOR_SCHEDULE
     if spec.get("schedule") == ANCHOR_SCHEDULE:
         os.environ["MA_SAO_ANCHOR_SCHEDULE"] = "1"
@@ -373,8 +398,13 @@ def main():
     cfg_path.write_text(yaml.safe_dump(configure(spec, run), sort_keys=False))
     config, _ = load_expr_config(["--config", str(cfg_path)], PPOConfig)
     if spec.get("joint_root") or spec.get("processed_behavior_logprobs", False):
+        from .concurrent_comparison import validate_method
         from .joint_workflow import JointVLLMConfig
-        config.vllm = JointVLLMConfig(**asdict(config.vllm))
+        if validate_method(spec):
+            from .slurm_vllm import SlurmVLLMConfig
+            config.vllm = SlurmVLLMConfig(**asdict(config.vllm))
+        else:
+            config.vllm = JointVLLMConfig(**asdict(config.vllm))
         write_json(run / "rollout_probability_contract.json", {
             "logprobs_mode": config.vllm.logprobs_mode,
             "temperature": config.gconfig.temperature,

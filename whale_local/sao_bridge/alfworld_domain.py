@@ -5,11 +5,14 @@ import json
 import logging
 import os
 import sys
+from pathlib import Path
 from urllib.parse import urlsplit
 
 import httpx
 
-from .alfworld_train_data import task_count
+from .alfworld_runtime import ALFWORLD_DATA
+from .alfworld_train_data import evaluation_paths, task_count
+from .common import file_sha
 
 logger = logging.getLogger(__name__)
 
@@ -84,14 +87,28 @@ def _tool_argument_errors(calls: list[dict]) -> list[dict]:
     return errors
 
 
+def _row_task_count(row: dict) -> int:
+    """Verify row provenance without overriding the official test_set catalogue."""
+    split = row.get("task_split", "test_set")
+    catalogue_path = row.get("task_catalogue")
+    catalogue_sha256 = row.get("task_catalogue_sha256")
+    if split == "test_set" and (catalogue_path is not None or catalogue_sha256 is not None):
+        if not isinstance(catalogue_path, (str, Path)) or not isinstance(catalogue_sha256, str):
+            raise ValueError("Official catalogue provenance requires both path and SHA-256")
+        official = (ALFWORLD_DATA / "test_set.json").resolve()
+        if Path(catalogue_path).resolve() != official:
+            raise ValueError("Row provenance must identify the official test_set catalogue")
+        if file_sha(official) != catalogue_sha256:
+            raise ValueError("Official test_set catalogue checksum changed")
+        return len(evaluation_paths(ALFWORLD_DATA))
+    return task_count(split, catalogue_sha256, catalogue_path=catalogue_path)
+
+
 async def run_episode(row: dict, spec: dict, generate, total_tokens=4096, seed=42) -> dict:
     del spec
     task_id = row.get("task_id", row.get("index"))
     task_split = row.get("task_split", "test_set")
-    count = task_count(
-        task_split, row.get("task_catalogue_sha256"),
-        catalogue_path=row.get("task_catalogue"),
-    )
+    count = _row_task_count(row)
     if type(task_id) is not int or not 0 <= task_id < count:
         raise ValueError(
             f"ALFWorld row requires an integer task_id in 0..{count - 1} for {task_split}"

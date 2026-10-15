@@ -31,6 +31,35 @@ class OwnershipTests(unittest.TestCase):
             self.assertEqual(launcher.env, {"VLLM_PORT": "35000"})
         self.assertEqual(launcher.stop.call_count, 2)
 
+    def test_comparison_replicas_use_uniprocess_and_nonshared_cache(self):
+        launcher = object.__new__(Launcher)
+        launcher.module = Mock(side_effect=[Mock(), Mock()])
+        launcher.ready = Mock()
+        launcher.stop = Mock()
+        with patch("sao_bridge.slurm_runtime.active", return_value=True):
+            with launcher.vllm("model", port=19801, gpus="0,1", name="solver", data_parallel=2):
+                for call in launcher.module.call_args_list:
+                    args = call.args[1]
+                    self.assertEqual(args[args.index("--distributed-executor-backend") + 1], "uni")
+                    self.assertEqual(args[args.index("--mm-processor-cache-type") + 1], "lru")
+                    self.assertEqual(args[args.index("--mm-tensor-ipc") + 1], "direct_rpc")
+                    self.assertIn(call.kwargs["gpus"], ("0", "1"))
+        self.assertEqual(launcher.stop.call_count, 2)
+
+    def test_comparison_rejects_parallel_and_ipc_overrides_before_launch(self):
+        launcher = object.__new__(Launcher)
+        launcher.module = Mock()
+        with patch("sao_bridge.slurm_runtime.active", return_value=True):
+            for options in (
+                {"tensor_parallel": 2, "gpus": "0,1"},
+                {"gpus": "0", "server_args": ["--distributed-executor-backend=mp"]},
+                {"gpus": "0", "server_args": ["--mm-tensor-ipc", "torch_shm"]},
+            ):
+                with self.subTest(options=options), self.assertRaises(ValueError):
+                    with launcher.vllm("model", port=19801, name="solver", **options):
+                        self.fail("Unsafe replica settings were accepted")
+        launcher.module.assert_not_called()
+
     def test_frozen_worktree_resolves_upstreams_before_hydra_import(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

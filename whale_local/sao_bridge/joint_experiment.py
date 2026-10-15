@@ -32,9 +32,11 @@ def validate_spec(spec: dict) -> None:
     from .training_acceleration import overlay_path
     overlay_path(spec)
     ablation = validate_component_ablation(spec)
+    from .concurrent_comparison import validate_method
+    comparison = validate_method(spec)
     if type(spec.get("critic_cooperative_context", True)) is not bool:
         raise ValueError("Critic cooperative context must be a boolean")
-    if not spec.get("critic_cooperative_context", True) and ablation != "without_context":
+    if not spec.get("critic_cooperative_context", True) and ablation != "without_context" and not comparison:
         raise ValueError("Removing cooperative context requires its isolated ablation declaration")
     if type(spec.get("stop_on_diagnostic_thresholds", True)) is not bool:
         raise ValueError("Diagnostic stopping policy must be a boolean")
@@ -69,7 +71,7 @@ def validate_spec(spec: dict) -> None:
     ):
         raise ValueError("Invalid joint pilot budget or policy-version protocol")
     if asynchronous and (
-        (not spec.get("value_normalization") and ablation != "without_value_norm")
+        (not spec.get("value_normalization") and ablation != "without_value_norm" and not comparison)
         or not 0 < spec.get("kl_ctl", 0) <= 1
         or not isinstance(spec.get("training_deadline_unix"), (int, float))
     ):
@@ -93,6 +95,8 @@ def validate_spec(spec: dict) -> None:
 def run_role(spec_path: Path) -> dict:
     require_research_node()
     spec = read_json(spec_path)
+    from .concurrent_comparison import require_executable_spec
+    require_executable_spec(spec)
     validate_spec(spec)
     root, joint = Path(spec["run"]), Path(spec["joint_root"])
     _immutable_json(root.parent / "IDENTITY.json", spec)

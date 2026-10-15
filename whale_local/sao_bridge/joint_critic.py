@@ -158,6 +158,16 @@ def validate_critic_settings(path: Path, settings: dict) -> None:
 
 
 class JointEpisodeCritic(ContinuationStateMixin, FSDPPPOCritic):
+    def _create_device_model(self):
+        seed = os.environ.get("MA_SAO_FRESH_CRITIC_SEED")
+        if seed is None:
+            return super()._create_device_model()
+        # The pinned Qwen3.5 loader initializes its missing score head on CPU.
+        # Isolate this RNG from Actor construction and the MA-only ValueNorm.
+        with torch.random.fork_rng(devices=[]):
+            torch.random.default_generator.manual_seed(int(seed))
+            return super()._create_device_model()
+
     def __init__(self, config):
         super().__init__(config)
         context = os.environ.get("MA_SAO_COOPERATIVE_CONTEXT", "1")

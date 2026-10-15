@@ -1,0 +1,20 @@
+{
+  "status": "BLOCKED: shared-episode prototype does not implement ordinary SAO ten-task differential reward",
+  "baseline_definition": "independent-sao-shared-episode-v1",
+  "run": "/mnt/vast/chengboliu/xudong/coevolve/runs/concurrent_e0_a1_144_v1",
+  "model_revision": "f6a915953f8206f3f5c7ef0b40240e1f4d2b6676",
+  "engineer_model": "/mnt/vast/chengboliu/xudong/coevolve/assets/Harness-R1/harness-r1",
+  "solver_model": "/mnt/vast/chengboliu/xudong/coevolve/assets/Harness-R1/target-agent-sft",
+  "worker_python": "/mnt/vast/chengboliu/xudong/.envs/alfworld/bin/python",
+  "source_data": "/mnt/vast/chengboliu/xudong/coevolve/reproducibility/ma_sao_20261012/payload/runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/joint_data.json",
+  "no_patch": "/mnt/vast/chengboliu/xudong/coevolve/examples/alfworld_no_patch.json",
+  "evaluation_protocol": "/mnt/vast/chengboliu/xudong/coevolve/runs/concurrent_e0_a1_inputs/evaluation.json",
+  "initial_state": "/mnt/vast/chengboliu/xudong/coevolve/runs/concurrent_e0_a1_inputs/initial_state.json",
+  "nodes": {
+    "ma_sao": {"editor": "ALLOCATED_NODE_0", "solver": "ALLOCATED_NODE_1"},
+    "sao": {"editor": "ALLOCATED_NODE_2", "solver": "ALLOCATED_NODE_3"}
+  },
+  "training_deadline_unix": 0,
+  "phase_timeout_seconds": 172800,
+  "fsdp_offload_params": true
+}
