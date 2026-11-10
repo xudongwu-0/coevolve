@@ -4,6 +4,23 @@
 
 **Agent 先读本节，再读 [项目状态](docs/PROJECT_STATE.md)、[算法与冻结协议](docs/MA_SAO.md) 和 [实验日志](docs/EXPERIMENT_LOG.md)。下面的2B RSFT/GRPO配置是历史原型，不是当前9B主线的启动入口。**
 
+## DBBench / WebShop 源码与历史 97% checkpoint
+
+- **DBBench 和 WebShop 的实现代码已有**，位于
+  [官方 Harness-R1 子模块](third_party/harness-r1-upstream)，固定版本为
+  `94f2e087f573e1b82fc9568bb634d4ae9a887e28`。包含任务适配、Harness hooks、
+  数据构建、reward 和评测入口；见[源码索引与获取说明](docs/BENCHMARK_IMPLEMENTATIONS.md)。
+  这是上游实现，不代表我们已完成两个环境的 MA-SAO 适配或训练验证。
+- **历史 ALFWorld 97% checkpoint**：
+  [Hugging Face 固定版本](https://huggingface.co/datasets/wxd02/coevolve/tree/d0e84414e8ef9e2b6a84585e1365189faf501051/best97)
+  （私有 dataset，需要访问权限），分别提供
+  [Solver](https://huggingface.co/datasets/wxd02/coevolve/tree/d0e84414e8ef9e2b6a84585e1365189faf501051/best97/solver)
+  和 [Engineer](https://huggingface.co/datasets/wxd02/coevolve/tree/d0e84414e8ef9e2b6a84585e1365189faf501051/best97/engineer)。
+  **97% 是选定 Harness + Solver 的 194/200；同一 Solver 无 Harness 为 185/200（92.5%）。**
+  HF 仅含两个 Actor checkpoint，不含 Harness 或完整续训状态；
+  对应 Harness、原始评测和[上传回执](reproducibility/historical97_20261012/HF_REMOTE_VERIFIED.json)
+  的入口见[说明](docs/BENCHMARK_IMPLEMENTATIONS.md#historical-alfworld-97-checkpoint)。
+
 ## 当前任务与主要结论
 
 ### 2026-10-12：可离线复算的代码与数据交接
