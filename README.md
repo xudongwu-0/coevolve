@@ -21,26 +21,15 @@ JoMoHa jointly optimizes a language agent's **model weights** and **executable h
 
 Success rates reported in [the paper](https://arxiv.org/html/2611.11499v1):
 
-| Method | ALFWorld | WebShop | DBBench | Average |
-|---|---:|---:|---:|---:|
-| **JoMoHa** | **97.0%** | **45.8%** | **68.0%** | **70.3%** |
+[![Main benchmark table comparing 13 methods on ALFWorld, WebShop, and DBBench; JoMoHa achieves 70.3% average success.](docs/figures/main_results.png)](docs/figures/main_results.pdf)
+
+*Full benchmark comparison from the paper. Best values are bold on red; second-best distinct values are underlined on blue. Frontier models serve as fixed harness editors; Reflection uses success@2.*
 
 JoMoHa improves average success over **Agent SFT + Harness-R1 by 6.1 percentage points** and **WHALE by 7.2 percentage points**. The average is the equally weighted mean of the three benchmark success rates.
 
 ## How it works
 
-```mermaid
-flowchart LR
-    T[Task and feedback] --> E[Engineer]
-    E --> H[Executable harness]
-    H --> S[Solver]
-    S <--> ENV[Environment]
-    ENV --> R[Shared task reward]
-    R --> ER[Engineer RL update]
-    R --> SR[Solver RL update]
-    ER --> E
-    SR --> S
-```
+[![JoMoHa jointly trains the Engineer and Solver from shared task rewards, with separate critics, ValueNorm, and partner-trajectory weighting.](docs/figures/jomoha_overview.png)](docs/figures/jomoha_overview.pdf)
 
 Each task attempt produces two complementary trajectories: the Engineer's generated program and the Solver's multi-turn execution. The shared task reward trains each policy on **its own generated tokens**, with separate actors and critics.
 
@@ -63,7 +52,7 @@ cd coevolve
 git submodule update --init --recursive
 ```
 
-The pinned submodules provide WHALE, Harness-R1 benchmark runtimes, the SAO backbone, and the MAPPO design reference.
+The pinned submodules provide WHALE, Harness-R1 benchmark runtimes, and the SAO backbone.
 
 ### 2. Explore the benchmarks
 
@@ -164,6 +153,6 @@ Contributions and issue reports are welcome. Include the repository revision, en
 
 ## Acknowledgments
 
-JoMoHa builds on [WHALE](https://github.com/krafton-ai/WHALE), [Harness-R1](https://github.com/DeepExperience/Harness-R1), the [unofficial SAO implementation](https://github.com/fooSynaptic/Single-rollout-async-Optimization), and [AReaL](https://github.com/inclusionAI/AReaL). [MAPPO](https://github.com/marlbenchmark/on-policy) is included as a design reference.
+JoMoHa builds on [WHALE](https://github.com/krafton-ai/WHALE), [Harness-R1](https://github.com/DeepExperience/Harness-R1), the [unofficial SAO implementation](https://github.com/fooSynaptic/Single-rollout-async-Optimization), and [AReaL](https://github.com/inclusionAI/AReaL).
 
 See [third-party notices](THIRD_PARTY_NOTICES.md) and [component licenses](licenses/) for attribution and applicable terms. Model weights and benchmark assets follow their providers' terms.
