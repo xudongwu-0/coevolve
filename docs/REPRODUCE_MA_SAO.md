@@ -1,105 +1,116 @@
-# MA-SAO：当前进展复现与模型交接
+# ALFWorld reproducibility and artifact guide
 
-更新日期：2026-10-12。**训练保持暂停。本文的校验、下载和上传计划均不授予训练启动权限。**
+This guide covers offline result verification, experiment provenance, training-source restoration, and checkpoint access. Historical files use the name **MA-SAO** for the joint Engineer/Solver implementation described as **JoMoHa** in the [paper](https://arxiv.org/abs/2611.11499).
 
-## 1. 新 agent 的最短接手路径
+For WebShop and DBBench runtimes, builders, and evaluation entry points, see the [benchmark guide](BENCHMARK_IMPLEMENTATIONS.md).
 
-取得此代码版本后，在仓库根目录执行：
+## Offline verification
+
+From the repository root, using Python 3.10 or later:
 
 ```bash
-python3 -B scripts/reproduce_ma_progress.py
+python3 -B scripts/reproduce_ma_progress.py --best97
 ```
 
-不需要安装训练依赖、提供API key、下载模型或使用GPU。这条命令逐文件核验
-[证据包](../reproducibility/ma_sao_20261012/MANIFEST.json)，然后：
+No dependency installation, submodule initialization, API access, model download, or GPU is required. The verifier:
 
-- 从固定任务目录和源样本重新构造joint/joint/anchor训练输入，逐项对比原始ledger。
-- 核对训练、选择、主评测和strict197的真实重叠关系。
-- 从原始逐题报告重算Full96、Full144的成功数，而不抄汇总表。
-- 核对Harness选择先于该端点主评测、Solver身份及评测预算。
-- 区分without_peer的76轮metrics与72轮完整配对恢复元数据。
-- 按各自原manifest验证七个冻结源码快照；不把当前代码倒称为历史执行代码。
+- Checks every declared file against the [payload manifest](../reproducibility/ma_sao_20261012/MANIFEST.json).
+- Reconstructs the joint/joint/Solver-only training inputs and compares them with the stored ledger.
+- Audits task IDs and goal-group overlap across training, selection, and evaluation.
+- Recomputes Full96 and Full144 scores from the original per-task reports.
+- Checks that harness selection preceded the endpoint evaluation, with the recorded Solver identity and evaluation budget.
+- Distinguishes recorded training metrics from complete paired recovery metadata.
+- Verifies the seven frozen executing-source snapshots against their own manifests.
+- Verifies the best97 harness and recomputes its 194/200 result, matching summary outcomes to the original per-task report.
 
-预期核心输出：
+The JSON output should report `status: "passed"`, 4,225 payload files, `training_allowed: false`, and `gpu_or_api_used: false`. These flags describe an offline evidence check, not a new experiment.
 
-| 对象 | 选定Harness + Solver | 无Harness、同一Solver |
+The `best97` object reports `selected.successes: 194`, `selected.accuracy: 0.97`, and `no_patch.successes: 185`. It also includes the matching harness path and SHA-256 digests for the harness and summary reports. Omit `--best97` to run the original Full96/Full144 archive audit on its own.
+
+### Expected endpoint scores
+
+| Archived endpoint | Selected harness + Solver | Same Solver without a harness |
 |---|---:|---:|
-| Full96 | 180/200，90.0% | 178/200，89.0% |
-| Full144，预先固定主终点 | **186/200，93.0%** | **179/200，89.5%** |
+| Full96 | 180/200 (90.0%) | 178/200 (89.0%) |
+| Full144, fixed primary endpoint | 186/200 (93.0%) | 179/200 (89.5%) |
 
-without_peer应显示两角色各76个连续metrics step、恢复元数据72轮；
-`training_allowed`与`gpu_or_api_used`均为false。
-**这是既有证据的确定性复算，不是新跑一次模型后得到93%。**
+For `without_peer`, the verifier should find 76 metric rows per role, but the latest complete paired recovery metadata is at round **72**, not 76. The archive does not establish a completed endpoint comparison for that ablation. Recovery metadata verifies saved receipts; it does not mean model tensors are present in Git.
 
-需要查看原运行相对目录时，可复制到一个尚不存在的新目录：
+### Extract an evidence copy
+
+To reconstruct the original relative directory layout in a new directory:
 
 ```bash
 python3 -B scripts/reproduce_ma_progress.py --materialize /tmp/coevolve-evidence-copy
 ```
 
-禁止覆盖现有目录，不修改原记录中的绝对路径，不复制模型、不执行任何启动器。
-在任意checkout目录均可直接做第一条离线核验；原训练脚本则不是任意路径即插即用。
+The destination must not already exist and must be outside the bundle. This copies only declared evidence, verifies the copied bytes, preserves recorded absolute paths as provenance, and does not execute launchers or copy model tensors.
 
-## 2. 算法和冻结配置
+The [frozen payload](../reproducibility/ma_sao_20261012/payload/) must not be edited. Adaptations belong in separate working configurations, not in the archived scientific records.
 
-完整机制、公式及设计局限见[算法说明](MA_SAO_ALGORITHM.md)；
-历史分支与协议见[MA_SAO](MA_SAO.md)。本次共同初始化控制：
+## Interpreting the results
 
-- H0 Engineer、普通SAO W1 Solver，以及原始pre-MA Critics；不是历史97%那组已训练MA Critics。
-- 两套Actor、两套Critic，同一环境episode的团队终局奖励。
-- bounded队友重要性权重、Critic协作上下文、各角色ValueNorm。
-- joint / joint / Solver-only调度；每角色前3个活跃轮只训练Critic。
-- seed1000043、batch8、144轮、32768上下文、4096动作token上限。
-- Actor LR5e-7、Critic LR2.5e-6、每活跃轮2次Critic更新、固定参考KL0.02。
-- 每12轮成对原生保存，只有Solver发布共享COMMITTED/LATEST。
+### Data splits
 
-Full训练共1152个共享环境episode、2304条生成角色轨迹；不是两个角色
-都各做144次Actor更新。原规范、两角色spec、metrics及训练审计均在证据包中。
+The archive preserves the original 500-task catalogue and its ordering; task IDs must not be reassigned by sorting directories.
 
-Full原训练使用两节点各8卡；最近without_peer续训使用node3八卡、node4 GPU1–7：
-每角色保持4个learner rank，rollout副本分别4和3。该调整保持原生优化器布局，
-但不保证采样逐token等价。端点评测维持node3八副本；不能将其缩成七副本后
-声称与原评分完全相同。
-
-## 3. 数据切分：必须准确表达的限制
-
-原始500任务目录及顺序被保存，不按目录排序重新编号：
-
-| 用途 | 实际范围/数量 | 注意事项 |
+| Partition | Scope | Interpretation |
 |---|---|---|
-| 本次MA训练 | 官方目录中的ID0–239，共240个任务 | 不与下面200题发生任务ID重叠 |
-| 基础源输入 | 768行，固定种子1000042产生任务顺序 | prompt及历史W0证据逐字保留 |
-| joint/joint/anchor输入 | 1152行，144轮×8 | anchor重复的是输入，不是重放已生成轨迹 |
-| Harness选择 | 显式manifest中的48题 | **这48题全部包含在下面main200中** |
-| main200 | 固定200题，每题一次 | 是反复使用的开发集，不是独立未触碰测试集 |
-| strict197 | main200排除291、414、467 | 这三题的实例没训练过，但goal group与旧训练任务有关 |
-| 其余152题 | main200减selection48 | 只做事后描述性统计，不能包装成新预注册测试终点 |
+| Training | Task IDs 0-239, 240 tasks | No task-ID overlap with the 200-task evaluation |
+| Source inputs | 768 rows, fixed seed 1000042 | Prompts and historical evidence are preserved |
+| Scheduled inputs | 1,152 rows, 144 rounds x 8 episodes | Repeated inputs are not replayed generated trajectories |
+| Harness selection | 48 explicit task IDs | All 48 are included in `main200` |
+| `main200` | 200 tasks, one sample each | Reused development evaluation, not an untouched test set |
+| `strict197` | `main200` excluding IDs 291, 414, 467 | Removes three goal-group overlaps with legacy training |
+| Remaining 152 tasks | `main200` minus the selection tasks | Post-hoc descriptive subset, not a new primary test |
 
-虽然训练与评测的任务ID分离，**选择与主评测并不分离**。93.0%因此不能称为
-独立泛化测试成绩。strict197也不消除选择题重叠；官方预训练数据暴露无法独立核验。
-同样，不把另一个2296-game训练目录或更早selection24协议误套到本次MA输入。
+Training/evaluation task-ID separation does **not** eliminate selection/evaluation overlap. Neither `strict197` nor the remaining 152 tasks should be presented as a newly established independent test protocol. Upstream pretraining exposure cannot be independently ruled out.
 
-证据包同时保存任务目录、原selection/core200协议、完整训练输入、训练packet、
-选择候选及原始逐题报告。任何新的未污染测试需要另行设计和授权，不能改写旧200题。
+These records describe a single-seed study on reused development data; they do not establish robust multi-seed superiority or a causal comparison with the historical 97% run.
 
-## 4. 代码、依赖和环境如何恢复
+### The 93% archive and the historical 97% run
 
-顶层Git包含完整项目代码和测试；上游仓库继续使用固定commit的Git submodule，
-不重新声称拥有其版权：
+The offline verifier's **Full144** result is 186/200 (93.0%). It uses a different initialization and run from the historical 194/200 (97.0%) result.
+
+The historical 97% record pairs a selected harness with a Solver. The same Solver without that harness scored 185/200 (92.5%). It is therefore not a weight-only 97% result, and it was selected on reused development data rather than an untouched generalization test.
+
+The historical [selected harness](../reproducibility/ma_sao_20261012/payload/runs/alfworld_ma_convergence_v1r4/block-01/round0096/patches/95-proposal07.json) is preserved in Git. The `--best97` verifier recomputes the archived score without running the model.
+
+## Archived training configuration
+
+The Full144 study used:
+
+- Separate Engineer/Solver actors and separate critics, with a shared terminal task reward.
+- H0 Engineer, ordinary SAO W1 Solver, and pre-MA critics; not the historical 97% run's trained critics.
+- Bounded partner-trajectory weights, critic collaboration context, and per-role ValueNorm.
+- Joint / joint / Solver-only scheduling, with critic-only warmup for each role's first three active rounds.
+- Seed 1000043, batch size 8, 144 rounds, 32,768 context tokens, and a 4,096 action-token limit.
+- Actor learning rate 5e-7, critic learning rate 2.5e-6, two critic updates per active round, and reference KL coefficient 0.02.
+- Paired native saves every 12 rounds, with a shared commit record.
+
+This accounts for 1,152 shared environment episodes and 2,304 generated role trajectories. It does not imply 144 actor updates for each role.
+
+The original Full run used two eight-GPU nodes. A later partial ablation changed the rollout layout while retaining four learner ranks per role; those layouts do not guarantee token-identical sampling. These are historical configurations, not a tested minimum hardware requirement.
+
+For implementation entry points, see the [README code overview](../README.md#code-overview). The archive's [state index](../reproducibility/ma_sao_20261012/STATE.json) identifies the exact study and source snapshots; current working-tree code must not be presented as the code that executed an older run.
+
+## Restoring the training source
+
+The following steps restore source dependencies, **not** a ready-to-run training environment.
+
+### 1. Initialize pinned submodules
 
 ```bash
 git submodule update --init --recursive
 ```
 
-版本见[UPSTREAMS.json](../reproducibility/ma_sao_20261012/UPSTREAMS.json)。
-AReaL不是这些submodule之一的普通已提交子目录；它位于SAO的忽略vendor目录，
-有实际本地修改。为避免只提交指针而遗漏运行代码，本次额外保存：
+The exact revisions are recorded in [UPSTREAMS.json](../reproducibility/ma_sao_20261012/UPSTREAMS.json). Third-party copyright and license notices remain with their respective components.
 
-- [完整AReaL工作树补丁](../reproducibility/ma_sao_20261012/upstream/AReaL-working-tree.patch)。
-- [基准revision及1180个文件的指纹](../reproducibility/ma_sao_20261012/upstream/AReaL.json)。
-- 原AReaL许可证，补丁同时包含tracked改动与untracked新增源文件。
+### 2. Restore the patched AReaL tree
 
-在**尚不存在**的vendor目录中准备原基准版本，然后应用完整补丁：
+AReaL is not a top-level submodule. The historical runtime includes local modifications, preserved as a [complete working-tree patch](../reproducibility/ma_sao_20261012/upstream/AReaL-working-tree.patch) with [baseline metadata and file fingerprints](../reproducibility/ma_sao_20261012/upstream/AReaL.json).
+
+From the repository root, with `third_party/sao/vendor/AReaL` **not yet present**:
 
 ```bash
 git clone https://github.com/inclusionAI/AReaL.git third_party/sao/vendor/AReaL
@@ -110,102 +121,46 @@ git -C third_party/sao/vendor/AReaL apply \
   ../../../../reproducibility/ma_sao_20261012/upstream/AReaL-working-tree.patch
 ```
 
-不要先运行自动应用SAO补丁的bootstrap再重复应用这份**完整**补丁。
-若目录已存在，先核对状态，不覆盖或reset。准备工具已经从干净基准重建并逐文件
-校验了该工作树；没有用修改中的仓库来冒充干净安装测试。
+Do not run the SAO bootstrap's component-patch sequence before applying this complete patch. If the vendor directory already exists, inspect its revision and local changes rather than overwriting or resetting it.
 
-实际9B原生环境以[ENVIRONMENT.json](../reproducibility/ma_sao_20261012/ENVIRONMENT.json)
-和包内ALFWorld worker环境清单为准，不直接照抄历史2B的worker requirements：
+### 3. Prepare the runtime and external assets
 
-- Python3.12；实际训练环境记录torch2.10.0+cu129、vLLM0.19.1、transformers5.7.0。
-- learner另有隔离覆盖层：FLA/fla-core0.5.2、Triton3.7.1；基础venv的Triton版本不是
-  实际learner覆盖层版本。见[覆盖层依赖](../requirements/training-acceleration.txt)。
-- ALFWorld AgentBench的原数据、环境和本地内核覆盖层另在大型assets归档中。
-- 原协议含绝对路径、固定host/UID/GID、systemd及GPU映射。完整GPU重放前须恢复
-  对应依赖和模型，并单独准备合法的新执行配置，**不能改写已冻结的科学记录**。
+The recorded 9B environment is described in [ENVIRONMENT.json](../reproducibility/ma_sao_20261012/ENVIRONMENT.json) and the worker environment records in the payload:
 
-本轮没有重装训练环境、没有新开推理服务、没有重训。历史Actor权重不包含Critic、
-Adam、RNG等原生训练状态；取得它们也不代表已经具备完整GPU续训材料。
+- Python 3.12, PyTorch 2.10.0+cu129, vLLM 0.19.1, and Transformers 5.7.0.
+- A separate learner overlay with FLA/fla-core 0.5.2 and Triton 3.7.1; see [training-acceleration.txt](../requirements/training-acceleration.txt).
+- Separately obtained model weights and ALFWorld/AgentBench environment assets, under their providers' terms.
 
-## 5. Hugging Face：只保存历史97%的Actor checkpoint
+Use this inventory for the 9B joint-training stack; the older 2B coordinator/worker dependency files describe a separate experiment setup.
 
-2026-10-12 15:34北京时间，用户将范围限定为历史97%对应的checkpoint，
-并明确**不上传Harness、不下载回验**。此前Full96/144、native72/144和初始化模型
-的批量上传计划全部取消。[旧模型清单](../reproducibility/ma_sao_20261012/MODEL_ARTIFACTS.json)
-仅保留为当时的本地库存，不能按其中的旧priority继续上传。
+Historical launchers contain absolute paths, host/service assumptions, user/group IDs, and GPU mappings. Prepare a new configuration for your infrastructure. Do not globally replace paths inside frozen evidence or treat old orchestration scripts as a portable launch recipe. Offline verification and extraction never activate the archived training controls.
 
-已于15:44:40北京时间完成上传，唯一目标为私有dataset
-[wxd02/coevolve](https://huggingface.co/datasets/wxd02/coevolve)，不可变revision为
-`d0e84414e8ef9e2b6a84585e1365189faf501051`。
-[精确文件清单](../reproducibility/historical97_20261012/CHECKPOINT_UPLOAD_MANIFEST.json)
-记录本地SHA256，[远端回执](../reproducibility/historical97_20261012/HF_REMOTE_VERIFIED.json)
-记录相同revision下的文件、大小及服务器对象摘要核对结果。
-**没有执行下载回验。** W&B仍只读，没有创建run或上传artifact。
+## Checkpoint access
 
-### 精确模型身份与范围
+The best97 package provides the Engineer/Solver actor pair, with the matching harness and per-task reports preserved in Git. Follow the [checkpoint download command](../README.md#checkpoints) using a Hugging Face account with access to the dataset.
 
-历史路线为`alfworld_ma_convergence_v1r4/block-01/round0096`，
-两个Actor目录均为`epoch0epochstep95globalstep95`；这是该路线累计144轮的峰值，
-**不是**共同初始化研究Full144的93%模型。
+The Engineer/Solver actor weights are stored in the Hugging Face dataset [wxd02/coevolve](https://huggingface.co/datasets/wxd02/coevolve). The [remote receipt](../reproducibility/historical97_20261012/HF_REMOTE_VERIFIED.json) records revision `d0e84414e8ef9e2b6a84585e1365189faf501051`; the [file manifest](../reproducibility/historical97_20261012/CHECKPOINT_UPLOAD_MANIFEST.json) records the file identities.
 
-| 内容 | HF相对目录 | 大小 |
-|---|---|---:|
-| 历史97% Solver Actor及原配置/tokenizer | `best97/solver/` | 18839727095字节，约17.55GiB |
-| 同时点Engineer Actor及原配置/tokenizer | `best97/engineer/` | 18839727101字节，约17.55GiB |
+| Historical artifact | Dataset-relative path | Scope |
+|---|---|---|
+| Solver actor | `best97/solver/` | Actor weights, configuration, and tokenizer |
+| Engineer actor | `best97/engineer/` | Actor weights, configuration, and tokenizer |
 
-共20份checkpoint文件、37679454196字节，约35.09GiB。
-**没有Harness、Critic、Adam/native状态、其他checkpoint或评测数据。**
-checkpoint目录里的原`joint_schedule.json`和`runtime_supplements.json`是小型配置元数据，
-不包含优化器状态，也不是可续训原生快照。HF自动维护的`.gitattributes`不计入模型文件数。
+The 20 recorded checkpoint files total 37,679,454,196 bytes, approximately 35.09 GiB. This actor pair belongs to the historical 97% run, **not** the Full144 93% archive. The dataset is not a single model loadable from its root.
 
-原始报告为选定Harness与Solver合计194/200（97%），同一Solver无Harness为185/200
-（92.5%）。97%是复用开发集选出的历史峰值，不是独立泛化测试，不能称为纯权重成绩。
-原选定Harness仍在[既有Git证据](../reproducibility/ma_sao_20261012/payload/runs/alfworld_ma_convergence_v1r4/block-01/round0096/patches/95-proposal07.json)
-中；按用户要求不复制到HF。
+The upload did not include the harness, critics, optimizer, native continuation state, other checkpoints, or evaluation artifacts. The harness is available separately in the Git evidence linked above. Upload completion and remote metadata were checked; model download-back verification was not performed.
 
-### 发布与访问约定
+Resuming training requires both actors, both critics, Adam state, ValueNorm, RNG, schedule/data cursors, and matching initial/reference models. Small schedule/runtime configuration files inside an actor directory do not supply those missing states.
 
-- 每份待传文件均已由上传SDK计算完整SHA256，并核对原模型身份、大小及已有摘要。
-- 上传完成后已核对远端revision、精确文件清单、大小及服务器对象摘要；**没有下载模型回验**。
-- 本地原checkpoint保留不动，文件权限/所有权不改写，不因为容量或权限将仓库改为公开。
-- 访问需要有该私有仓库权限的HF token，并显式指定`repo_type="dataset"`和实际不可变revision。
-- 只需Solver时选择`best97/solver/*`；需要Engineer时选择`best97/engineer/*`。
-  不能把这个双角色dataset当成一个根目录可直接`from_pretrained`的单模型repo。
-- 不使用虚构revision或默认`main`冒充已锁定的模型版本。
+## Development checks
 
-以下仅供未来按需访问，本次没有执行这些下载代码。安装有`huggingface_hub`的环境中，
-将`HF_TOKEN_FILE`设置为仓库之外的HF凭据文件路径，再从Git仓库根目录运行：
+In an environment with `pytest` installed, run:
 
-```python
-import json
-import os
-from pathlib import Path
-from huggingface_hub import snapshot_download
-
-release = json.loads(Path(
-    "reproducibility/historical97_20261012/HF_REMOTE_VERIFIED.json"
-).read_text())
-model_root = snapshot_download(
-    repo_id=release["repo_id"],
-    repo_type=release["repo_type"],
-    revision=release["revision"],
-    token=Path(os.environ["HF_TOKEN_FILE"]).read_text().strip(),
-    allow_patterns=["best97/solver/*"],
-    local_dir="runs/hf_best97_download",
-)
-print(Path(model_root) / "best97/solver")
+```bash
+python3 -m pytest -q tests/test_ma_handoff.py tests/test_reproduce_ma_progress.py
+python3 -B scripts/reproduce_ma_progress.py --best97
 ```
 
-访问Engineer时将allow_patterns改为`["best97/engineer/*"]`；需要两者时显式列出
-两个模式。得到本地Actor目录不代表获准启动推理、评测或训练。
+These checks validate evidence packaging and offline reconstruction. They are not GPU training or model-evaluation tests.
 
-## 6. 凭据与Git发布
-
-用户指定的三个凭据文件在仓库之外的`/mnt/3fs/xudong/api_keys/`。
-目录0700、文件0600；GitHub文件实际是SSH私钥，不是GitHub REST token。
-API key/私钥不进入Git、命令参数、URL、配置快照或日志；不读取旧聊天中的令牌。
-仓库额外忽略api_keys及相应文件名，打包器也拒绝凭据路径和已知令牌/私钥内容。
-
-GitHub仅发布代码、固定数据切分/输入、原始核心结果和元数据；
-HF仅授权上述历史97% Actor对，W&B不写入。私有Git仓库本身也不能替代模型备份，
-历史上传计划不能覆盖用户最新限定的范围。
+Keep credentials outside the checkout and never include them in commands, URLs, configuration snapshots, logs, or issue reports. Consult the [third-party notices](../THIRD_PARTY_NOTICES.md) for component attribution and licensing boundaries.

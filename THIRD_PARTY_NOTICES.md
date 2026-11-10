@@ -4,9 +4,9 @@ Coevolve is a research extension of **WHALE: A Simple Recipe for Joint Harness-W
 
 WHALE is distributed under Apache-2.0. Copies of its [license](licenses/WHALE-APACHE-2.0.txt) and [NOTICE](licenses/WHALE-NOTICE.txt) are included. Its own notices cover vendored verl and Search-R1 components; the submodule preserves those notices and source history. Our local modules adapt the execution interfaces and reuse the upstream environment, verifier, actor and selection code. We do not claim authorship of those components.
 
-The editor update is inspired by Harness-R1's group-relative outcome optimization; the local implementation and its differences are described in [METHOD.md](docs/METHOD.md). Model weights (Qwen3.5-2B), MATH source data, and other datasets are not redistributed in this repository and remain subject to their providers' terms.
+The historical RSFT/GRPO editor update is inspired by Harness-R1's group-relative outcome optimization; that implementation and its differences are described in [METHOD.md](docs/METHOD.md). The joint Engineer/Solver implementation is described in the [JoMoHa paper](https://arxiv.org/abs/2611.11499), with release boundaries in the [reproducibility guide](docs/REPRODUCE_MA_SAO.md). Model weights, MATH source data, and complete benchmark assets are not redistributed in this repository and remain subject to their providers' terms.
 
-This private research repository does not add a license grant for the original Coevolve extensions. Third-party license files apply to their respective components.
+A project-wide license for the original Coevolve/JoMoHa extensions has not yet been provided. Third-party license files apply to their respective components and do not grant rights to the original extensions.
 
 ## Optional independent SAO baseline
 
@@ -22,7 +22,7 @@ Its bootstrap script downloads Apache-2.0 AReaL at
 SAO integration patch. The optional `whale_local/sao_bridge` task adapters call
 that trainer; they do not implement a replacement PPO/SAO optimizer. This
 baseline does not change the original RSFT/GRPO experiment.
-# MAPPO design reference
+## MAPPO design reference
 
 The optional `third_party/mappo-reference` submodule is the official
 `marlbenchmark/on-policy` repository, pinned at
@@ -43,8 +43,8 @@ The ALFWorld adapter invokes unchanged official builders, evaluators and
 AgentBench runtime through a writable shadow directory.
 Released model weights and benchmark assets are downloaded separately and are
 not redistributed by this repository. See the
-[current project state](docs/PROJECT_STATE.md) for model-role distinctions and
-reproduction limitations.
+[benchmark guide](docs/BENCHMARK_IMPLEMENTATIONS.md) for runtime entry points
+and checkpoint resources.
 
 ## Frozen MA-SAO reproduction evidence
 

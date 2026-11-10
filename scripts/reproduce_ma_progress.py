@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Recompute the frozen MA-SAO results and data split audit without GPUs or APIs."""
+"""Verify archived JoMoHa/MA-SAO results without GPUs, model weights, or APIs."""
 from __future__ import annotations
 
 import argparse
@@ -18,6 +18,7 @@ sys.path.insert(0, str(ROOT / "whale_local"))
 from sao_bridge.joint_anchor import build_rows
 
 DEFAULT_BUNDLE = ROOT / "reproducibility/ma_sao_20261012"
+BEST97_RUN = Path("runs/alfworld_ma_convergence_v1r4/block-01")
 
 
 class Evidence:
@@ -105,7 +106,7 @@ def split_audit(evidence: Evidence, protocol: dict) -> dict:
     }
 
 
-def report_scores(report: dict, tasks: list[int], strict: list[int], remaining: list[int]) -> dict:
+def report_outcomes(report: dict, tasks: list[int]) -> dict[int, float]:
     rows = report["results"]
     actual = [(row["task_id"], row["sample_index"]) for row in rows]
     if (
@@ -118,7 +119,12 @@ def report_scores(report: dict, tasks: list[int], strict: list[int], remaining: 
     successes = int(sum(row["reward"] for row in rows))
     if not math.isclose(report["accuracy"], successes / len(tasks), rel_tol=0, abs_tol=1e-12):
         raise ValueError("Raw report mean differs from its recorded outcomes")
-    by_task = {row["task_id"]: row["reward"] for row in rows}
+    return {row["task_id"]: row["reward"] for row in rows}
+
+
+def report_scores(report: dict, tasks: list[int], strict: list[int], remaining: list[int]) -> dict:
+    by_task = report_outcomes(report, tasks)
+    successes = int(sum(by_task.values()))
     return {
         "successes": successes, "questions": len(tasks), "accuracy": successes / len(tasks),
         "strict197_successes": int(sum(by_task[task] for task in strict)),
@@ -166,6 +172,42 @@ def endpoint_audit(evidence: Evidence, protocol: dict) -> dict:
             scores[name] = score
         endpoints[rounds] = scores
     return endpoints
+
+
+def best97_audit(evidence: Evidence) -> dict:
+    protocol = evidence.read(Path(evidence.state["study"]) / "PROTOCOL.json")
+    tasks = evidence.read(protocol["core200_protocol"])["all_task_ids"]
+    unique_ids(tasks, count=200, name="best97 evaluation")
+    harness = BEST97_RUN / "round0096/patches/95-proposal07.json"
+    patch = evidence.read(harness)
+    if patch["schema_version"] != "harness-r1-patch-v1" or patch["benchmark"] != "alfworld":
+        raise ValueError("The best97 harness must use the recorded ALFWorld patch schema")
+    original = evidence.read(
+        BEST97_RUN / "round0096/evaluation200/attempt-01/reports"
+        / "af8f607201d8a33fc24700422ee1b1169e830df854ff3022a63e0842d2dcdb76.json"
+    )
+    if original["domain"] != "alfworld":
+        raise ValueError("The best97 original report must be an ALFWorld evaluation")
+    original_outcomes = report_outcomes(original, tasks)
+    scores = {}
+    for name, suffix, expected in (("selected", "joint_harness", 194), ("no_patch", "no_patch", 185)):
+        report_path = BEST97_RUN / f"round0096_{suffix}_report.json"
+        report = evidence.read(report_path)
+        if report["domain"] != "alfworld":
+            raise ValueError("The best97 reports must be ALFWorld evaluations")
+        outcomes = report_outcomes(report, tasks)
+        if name == "selected" and outcomes != original_outcomes:
+            raise ValueError("The best97 summary differs from the original per-task report")
+        successes = int(sum(outcomes.values()))
+        if successes != expected:
+            raise ValueError(f"The best97 {name} report must contain {expected}/200 successes")
+        scores[name] = {
+            "successes": successes, "questions": len(tasks), "accuracy": successes / len(tasks),
+            "report": report_path.as_posix(), "sha256": sha256(evidence.path(report_path)),
+        }
+    return {
+        **scores, "harness": harness.as_posix(), "harness_sha256": sha256(evidence.path(harness)),
+    }
 
 
 def finite_metrics(value) -> bool:
@@ -281,8 +323,14 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bundle", type=Path, default=DEFAULT_BUNDLE)
     parser.add_argument("--materialize", type=Path)
+    parser.add_argument(
+        "--best97", action="store_true",
+        help="Also verify the best97 harness and its 194/200 ALFWorld result.",
+    )
     args = parser.parse_args()
     result = audit(args.bundle)
+    if args.best97:
+        result["best97"] = best97_audit(Evidence(args.bundle))
     if args.materialize is not None:
         result["materialized"] = materialize(args.bundle, args.materialize)
     print(json.dumps(result, indent=2, ensure_ascii=False))

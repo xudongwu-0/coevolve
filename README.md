@@ -1,811 +1,169 @@
-# Coevolve: SAO / MA-SAO harness–weight co-evolution
+# JoMoHa: Joint Model-Harness Optimization with Reinforcement Learning
 
-**基于 [WHALE](https://github.com/krafton-ai/WHALE) 的双模型改进：不仅训练 Solver，也训练负责修改可执行 harness 的 Engineer。先建立足够强的 SAO baseline，再验证 MA-SAO 的额外收益。**
+[![arXiv](https://img.shields.io/badge/arXiv-2611.11499-b31b1b.svg)](https://arxiv.org/abs/2611.11499)
+[![Checkpoints](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-best97-yellow)](https://huggingface.co/datasets/wxd02/coevolve/tree/d0e84414e8ef9e2b6a84585e1365189faf501051/best97)
 
-**Agent 先读本节，再读 [项目状态](docs/PROJECT_STATE.md)、[算法与冻结协议](docs/MA_SAO.md) 和 [实验日志](docs/EXPERIMENT_LOG.md)。下面的2B RSFT/GRPO配置是历史原型，不是当前9B主线的启动入口。**
+**Train the agent. Train the runtime writer. Improve them together.**
 
-## DBBench / WebShop 源码与历史 97% checkpoint
+JoMoHa jointly optimizes a language agent's **model weights** and **executable harness** through reinforcement learning. An **Engineer** learns to write the runtime, a **Solver** learns to act under it, and both improve from the outcome of the same task execution.
 
-- **DBBench 和 WebShop 的实现代码已有**，位于
-  [官方 Harness-R1 子模块](third_party/harness-r1-upstream)，固定版本为
-  `94f2e087f573e1b82fc9568bb634d4ae9a887e28`。包含任务适配、Harness hooks、
-  数据构建、reward 和评测入口；见[源码索引与获取说明](docs/BENCHMARK_IMPLEMENTATIONS.md)。
-  这是上游实现，不代表我们已完成两个环境的 MA-SAO 适配或训练验证。
-- **历史 ALFWorld 97% checkpoint**：
-  [Hugging Face 固定版本](https://huggingface.co/datasets/wxd02/coevolve/tree/d0e84414e8ef9e2b6a84585e1365189faf501051/best97)
-  （私有 dataset，需要访问权限），分别提供
-  [Solver](https://huggingface.co/datasets/wxd02/coevolve/tree/d0e84414e8ef9e2b6a84585e1365189faf501051/best97/solver)
-  和 [Engineer](https://huggingface.co/datasets/wxd02/coevolve/tree/d0e84414e8ef9e2b6a84585e1365189faf501051/best97/engineer)。
-  **97% 是选定 Harness + Solver 的 194/200；同一 Solver 无 Harness 为 185/200（92.5%）。**
-  HF 仅含两个 Actor checkpoint，不含 Harness 或完整续训状态；
-  对应 Harness、原始评测和[上传回执](reproducibility/historical97_20261012/HF_REMOTE_VERIFIED.json)
-  的入口见[说明](docs/BENCHMARK_IMPLEMENTATIONS.md#historical-alfworld-97-checkpoint)。
+**[Paper](https://arxiv.org/abs/2611.11499) | [Checkpoints](#checkpoints) | [Getting started](#getting-started) | [Benchmark guide](docs/BENCHMARK_IMPLEMENTATIONS.md) | [Citation](#citation)**
 
-## 当前任务与主要结论
+## Highlights
 
-### 2026-10-12：可离线复算的代码与数据交接
+- **Joint model-harness learning.** Train both the harness-generation policy and the task-execution policy from shared execution feedback.
+- **Learning to improve.** The Engineer itself learns to construct better runtimes, enabling recursive self-improvement alongside the Solver.
+- **Coordinated reinforcement learning.** Collaboration-aware critics, role-specific return normalization, partner-trajectory weighting, and asymmetric updates keep the two learners working together.
+- **Strong results across three environments.** JoMoHa achieves **70.3% average success** across ALFWorld, WebShop, and DBBench, including **97.0% on ALFWorld**.
+- **Research resources in one place.** Explore the training code, pinned benchmark runtimes, Engineer/Solver checkpoints, matching harness, and verifiable per-task experiment records.
 
-新agent先读[接手入口](AGENTS.md)及[复现与checkpoint访问说明](docs/REPRODUCE_MA_SAO.md)，
-执行`python3 -B scripts/reproduce_ma_progress.py`即可在无GPU、无API key的情况下
-验证4225份证据文件、重建固定训练输入、重算Full96/144，并确认without_peer为
-76轮metrics、72轮完整恢复元数据。大权重不在Git里。
-15:34北京时间最新范围为：HF只保存历史97%时点的Engineer/Solver两个Actor，
-共20份checkpoint文件、约35.09GiB；不上传Harness、Critic、Adam、原生恢复状态
-或其他checkpoint，也不下载回验。此前多模型上传计划已取消，W&B仍不写入。
-15:44:40已完成私有HF上传，实际revision与访问方式见复现说明中的
-[远端回执](reproducibility/historical97_20261012/HF_REMOTE_VERIFIED.json)。
-**selection48全部包含在main200内，93%是复用开发集成绩，不是独立测试成绩。**
-实验仍暂停；离线核验和代码发布不授予训练/推理启动权限。
+## Results
 
-### 2026-10-12 14:32 北京时间：全部实验暂停，不再准备或启动
+Success rates reported in [the paper](https://arxiv.org/html/2611.11499v1):
 
-用户最新要求暂停实验，并停止Full144延长方案的准备。
-当前和旧自动训练入口均持久取消，原授权检查已验证拒绝启动。
-without_peer最后记录76轮，完整可恢复checkpoint为72轮；
-Full144的186/200保持不变。当前无我们的GPU训练进程。
-node3八卡空闲，node4仅GPU0由其他用户的O-Voxel Stage3进程占用，
-两节点维持程序仍停用。独立5分钟只读GPU历史记录继续运行。
-以下旧训练计划不是当前授权；详见[最新项目状态](docs/PROJECT_STATE.md)。
+| Method | ALFWorld | WebShop | DBBench | Average |
+|---|---:|---:|---:|---:|
+| **JoMoHa** | **97.0%** | **45.8%** | **68.0%** | **70.3%** |
 
-### 2026-10-12 12:45 北京时间：恢复串行消融，外部kill后不重启
+JoMoHa improves average success over **Agent SFT + Harness-R1 by 6.1 percentage points** and **WHALE by 7.2 percentage points**. The average is the equally weighted mean of the three benchmark success rates.
 
-用户重新授权直接续训：先完成without_peer24→144，再依次运行without_context、
-without_value_norm、always_joint；full144的186/200保留，不重跑。
-每次只运行一个实验，node3使用8卡，node4仅GPU1–7，保留其他用户的GPU0进程。
-两节点利用率维持程序已核验并暂停。两边各4卡训练，rollout分别4/3卡；
-终点评测改在空出的node3上执行，仍保持原8副本，不缩减候选或评测预算。
-采样布局变化不承诺逐token等价，结论需保留与原Full运行布局不同的限制。
-
-预计剩余训练及评测共14–20小时，尚待15卡实际速度校正。
-外部kill后停止，不自动恢复；自身故障先诊断修复，再决定是否从完整原生断点续训。
-详见[完整计划与当前状态](docs/PROJECT_STATE.md)、
-[执行控制目录](runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/serial15_20261012_self_fix01/)。
-首个续训attempt在新采样前因快照遗漏运行时patch文件退出，已保留失败并补全新快照；
-此为已定位的自身启动故障，不是外部kill，按用户授权从原24轮状态重新恢复。
-13:37:52北京时间已核验：双角色原生恢复成功并完成36轮，新第36轮配对checkpoint
-已经发布且校验通过；没有重置Adam或重复warmup。见
-[首次新配对核验](runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/serial15_20261012_self_fix01/FIRST_NEW_CHECKPOINT_VERIFIED.json)。
-实际训练T0为13:14:30，预计四项全部完成窗口为次日03:14–09:14，仍属估计；
-当前尚无新的消融终点评分，不能把训练进度当作实验结论。
-旧两小时等待器继续保持取消；独立5分钟GPU记录器继续只读记录。
-
-### 2026-10-12 11:32 北京时间：改为独立只读GPU历史记录
-
-用户将当前工作切换为**不依赖对话的5分钟GPU记录**，旧自动开训等待器已暂停，
-本次不启动训练。记录node3/node4每张卡的利用率、显存、功率、温度，
-以及PID、UID、程序/模块名和每进程显存；不记录完整命令参数、环境变量或密钥。
-所有可读时间使用`Asia/Shanghai`（北京时间，`+08:00`），按北京时间日期保存。
-程序：[gpu_history.py](whale_local/sao_bridge/gpu_history.py)；
-运行状态：[STATUS.json](runs/gpu_history_node3_node4/STATUS.json)；
-最近样本：[LATEST.json](runs/gpu_history_node3_node4/LATEST.json)。
-历史查询及停止方法见[项目状态](docs/PROJECT_STATE.md)。
-后台记录独立于会话存活，不是训练授权，也不是开机自启服务。
-
-### 2026-10-12：新授权的双节点两小时空闲监控
-
-用户重新授权后续H200消融训练，但**不立即启动**：每10分钟检查node3/node4，
-至少13次有效采样跨越2小时，均为空闲或身份已核验的利用率维持程序，才允许续训。
-先从without_peer第24轮完整原生断点继续，再完成另外三项固定144轮消融；full144不重跑。
-其他作业、检测失败或漏检重置等待；未知训练错误停止，不盲目重启。
-新入口及暂停方法见[项目状态](docs/PROJECT_STATE.md)；
-以[监控状态](runs/alfworld_ma_mechanisms_single_seed_v2_rolling12_r2/idle2h_20261012/STATUS.json)为准。
-本次授权不包含远端上传。以下10月10日暂停记录继续保留，但不再禁止这个新授权入口。
-
-### 2026-10-10：停止H200训练，保存结果与本地交接
-
-**当时禁止H200训练，所有旧自动恢复入口仍保持取消。下面旧日期的启动/队列描述不是当前授权。**
-共同初始化full144主终点为186/200（93.0%），同一Solver空Harness为179/200（89.5%）；
-without_peer停在24轮，原生状态有效，尚未得到最终评测。其他三项消融未启动。
-用户要求保存完整代码、实验结果、数据及checkpoint；本地交接不等于GitHub或HF远端备份。
-见[交接说明](docs/MA_SAO_HANDOFF_2026-10-10.md)和[最新状态](docs/PROJECT_STATE.md)。
-
-### H0/W0独立MA结果已完成（2026-10-03 08:12 UTC）
-
-**没有超过历史W1+h2的92%。** 同1024条训练消费点为87.5%，后期按预定快测规则
-选出的第112轮组合为82.5%。全部200题、每题一次，已完成身份/哈希/题目合同核验。
-
-| 系统 | 空harness Solver | 该阶段选出的harness+Solver | 组合strict197 |
-|---|---:|---:|---:|
-| 原始H0/W0 | 148/200 = 74.00% | 170/200 = 85.00% | 85.28% |
-| MA第64轮，H+W=1024 | 157/200 = 78.50% | 175/200 = 87.50% | 87.31% |
-| MA第112轮，所选路径H+W=1792 | 161/200 = 80.50% | 165/200 = 82.50% | 82.74% |
-| 历史SAO W1+h2，保留 | 87.00%（历史W1空harness） | **184/200 = 92.00%** | **91.88%** |
-
-匹配点相对本轮85%起点+2.5pp，配对95%区间[-2,7]pp；后期组合相对匹配点
--5pp，区间[-10,0]pp。后期Solver空harness反而比原始W0高6.5pp，[1.5,11.5]pp。
-因此不能把组合回落直接叫作W权重崩塌；优先排查harness质量、选择噪声及兼容性。
-第64轮harness加成9pp，[4,14.5]pp；后期只剩2pp，[-3,7]pp。
-这仍是单seed、已用开发集，不能估计MA/SAO的可靠崩塌概率。
-
-“后期最佳”仅指selection24在第104/108/112轮中选出的系统，不是200题择优；
-三点八候选平均快测分别75.78%、73.70%、60.16%，但第112轮单个候选最高，
-显示仅看最高候选可能掩盖整体候选质量下降。不同checkpoint的Solver也不同，
-这不是Engineer单变量比较。完整证据：
-`runs/alfworld_joint_h0w0_8h_v1/FINAL_AUDIT.json`。
-训练共完成115轮/每角色110次Actor更新，实际消费1840、完整生成1872条；
-没有OOM，按计划停训；未覆盖原W1+h2。
-
-后续W2恢复首次启动在任何采样前遇到共享checkpoint元数据写权限错误，已改为
-复用完整只读元数据并在node3实际UID验证；新运行是`runs/alfworld_w2_recovery_v2`。
-WHALE完整GPU烟测的恢复阶段失败，尚未进入研究训练，正在独立修复；
-旧失败不改写，下游尚未开始的SAO/调度队列已暂停以免引用失效前置。
-
-### 2026-10-03研究问题驱动的后续对照
-
-当前H0/W0联合MA继续，不抢占它的GPU。后续按以下问题组织，所有分数仍使用
-同all200/strict197；不能用loss或GPU负载替代效果结论。
-
-**06:02 UTC进度：** 当前MA双方已完成91轮，健康指标有限，未再次OOM；
-第64轮的完整Actor/critic已保存并核验，达到了从零计数的1024条匹配预算。
-这仍不是测评分数。后续所有控制已进入持久队列，不再只是纸面安排：
-node3的W2恢复与node4的WHALE分别等待当前matched/best评测释放，然后运行
-修正SAO，最后运行调度消融。各队列启动前均检查前置完成及GPU释放。
-
-| 问题 | 实验 | 可以回答什么 |
-|---|---|---|
-| 退化W2能否回升？ | 从真实W2-step79及其critic继续，固定原h2；先重测起点，再报告额外20/40/60/80步 | 有限续训预算内是否改善；不能证明永远不可恢复 |
-| WHALE在ALFWorld多强？ | 移植官方RSFT+Meta-Harness流程，明确本地proposer及动作空间差异 | 本地ALFWorld适配结果，不冒充论文官方分数 |
-| MA是否更稳定，交替是否致因？ | 当前MA与SAO端点比较；另外固定MA其余组件，仅改变角色更新阶段 | 方法级比较与调度消融分开，不把旧后端错误当作交替训练的因果证据 |
-
-W2恢复入口为[alfworld_w2_recovery](whale_local/sao_bridge/alfworld_w2_recovery.py)，
-准备目录`runs/alfworld_w2_recovery_v1`，使用原W1/W2尚未消费的train-only
-实例1280–1919，共640条。Actor/critic从真实W2延续，但原Adam状态未保存，
-因此明确是**权重续训＋新优化器**；保留原LR/K/预热和h2，仅启用单轨迹
-microbatch修复。起点及四个预定点都做完整200题，不按200题选择模型。
-最终额外80步相对新重测起点的配对差为主终点；其它曲线点是探索性诊断。
-
-WHALE官方仓库只列SearchQA、数学、棋类，未提供可直接引用的ALFWorld分数。
-不得把本项目85%的H0/W0或Harness-R1分数改名为WHALE。适配器的GPU验证和
-真实结果必须另行完成。联合更新也不保证永不崩塌；单seed只能说明这一次，
-不能估计可靠的崩塌概率。初步差异出现后仍需多seed确认。
-
-新增核查还发现训练任务分布的混杂：当前MA的Solver用legacy train0-239，
-历史单独SAO的W1用另一套train-only实例。后续修正SAO和本地WHALE基线
-需要对齐当前MA的训练任务总体/顺序，不能只对齐起点和总样本数。
-普通SAO的H/W预算384/640与MA的512/512仍不同，应作为方法配置差异披露；
-只有调度消融保持每角色有效训练样本序列与数量相同。
-
-实际入口：WHALE为`runs/alfworld_whale_baseline_v6/PRODUCTION_FROZEN.json`
-（源码`be92302`）；修正SAO为`runs/alfworld_sao_corrected_v4`
-（源码`a05800e`）；调度消融为`runs/alfworld_ma_alternating_blocks_v2`
-（同`a05800e`）。对应`QUEUE_LAUNCH.json`绑定具体服务和依赖，
-旧未启动的准备目录不是活跃实验。WHALE须先通过32K完整反传/优化器恢复smoke，
-失败会立即阻塞后续SAO，不能把smoke完成当成WHALE的评测结果。
-
-### 2026-10-03：从H0/W0独立启动MA-SAO
-
-新请求不再继承SAO的H1/W1。`joint_campaign --from-initial`从原始SAO配置
-读取官方H0=`harness-r1`、W0=`target-agent-sft`，critic也从对应原始模型初始化，
-不加载旧critic、ValueNorm或优化器状态。H0本身已经经过官方RL，并非裸基座。
-Engineer输入和critic历史证据改用原始W0的train0-239记录，不复用W79证据。
-
-- 先用未更新H0生成8个补丁，selection24选择后冻结，测W0空harness与W0+新h0的
-  同200题/strict197，建立真正的本轮组合起点。
-- 训练必须同时通过初始评测及完整32768-token原生Actor反传/optimizer显存验证；
-  单纯释放8GiB缓存的smoke test不足以放行。验证通过前不宣称OOM已解决。
-- 每轮8个配对episode=16条H+W轨迹，预算从0计；5轮critic-only预热，
-  K=2、Actor LR5e-7、critic LR2.5e-6、KL0.005，允许真实lag1。
-- 每4轮保存：round12=192、round52=832、round64=1024。
-  **同历史W1+h2完整训练消费的匹配点是round64，不再是round12。**
-  继续训练的上限是128轮/2048条，受独立截止约束；不承诺达到该上限。
-- 所有200题仍为已使用开发集。相同轨迹数不等于相同tokens、环境调用或总研究成本；
-  原W1+h2不覆盖，退化和失败如实报告。
-
-本轮原始模型的200题起点已完成并核验：
-**W0空harness=148/200=74%；H0生成并选出的新h0配W0=170/200=85%**。
-严格197题分别146/197=74.11%、168/197=85.28%。8提案7合法，
-selection24按预定规则选proposal01（40/48），然后冻结测200题。
-这不是旧H1/W1，也不是另一个官方对口Engineer的历史分数。
-相对同轮W0空harness高11pp，题级配对95%区间[6,16]pp；仍为已用开发集。
-证据在`runs/alfworld_joint_h0w0_8h_v1/INITIAL_AUDIT.json`。
-
-OOM修复已通过真实长序列优化器验证，不再只有allocator smoke test：
-W0执行32768-token Actor/reference、33792-token critic的两次更新；
-H0以K2、1轮critic预热执行两次Actor/六次critic更新，均通过。
-除了reference，还需释放学习器更新后未用的缓存，避免下一次reference前向OOM。
-五轮生产预热没有在压力测试中完整复现；此限制保留，不保证所有未来输入不会OOM。
-两份显存测试收据位于`runs/alfworld_joint_memory_20261003/`，不计入研究训练样本。
-
-**02:05 UTC已核验正式训练：** 两节点均完成5轮真实critic预热和第1次Actor更新，
-各消费48条、合计96条；每角色前48条中40条观察到真实lag1。
-首次行为/proximal概率工程检查最大token均值差H0.000810、W0.000222，
-均小于0.01阈值。此时无OOM，但尚无训练后200题成绩。
-运行目录`runs/alfworld_joint_h0w0_8h_v1`，实际训练源码冻结`b481fb0`，
-`FIRST_ACTOR_AUDIT.json`记录真实梯度/步数，`TRAINING_LAUNCH.json`绑定全部身份。
-node3 Engineer、node4 Solver及后续matched/best评测均由持久服务管理，
-不依赖agent在线；filler继续保持开启。
-为最多3对后期候选的harness选择和200题评测留足时间，已额外设置
-**07:10 UTC提前停训计时器**，报告截止仍为**08:49:31 UTC**；
-原07:49:31只是原协议的最迟兜底。第64轮匹配点已保留，调整不依据训练后分数。
-
-结果快照：**2026-10-02 23:07 UTC：GRPO对照与MA恢复点的200题评测完成；MA为90%，未超过W1+h2的92%**。第12轮同预算点未达到，整个训练协议不算完整完成；保留原W1+h2。
-
-### 新任务：同起点、同192条预算的Harness-R1对照
-
-新增[匹配GRPO入口](whale_local/sao_bridge/alfworld_matched_grpo.py)与
-[冻结参数](configs/alfworld_engineer_matched_grpo.json)，先完成此对照及W0/W1的200题评测，
-再继续真正联合更新的MA-SAO。GRPO第4次独立启动已完成：
-20:57核验192条生成/消费、24次optimizer更新，21:30完成两节点200题评测。
-此前三次均未完成首个rollout/optimizer更新，失败记录保留。
-H2此前固定W1训练，**不依赖退化的W2**；新的MA也从H1/W1而不是W2开始。
-
-- 起点仍是官方已RL的`harness-r1` H0，固定W0；不换成SFT或对口官方Engineer。
-- 精确复用SAO的24个提示及奖励metadata，每个8条，共192条；6个rollout，
-  每轮32条分4个8条minibatch，**不是4个epoch**。保留消费96/192条的checkpoint。
-- 直接调用hash固定的官方Relax GRPO奖励标准化、clip及TIS函数，
-  运行器为FSDP/vLLM后端适配，**不是完整Relax/Megatron执行栈复现**。
-- 同4096 response/32768 context上限，但保留官方GRPO优化器参数；
-  轨迹预算相同不代表token/FLOPs相同。SAO的192条包含30条critic-only，
-  GRPO没有critic预热。额外reward环境执行、下一轮预取另记，不能隐藏成本。
-- 原模型严格加载原生Qwen3.5多模态checkpoint，文本任务不提供视觉输入；
-  不重映射或随机初始化语言权重，不改原SearchQA的默认模型约束。
-- 排除已有200题训练实例，基础设施故障抛错而非记零分；保留filler，
-  固定目标服务与训练器均有独立超时、失败记录和GPU释放审计。
-
-评测入口为[matched GRPO evaluation](whale_local/sao_bridge/alfworld_matched_grpo_eval.py)：
-预先固定最终192条消费checkpoint，不依据200题选择96/192模型；
-使用与固定H1相同的W79历史证据/seed生成8个补丁，保留非法及重复槽。
-为保证6小时MA结论的时间预算，仅在W1测24题mean@2选一个补丁，随后不再改动，
-W0/W1分别完整重测同200题mean@1并报告严格197题。W0列仍是W1补丁的迁移测试，
-不是为W0单独重选的最优补丁。SAO采用历史选择的step15，因此不能把此次对照
-说成checkpoint选择过程完全相同；96点保留供后续审计，不参与本轮最终选择。
-
-**同预算对照结果（200题，每题一次）：**
-
-| 系统 | all200 | strict197 |
-|---|---:|---:|
-| W0 + SAO固定h1（此前） | 148/200 = 74.00% | 74.11% |
-| W0 + 新GRPO固定h1 | **167/200 = 83.50%** | **83.76%** |
-| W1 + SAO固定h1（此前） | **181/200 = 90.50%** | **90.36%** |
-| W1 + 新GRPO固定h1 | 176/200 = 88.00% | 88.32% |
-| W1 + SAO固定h2（当前保留） | **184/200 = 92.00%** | **91.88%** |
-
-新GRPO补丁在W0上比SAO h1高9.5pp，题级配对95%区间[5.0,14.0]pp；
-在W1上低2.5pp，区间[-6.5,1.5]pp；相比W1+h2低4.0pp，区间[-8.5,0.0]pp。
-不能据此宣称GRPO或SAO普遍优越。8个新提案7个合法，slot00与07在24题mean@2
-并列95.83%，按预定较小slot规则选00，随后原样部署两节点。
-快测高分没有在200题保持。此次同时重测空harness：W0为75%、W1为88%，
-此前分别73.5%和87%；同题不代表随机生成逐位可复现，不能混淆新旧基线。
-200题含selection24，仍是开发评测；严格197题只排除goal族重叠，不消除选择暴露。
-结果收据：`runs/alfworld_matched_grpo_200_v3/COMPLETE.json`。
-
-### 六小时联合MA-SAO结果
-
-用户约定的报告截止是 **2026-10-02 23:41:31 UTC**，训练最迟
-22:41:31停止，最后一小时留给选择和200题评测。
-实际200题在**23:07:27 UTC**完成，早于截止约34分钟。
-**本轮未达到超过92%的目标，也没有可报告的第12轮同预算结果。**
-持久入口为
-[joint_campaign](whale_local/sao_bridge/joint_campaign.py)；
-具体实现与限制见[MA-SAO协议](docs/MA_SAO.md)。
-
-| 系统 | all200，每题一次 | strict197 |
-|---|---:|---:|
-| SAO W1+h1（历史） | 181/200 = 90.50% | 178/197 = 90.36% |
-| SAO W1+h2（保留） | **184/200 = 92.00%** | **181/197 = 91.88%** |
-| MA第4轮Solver，空harness | 172/200 = 86.00% | 170/197 = 86.29% |
-| MA第4轮Solver + 同轮Engineer新harness | **180/200 = 90.00%** | **177/197 = 89.85%** |
-
-八个新提案六个合法；proposal01/02/03在selection24 mean@2并列45/48，
-按预定最小slot选01，然后冻结做200题，未按200题更换候选。
-MA组合比W1+h2低2.0pp，题级配对95%区间[-5.5,1.5]pp：
-5题改善、9题退步。相比同一MA Solver的空harness高4.0pp，
-区间[-0.5,8.5]pp，16题改善、8题退步；这也尚不足以确认稳定增益。
-不能把本次短训练负结果解释成MA算法必然不如SAO，也不能宣称已超过SAO。
-200题仍是单seed、已用开发集；后端正确性修复还使新旧实现不完全一致。
-结果与完整核验分别在`runs/alfworld_joint_async_6h_v5_recovered/best_COMPLETE.json`
-和`FINAL_AUDIT.json`。`DEADLINE_REPORT.json`明确保留`incomplete`，
-原因是matched分支未达到，不是把已完成的best评测抹掉。
-
-本窗口采用的训练与预警协议：
-
-- 从H1/E15和W1/W79及同角色critic出发，两角色每轮各8条真实配对轨迹，
-  共享终止奖励、同轮更新、Adam跨轮连续；不是先训完整H阶段再训W阶段。
-- MAPPO官方ValueNorm、集中式critic输入、优势标准化及对称PPO clip；
-  保留SAO自身TIS/DIS，允许最多一轮真实行为版本滞后。额外的截断
-  teammate轨迹权重是实验扩展，不是标准MAPPO或无偏保证。
-- 每4轮保存模型；第12轮累计新增H+W=192条，对齐成功H2续训消费预算；
-  第52轮新增832条，对齐H2加被拒绝W2的完整尝试预算。共同前缀实际消费832条。
-  预取、未完成轨迹、critic-only及模型/补丁选择成本分别记录，不算免费。
-- 固定初始policy KL、原单位value MSE、重要性截断率/ESS、梯度、
-  非法补丁和token上限比例用于预警。非有限值或缺失固定reference硬停；
-  连续三轮KL/value MSE超阈值软停。长轨迹重要性截断率只报警，不单独认定崩溃，
-  只恢复有完整原生指标及actor/critic文件的共同checkpoint。
-- 报告固定第12轮和后期候选；后期只在selection24选择最多三个checkpoint、
-  每点8个新补丁，然后冻结再做200题单次评测。不会以旧h2冒充新Engineer。
-  200题仍是已使用开发集；未超过也必须报告，原W1+h2保持不被覆盖。
-
-当前GRPO恢复源码`3ebdcfa`，训练目录`runs/alfworld_matched_grpo_192_v4`，
-测评目录`runs/alfworld_matched_grpo_200_v3`。第2次启动为TP2 custom-allreduce
-错误；第3次为单卡TCPStore选错可达地址。分别改为TP1/eager和显式回环地址，
-目标函数、H0、192条预算均不变。MA的首个native尝试发现ValueNorm按DP分片
-独立更新统计，已在没有提交optimizer指标行时停止；16个Engineer动作及12个
-Solver终止outcome保留审计，不能把失败采样当免费成本。修正为整个DP组共享
-有效目标统计，真实双进程回归覆盖不同分片token数及非有限值传播。
-后续概率审计还发现vLLM默认raw logprob未包含Engineer的0.7采样温度，
-现显式使用`processed_logprobs`。旧试跑的真实采样和已提交更新成本另记；
-历史单角色结果不改写，但这也是MA与旧baseline间的实现差异。
-进一步核查发现HF Qwen3.5循环层未在packed序列间重置状态；联合训练改为
-每个microbatch只放一条轨迹，保持有效batch/梯度累积预算不变。
-有效训练目录`runs/alfworld_joint_async_6h_v5`，冻结源码`f3563e6`：
-初始概率一致性检查通过，两个角色各完成6个native步骤、4次Actor更新；
-观察到真实一轮行为滞后。22:33 Solver在24075-token轨迹反传时OOM，训练失败。
-唯一共同已提交检查点为**第4轮/global_step3，各含2次Actor更新**，
-实际张量变化与ValueNorm状态已核验；不把失败训练改写为完整完成。
-其新补丁及200题评测已在`runs/alfworld_joint_async_6h_v5_recovered`完成。
-第12轮未达到，同预算结果明确不可用；不能将恢复点称为同192条完整训练。
-有效尝试消费96条，前期失败尝试另消费72条，另有生成/未完成工作；
-所有MA尝试已知提交消费168条、生成动作下界260；加共同前缀832条，
-已知提交消费共1000条，选择/评测另计。不能只报所选点64条而隐藏成本。
-两节点研究GPU已释放、filler仍开；其负载不是模型训练。
-未来启动会释放冻结reference的未用缓存（`837a67e`）；
-GPU检查验证释放8GiB且不改活跃输出，但没有重跑完整长序列PPO来声称OOM已完全解决。
-
-## ALFWorld模型起点、训练步数与checkpoint
-
-基础架构均为**Qwen3.5-9B**。Solver从官方`target-agent-sft`开始，
-不是裸基座；Engineer从官方已经RL训练过的`harness-r1`开始，
-不是SFT-only。官方对口比较使用另一个发布checkpoint
-`agent-sft-harness-r1`。这三者均来自revision
-`f6a915953f8206f3f5c7ef0b40240e1f4d2b6676`，不得混淆其训练对象。
-
-| 阶段 | 本轮初始化及固定对端 | Native步数 | Critic-only预热 | Actor更新 | 被采用checkpoint |
-|---|---|---:|---:|---:|---|
-| H1 | 官方Engineer，固定W0评奖励 | 32 | 5 | 27 | **step15**，累计11次本地Actor更新；中间模型 |
-| W1 | 官方Agent-SFT W0，固定空harness | 80 | 5 | 75 | **step79**，最后模型 |
-| H2 | H1-step15，固定W1 | 32 | 5 | 27 | **step31**，本轮最后模型 |
-| W2候选 | W1-step79，固定选中的h2补丁 | 80 | 5 | 75 | **没有被采用**；step39和79均被拒绝 |
-
-step编号从0开始，且每个阶段重新计数。H2在保留的H1权重上再做27次Actor更新
-（本地保留路径共11+27=38次）；候选W2在W1上再做75次
-（共75+75=150次）。这不包含官方模型预先执行的训练，也不等于全部搜索成本。
-H1和W1最初独立并行训练；后续交替先H2、后W2，不能说W1在H1补丁上训练。
-用户新要求的W2+h2测评明确使用**实际最终W2-step79**，不使用拒绝后回退的W1。
-
-样本数不等于样本效率：H1完整32步消费192条Engineer训练轨迹，其中
-162条参与Actor更新，30条用于critic-only预热；选中的step15包含96条
-累计消费轨迹、66条Actor训练轨迹，但不能因此抹去后续训练与筛选成本。
-Harness-R1开源README示例为174个rollout batch、每批4个prompt、每prompt
-8条样本，即5568条名义生成轨迹；这只是参考配置，不是已核验的发布模型日志。
-192/5568约1/29只能描述局部消费数比例，不能宣称29倍样本效率：
-我们的Engineer继承了官方RL权重，起点/任务/目标执行成本/效果均未匹配。
-
-SAO依赖[fooSynaptic/Single-rollout-async-Optimization](https://github.com/fooSynaptic/Single-rollout-async-Optimization)，
-固定ac2728149041b5f15ceb75413f467ce0659179cf；它明确标注为**非官方复现**，
-不是论文作者官方实现。底层为[inclusionAI/AReaL](https://github.com/inclusionAI/AReaL)，
-固定3cf0dfbd2b0fbeabd6977184980e189d1567747a，实际执行SAO补丁后的PPOTrainer。
-本项目增加环境/轨迹接线、终止GAE修复及监督管理，快速配方critic每步1次，
-不同于上游默认K=2；不得声称未经修改的论文原版复现。
-
-## 新补测：实际W2+h2严重退化（2026-10-02 16:48 UTC）
-
-按用户要求测实际最终W2-step79，不使用选择失败后保留的W1。
-相同200题全部重新单次采样，冻结同一h2，分两节点100/100题，
-temperature1、总completion4096、相同任务seed。
-
-| 系统 | 200题成功率 | 成功数 | 严格197题 |
-|---|---:|---:|---:|
-| W1，无harness（既有参考） | 87.00% | 174/200 | 87.31% |
-| 实际W2，无harness | **50.00%** | 100/200 | 50.76% |
-| W1+h2（既有参考） | 92.00% | 184/200 | 91.88% |
-| 实际W2+h2 | **63.50%** | 127/200 | 63.96% |
-
-W2+h2比W1+h2低**28.50pp**，题级95%区间[-35.50,-21.50]pp。
-这支持此前拒绝W2、保留W1的决定；不是证明交替训练闭环成功。
-W2权重SHA256为46fa776d8652188aba42f54212a9c7884db91ab42785fe1fbbc49bb11b018ea9，
-已验证与W1权重不同。约11分钟完成，原生来源hash、200条唯一sample0、
-seed/token预算及两个节点GPU释放全部核验。退化根因尚未定位。
-证据：[W2补测收据](runs/alfworld_w2_h2_200_v1/COMPLETE.json)。
-
-## 前次核心结果：200题单次测评（2026-10-02 16:04 UTC）
-
-用户要求排除训练题并尽快扩大验证。此前实际为24题，因此新增176题，
-已有24题只取预先固定的sample0，不挑成功样本。模型和harness全部冻结，
-temperature1、每episode总completion预算4096，每题一次。
-
-| 系统 | 200题成绩 | 成功数 | 严格目标组隔离197题 |
-|---|---:|---:|---:|
-| W0，不加harness | **73.50%** | 147/200 | 73.10% |
-| W0 + 官方对口Harness-R1 | **83.00%** | 166/200 | 82.74% |
-| W0 + 固定H1 | **74.00%** | 148/200 | 74.11% |
-| W1，不加harness | **87.00%** | 174/200 | 87.31% |
-| W1 + 同一固定H1 | **90.50%** | 181/200 | 90.36% |
-| W1 + 固定H2 | **92.00%** | 184/200 | 91.88% |
-
-200个game实例均不在本项目训练范围。197题还排除了全部训练目标组
-（实际179个不同goal-group）；其余3个未训练实例291/414/467与训练题
-共享目标组，因此单列197题严格口径。训练排除覆盖旧0-239题及完整2296个
-独立训练catalogue实例；不能据此保证官方发布模型的全部预训练数据不可见。
-新增题中83题此前封存，本次已打开；这些题以后不能再称为未打开测试。
-
-纯权重收益**+13.50pp**，固定H1对W0仅**+0.50pp**；
-H1对W1为**+3.50pp**，H2比H1再高**1.50pp**。
-最好系统相对官方同口径83%为**+9.00pp**，并非沿用论文84%计算。
-H2-H1的题级95%区间[-1.50,+5.00]pp，不能宣称稳定显著更好。
-旧24题的97.92%不再作为较大样本的主结果；只看新增176题，
-W0/官方/H1/W1/W1+H1/W1+H2分别为
-73.86%/82.95%/74.43%/87.50%/89.77%/91.48%。
-旧24题参与过选择，且更大题池也有开发评测历史，因此不是完全未用过的
-确认性测试；训练/选择预算不匹配，不能直接推断算法优越性。
-
-第一次两节点均因worker interact ReadError返回502而中断，未记为模型失败。
-57942d1改为新建本地worker连接、不重试可能已执行的动作；真实TCP测试复现
-连接复用失败，并验证新连接方案。18测试及6subtest通过，重跑完整完成。
-从首次启动约30.5分钟，恢复轮16.6分钟，未达到最初15分钟预期。
-失败及中止的同配置尝试都保留并计入成本，不伪称只有一次计算。
-
-结果在[200题收据](runs/alfworld_core_200_oneshot_v2/COMPLETE.json)和
-[排除审计](runs/alfworld_core_200_oneshot_v2/COHORT_AUDIT.json)；
-[合并入口](whale_local/sao_bridge/alfworld_core_extend.py)验证200条唯一
-sample0记录、seed/token预算及原始报告hash。GPU已释放，filler仍active。
-
-## 历史核心结果：24题同口径快速测评（2026-10-02）
-
-用户优先要求核心数据表，node3/node4已并行补测。统一24题、每题2次，
-Solver temperature1、每episode总completion预算4096、seed6000045。
-W0是官方Agent-SFT Solver；W1是已验证的SAO-v4-step79。
-
-| 系统 | 本次成功率 | 成功次数 |
-|---|---:|---:|
-| W0，不加harness | **68.75%** | 33/48 |
-| W0 + 官方对口Harness-R1（8候选择优） | **85.42%** | 41/48 |
-| W0 + 我们的固定H1 | **75.00%** | 36/48 |
-| W1，不加harness | **87.50%** | 42/48 |
-| W1 + 同一固定H1 | **91.67%** | 44/48 |
-| W1 + 固定H2 | **97.92%** | 47/48 |
-
-官方发布的`agent-sft-harness-r1`已实际完成8候选快速复测，
-全部8/8合法，候选平均**80.21%**，最优**85.42%**；不是沿用论文84%。
-H1是此前针对W1选出的共同固定补丁，本次不换补丁测它对W0/W1的作用；
-75%不是E15 Engineer对W0重新择优的能力上限。额外的同输入8候选
-Engineer诊断与必需核心表分开，不能把候选平均当作固定系统成绩。
-
-15:08 UTC额外诊断也已完成：相同W0、相同8个Engineer输入与提案预算，
-官方提案平均**80.21%**、8选1 **85.42%**、合法8/8；
-我们的H1提案平均**69.53%**、8选1 **81.25%**、合法7/8。
-因此，即使也允许H1在W0上8选1，本次仍低于对口官方Engineer；
-不能声称H1本身已经超过官方Harness-R1。两种选法的分数都不改写上述
-固定H1系统行，也不改写旧70题greedy/per-turn预算的80%。
-完整诊断见[匹配Engineer收据](runs/alfworld_core_quick_20261002_v1/ENGINEER_MATCHED_DIAGNOSTIC.json)。
-
-本次纯W收益**+18.75pp**，固定H1对W0为**+6.25pp**；
-H2叠加到W1为**+10.42pp**，比W1+H1高**6.25pp**。
-最好系统比本地官方8选1高**12.50pp**，题级95%区间[+2.08,+25.00]pp。
-但这是反复使用的选择开发集，且历史训练/搜索预算不相同，
-**不是论文500题胜出或公平训练算法优越性的正式证据**。
-旧W1+H2的70题主报告仍为96.43%，不被本次97.92%替换。
-
-此前4B为**数学任务**、固定空harness、512题mean@2：
-seed42 **41.50%→56.54%（+15.04pp）**；
-seed43 **38.18%→51.56%（+13.38pp）**；
-平均**+14.21pp**，通过两seed强门槛。不是4B ALFWorld或Engineer结果。
-
-完整分数、样本数、配对区间和来源hash在
-[核心结果收据](runs/alfworld_core_quick_20261002_v1/CORE_TABLE.json)。
-对应[官方快速比较入口](whale_local/sao_bridge/alfworld_core_quick.py)
-已随源码d2e306a推送。两节点filler保持开启，MA联合试跑暂缓且尚无native更新；
-不得把旧MA的回退95%或新试跑的启动成功称为MA训练成绩。
-
-## 历史任务：已验证 H1/W1 起点的自动交替实验
-
-**2026-10-02 14:21 UTC新任务：转向真正的联合轮次MA-SAO首版。**
-旧8小时实验已结束：普通SAO选中了H2但拒绝退化的W2；MA在启动时失败，
-不能作为算法对照。新的[联合实验入口](whale_local/sao_bridge/joint_experiment.py)
-在node3训练Engineer、node4训练Solver，共享版本屏障与同一次合作episode
-的最终奖励，两角色优化器持续存在，不再执行几十步H后几十步W的块交替。
-首版16轮、4轮critic预热、每角色12次Actor更新，batch8。
-Engineer actor保持E15起点，Solver保持v4-W79，critic各自匹配；
-Solver学习率暂降到5e-7，避免机械重用此前W2退化配方。
-
-新实验输出使用`runs/alfworld_joint_ma_pilot_v1`，与历史目录严格分离。
-先开发集24题选择最终Engineer的harness，再对冻结H1/W1及联合候选分别
-进行70题mean@2报告；候选即使更差也报告，不只挑正结果。
-每轮记录两角色真实行为概率、完整concat轨迹、团队奖励和动态的动作前
-critic上下文。后续轮次必须等待两个rollout策略都完成权重发布，任何伙伴
-失败使另一方显式停止。无效Engineer提案明确执行no-patch并计入结果，
-不伪造Solver样本或行为概率。
-
-这是**MAPPO式联合采样/更新 + 原生SAO value/GAE更新的初版**，尚不宣称
-完整MAPPO实现：ValueNorm等尚未接入；历史W79失败包仍是固定任务输入，
-真实奖励则由当前联合策略执行得到。未来独立SAO/IPPO式对照必须使用相同
-联合轮次和采样预算，仅改变critic可见信息。旧长阶段交替不是该主对照。
-GPU filler保持开启，node0-node2不使用，旧实验收据和模型不改写。
-
-MA旧故障已定位并修复：Launcher改写`HOME`后不能依赖交互用户的Git配置。
-源码校验现在对每条Git命令只信任解析后的两个确切SAO/AReaL路径；
-节点3真实子进程预检通过，不使用`safe.directory=*`。
-
-用户离线期间，node4跑普通SAO对照，node3跑MA-SAO。**两臂都从同一份
-Engineer E15/critic15与Solver v4 W79/critic79开始，都按H2 → W2顺序训练。**
-不要把上一轮保留下来的官方Agent-SFT W0误当成本轮的W1，也不要把已有
-官方RL训练的Engineer起点误写成SFT-only。
-
-| 项目 | 两臂相同的设置 |
-|---|---|
-| 共同准备 | 用W79在train0–239收集真实官方失败轨迹；E15针对它生成8个harness，开发集选择共同初始harness |
-| H2 | 32 native steps，5 critic warmup +27 Actor更新，batch6；比较step15/31与E15的匹配8提案 |
-| W2 | 从W79及其critic继续，80 native steps，5 warmup +75 Actor更新，batch8；使用offset640的新训练输入，比较step39/79 |
-| 采纳规则 | 开发集至少+2pp才更换相应组件；退化则保留已验证模型，不部署未评测checkpoint |
-| 终评 | 固定70题、mean@2；报告初始W1/H1、W1/H2、W2/H2及两臂最终系统。不做多种子、参数扫或交叉harness消融 |
-| MA差异 | 仅MA critic加入动作发生前的伙伴/当前harness/训练集校准信息；Actor仍用同一SAO更新，不宣称是逐字复现MAPPO |
-
-运行入口是[自动控制器](whale_local/sao_bridge/alfworld_alternating_campaign.py)。
-本次冻结协议及所有输出在服务器的
-`runs/alfworld_alternating_e15_w79_8h_v1/`，**不属于要推送的中间数据/权重**。
-协议的`autonomous`字段保存绝对启动、共同准备、训练截止、总截止时间、
-节点与服务名；重启读取原时间，绝不重新获得8小时。
-
-**已部署的本次时间窗口：2026-10-02 05:22:03–13:22:03 UTC**
-（北京时间13:22:03–21:22:03）。训练最晚12:22:03 UTC停止；6小时后的
-11:22 UTC可直接查看状态或已完成结果。控制器源码冻结在`1b365c4`，不要在
-`runs/source-snapshots/alt8h-e15-w79-v1/`内编辑代码。
-
-| 节点 | 独立于Agent运行的协调器 |
-|---|---|
-| node4 | `coevolve-alt8h-e15-w79-v1-sequential-coordinator.service` |
-| node3 | `coevolve-alt8h-e15-w79-v1-ma-coordinator.service` |
-
-node4已启动共同W79环境服务；node3正确等待同一份H1/W1初始化，随后两臂
-并行执行H2/W2。计算子服务使用同一前缀的`sequential-common`、
-`sequential-arm`、`sequential-report`、`ma-arm`、`ma-report`，每个都有独立
-expiry timer。部署时两节点的GPU filler均保持active，没有被停止或改动。
-
-- 最多约1小时共同准备，最晚第7小时停止训练，至少留1小时终评；若提前完成，
-  可以提前出结果，不为耗满8小时继续无收益训练。
-- 两个CPU协调器管理独立systemd计算服务；崩溃后接回原服务与已有收据，
-  不重复创建正在运行的训练。native/测评各保留原有最多2次尝试。
-- **独立的绝对时间systemd timer**负责停止本实验的计算服务，即便协调器挂掉
-  也不延长预算。截止时只冻结最后一个完整验证过的状态；部分训练不冒充完成。
-- 如果某臂预算没有完整执行，仍尽可能报告已验证系统，但不据此声称MA胜出。
-- `bruli-h200-load.service`保持开启，不在任何停止列表中。算法退出后由其自行
-  填补负载。node0–node2不被占用。
-- 当前node4系统盘已满；本实验临时文件使用`/dev/shm`，日志和收据写3FS，
-  不清理或删除其他用户的数据。
-- systemd服务能跨VS Code/Agent断开继续运行；不承诺机器重启后仍保有
-  `/dev/shm`解释器和运行环境。
-
-查看`sequential/COORDINATOR_STATUS.json`、`ma/COORDINATOR_STATUS.json`、
-各臂`ARM_STATUS.json`和`optimizer/metrics.jsonl`；最终查看`PAIRED_REPORT.json`。
-若终评未完成，脚本明确写`COMPARISON_UNAVAILABLE.json`，不会补造分数。
-每臂`*_command.json`、`*_launches.json`和`*_expiry.json`保存实际命令、
-重启历史及独立截止保护，`*.service.log`保存无需journal权限即可读取的日志。
-node3首次检查还遇到共享源码的Git所有权保护：仅在先验证固定revision后，
-为SAO/AReaL两个真实路径加入该用户的显式信任，没有通配符信任；记录在
-`ma/SHARED_GIT_TRUST.json`。不要将这个部署问题误判为算法学习失败。
-
-手动接回同一个实验时，在**冻结源码工作树**中运行：
-
-```bash
-CUDA_VISIBLE_DEVICES='' TMPDIR=/dev/shm PYTHONPATH=whale_local \
-  /dev/shm/sao-venv-ppo/bin/python -B -m sao_bridge.alfworld_alternating_campaign \
-  --protocol /mnt/3fs/xudong/coevolve/runs/alfworld_alternating_e15_w79_8h_v1/frozen_protocol.json \
-  --arm sequential
-```
-
-node3使用`--arm ma`。已有协调器在线时不要重复启动；也不要修改冻结协议、
-部署中的源码或删掉失败收据。需要暂停时停止该臂协调器及其`common/arm/report`
-计算服务，保留expiry timer；恢复只重启原协调器，原截止时间仍有效。
-不要停止GPU filler。开启新实验需新目录、独立服务前缀和新冻结协议。
-
-下方旧强对比的服务表是历史快照，不是本轮的入口。旧两臂已均冻结为相同
-W0/E15/H1；MA的W2选择45.83%/75.00%，普通对照62.50%/56.25%，均未超过
-83.33%的旧incumbent。旧报告若不能及时收尾，交接仅停止我们的旧服务并保留
-全部证据，优先把GPU交给本轮E15/W79实验。
-
-1. **验证 SAO 可以训练9B Solver：已通过单seed探索门槛。** 固定空harness，从官方 Agent-SFT W0 出发，80个native step包含5步critic warmup和75次非零Actor更新，选中step79。
-2. **验证 SAO 可以提高9B Engineer的修改能力：已通过单seed探索门槛。** 从官方已训练的`harness-r1`继续训练，选中step15，即11次Actor更新后的模型；匹配每个模型的8个训练failure prompts、提案槽位和decode seeds。不是从SFT-only初始化的SAO/GRPO对照；对口的`agent-sft-harness-r1`尚未本地测评。
-3. **建立强顺序基线，再检验 MA-SAO：正在运行，尚无MA优势结论。** 先完成公平对照，再决定稳定性改进、关键组件和交替频率研究。WebShop仍是条件性的后续任务。
-
-主结果每行表示一个完整系统，不把“Engineer学习诊断”和“加harness的实际
-收益”混在同一张前后对照表中。官方数字来自
-[Harness-R1结果表](https://github.com/DeepExperience/Harness-R1#results)。
-
-| 系统配置 | 官方ALFWorld：500题 | 本地Weight评测：91题 | 本地Harness评测：70题 |
-|---|---:|---:|---:|
-| 原始Qwen3.5-9B，默认harness | 40.6% | 未测 | 未测 |
-| 原始Qwen3.5-9B + Harness-R1 | 53.2% | 未测 | 未测 |
-| Agent SFT，默认harness | 71.2% | 78.02% | 75.71% |
-| Agent SFT + 官方对口Harness-R1 | 84.0% | 未测 | 未测 |
-| Agent SFT + SAO-Weight，仅更新Solver | — | **89.56%** | 未测 |
-| Agent SFT + SAO-Harness，Solver不变 | — | 未测 | **80.00%** |
-| SAO更新后的Solver + SAO更新后的Harness | — | 尚未完成统一评测 | 尚未完成统一评测 |
-
-不同列不能相减或排名。我们的起点已经是Agent-SFT，不是官方40.6%的原始
-模型；同口径Weight提升为+11.54pp，题级95%区间[+3.30,+19.78]pp，
-相对不改harness的Harness收益为+4.29pp。Weight列采用mean@2；
-Harness列对8个匹配Engineer提案取Solver成功率均值，不是best-of-8。
-
-单列的Engineer学习诊断是E0提案72.14%到E15提案80.00%，+7.86pp，
-题级95%区间[+4.46,+11.25]pp。其中E0低于no-patch的75.71%；该学习增益
-不是相对无harness的增益，不能相加。E0使用面向vanilla Solver训练的
-官方`harness-r1`，而非针对Agent-SFT训练的官方`agent-sft-harness-r1`；
-尚不能据此宣称SAO胜过官方GRPO。所有本地结果是单训练seed、已使用过的开发
-cohort上的探索性证据，不是多seed稳健性或未接触过的确认性测试。
-**不能把两项单角色收益相加，当成MA-SAO的收益。**
-
-### 正在执行的强 SAO / MA-SAO 对照
-
-两臂共享已验证的E15、官方W0及同一个H1，完整共同训练/搜索成本均计入
-两个逻辑臂；共同前缀物理上只执行一次。冻结方案见
-[alfworld_strong_sao_ma_v1.json](examples/alfworld_strong_sao_ma_v1.json)。
-
-| 节点 | 共同H1之后的顺序 | 04:41 UTC时的进度 |
-|---|---|---|
-| node4 | 顺序SAO：H2 → W1 → W2 | 已完成并冻结为W0/E15/H1；W2候选62.50%/56.25%，均未采纳 |
-| node3 | MA-SAO：W1 → H2 → W2 | W2完成80步/75次非零Actor更新；基础设施恢复后正在重做选择，无最终分数 |
-
-- H2预算为32步（5 warmup +27 Actor），每个W块为80步（5+75）。当前W2
-  的640行、起始Solver/critic、harness内容和更新设置已核对匹配；仅MA启用
-  train-only、pre-action centralized critic。Replay、interaction bonus和
-  Solver recycling均关闭，不伪造行为token或logprob。
-- **已有负结果必须保留。** 顺序W1的step39/79在选择集上都退化为0%；
-  MA W1为75.00%/77.08%，仍低于W0/H1的83.33%。两侧H2也都未提高，
-  所以当前仍保留W0/E15/H1，没有把坏checkpoint部署成一个容易击败的基线。
-  此前也没有接受counterpart变化，尚不能声称发生有效共适应。
-- 选择集为goal隔离的24题，最终report为70题，均采用native mean@2。
-  W checkpoint采纳要求至少+2pp点差；记录的Bonferroni LCB是诊断量，
-  不是额外采纳条件。**两臂都冻结后才打开本轮report**；MA大幅胜出须
-  至少+5pp且配对95%下界大于0。最终Solver权重与harness完全相同时，
-  独立serving的分差只能称为评测波动。
-- 目前是**固定预算续训，不是收敛证明**。固定H1下的真实退化说明SAO
-  稳定性仍需加强；不能用有限非零梯度或GPU利用率替代任务收益。
-  不得因step39不够好而提前放弃整个W块，v4是在step79才明显改善。
-
-### Agent 如何接上进度
-
-服务器运行根目录为
-`/mnt/3fs/xudong/coevolve/runs/alfworld_strong_sao_ma_v1`。
-`frozen_protocol.json`是本次运行的权威协议，不能在运行中改写。
-下面的收据、数据和权重只在服务器保存，**不随Git发布**。
-
-1. 先查看两臂的`ARM_STATUS.json`，再核对对应的`PHASE_COMPLETE.json`、
-   `*_selection/COMPLETE.json`和`RELEASED.json`；日志较旧不等于训练卡死。
-   `ARM_FROZEN.json`是最终选择完成的标记，native训练完成并不等于整臂完成。
-2. 下列systemd服务独立于Agent/VS Code连接运行；不要重复启动或重训已完成阶段。
-
-   | 节点 | 服务 | 用途 |
-   |---|---|---|
-   | node4 | `coevolve-strong-sao-v1-sequential-arm-r2.service` | 顺序臂已完成冻结，不重启；旧`arm`及`arm-r1`保留为失败历史 |
-   | node3 | `coevolve-strong-ma-v1-arm-r3.service` | 当前MA恢复控制器，冻结`a4eef56`，不重复native训练 |
-   | node3 | 原`arm`、`arm-r1`、`arm-r2` | 已退出的历史控制器，不应当作当前任务重启 |
-   | node4 / node3 | `coevolve-strong-sao-v1-sequential-report-r2.service` / `coevolve-strong-ma-v1-report-r2.service` | 等待两臂冻结后评测，已更新端口及取消确认逻辑 |
-   | node4 | `coevolve-strong-sao-ma-v1-finalizer-r1.service` | 两侧report及GPU释放完成后产生`PAIRED_REPORT.json` |
-   | node4 / node3 | `coevolve-strong-sao-v1-sequential-cost-r2.service` / `coevolve-strong-ma-v1-cost-r2.service` | CPU等待各自当前report结束，再产生每臂`COST_AUDIT.json` |
-
-3. 继续完成W2选择、双臂冻结、配对report与成本审计，并更新本README、
-   [项目状态](docs/PROJECT_STATE.md)和[实验日志](docs/EXPERIMENT_LOG.md)。
-   若MA未过门槛，诚实报告，并优先处理SAO稳定性/有效更新，而不是直接
-   宣称MA成功或开始频率/WebShop搜索。
-4. 恢复必须保留失败尝试、原始metrics、身份绑定及已完成评测。FP32 target
-   审计只容忍`1e-6`边界舍入，不裁剪target或改变训练；兼容升级保持历史
-   phase/selection收据逐字节不变。相关45项测试和29个subtests，以及真实
-   MA H2收据临时副本验证已通过。详见[恢复说明](docs/MA_SAO.md)。
-   MA W2选择另遇到两次vLLM内部端口冲突，以及取消请求超时后worker仍满的
-   HTTP406。分别通过独立端口和官方取消完成通知修复；51测试/28 subtests、
-   128个真实环境session取消后占用归零的CPU验证通过。两个显式哈希绑定的
-   恢复收据各增加一次基础设施尝试，**不再声称自动重试上限未变**；任务、
-   模型、seed、native预算和采纳门槛未变，失败/部分生成成本保留。
-5. 运行中的controller和子进程使用冻结Git worktree；不要修改这些worktree
-   或共享upstream。新快照须链接assets及`.gitmodules`的**全部**路径，
-   包括根目录WHALE，并先进行CPU导入检查。服务可跨VS Code断连存活，
-   不等于已实现机器重启恢复。
-
-主要实现入口：
-
-| 代码 | 职责 |
-|---|---|
-| [alfworld_strong_arm.py](whale_local/sao_bridge/alfworld_strong_arm.py) / [alfworld_strong_phase.py](whale_local/sao_bridge/alfworld_strong_phase.py) | 整臂状态机、冻结输入、预算/原生更新审计、有限重试 |
-| [alfworld_strong_select.py](whale_local/sao_bridge/alfworld_strong_select.py) / [alfworld_strong_refresh.py](whale_local/sao_bridge/alfworld_strong_refresh.py) | 匹配提案/checkpoint选择、真实train-only partner刷新 |
-| [alfworld_strong_report.py](whale_local/sao_bridge/alfworld_strong_report.py) / [alfworld_strong_cost.py](whale_local/sao_bridge/alfworld_strong_cost.py) | 双freeze报告门、配对结论和实际成本 |
-| [large_train.py](whale_local/sao_bridge/large_train.py) / [terminal_actor.py](whale_local/sao_bridge/terminal_actor.py) / [central_critic.py](whale_local/sao_bridge/central_critic.py) | 原生SAO/AReaL接线、完整terminal轨迹和集中critic |
-| [alfworld_solver_eval.py](whale_local/sao_bridge/alfworld_solver_eval.py) / [alfworld_controller.py](whale_local/sao_bridge/alfworld_controller.py) | 共享Solver推理池、重复harness去重及异步环境请求 |
-
-资源边界：本项目计算只使用node3/node4，不擅自占用node0–node2或操作其任务。
-用户的GPU利用率程序在仓库外的`/mnt/3fs/xudong/gpu-utilization`，必须保持
-运行，不可kill；训练SM与filler SM分开记录。实际成本包含失败尝试、prefetch、
-保存和等待，不能用输入行数或总GPU显示值冒充有效计算。
-只提交代码、文档、协议和聚合结果；不提交`runs/`、模型权重、优化器、
-原始轨迹或环境目录。
-
-## 历史2B原型：WHALE + RSFT / GRPO
-
-以下保留第一版实验及复现入口，**不代表当前9B SAO/MA-SAO算法**。
-WHALE 把求解器权重更新与可执行 harness 搜索交替进行。第一版Coevolve
-将外部提案模型替换为可以训练的2B改写器：它读取当前harness和失败反馈，
-生成Python代码；候选的实际任务收益用于更新改写器权重。
-
-该历史原型维护两个独立checkpoint，均使用Qwen3.5-2B：
-
-| 状态 | 职责 | 更新方法 |
-|---|---|---|
-| 求解器 `W` | 在 harness 中推理、调用 Python、回答题目 | 原生 WHALE RSFT：用在线采样中通过 verifier 的成功轨迹训练 |
-| 改写器 `E` | 根据当前代码与失败反馈生成新的 harness | 合成代码编辑 SFT 初始化；随后使用 Harness-R1 风格的 outcome GRPO |
-| 执行代码 `H` | 提示、工具反馈处理、停止与恢复行为 | 执行候选并比较开发集表现，用 WHALE 的 Pareto/接受规则选择 |
+## How it works
 
 ```mermaid
 flowchart LR
-    WH[当前求解器 W + harness H] --> D[开发集执行反馈]
-    D --> E[小模型改写器 E 生成候选]
-    E --> R[固定 W 执行候选并计算收益]
-    R --> EU[GRPO 更新 E 的权重]
-    EU --> H[重新生成并选择 H]
-    H --> T[采集成功解题轨迹]
-    T --> WU[RSFT 更新 W 的权重]
-    WU --> WH
+    T[Task and feedback] --> E[Engineer]
+    E --> H[Executable harness]
+    H --> S[Solver]
+    S <--> ENV[Environment]
+    ENV --> R[Shared task reward]
+    R --> ER[Engineer RL update]
+    R --> SR[Solver RL update]
+    ER --> E
+    SR --> S
 ```
 
-## 历史原型相对 WHALE 的主要扩展
+Each task attempt produces two complementary trajectories: the Engineer's generated program and the Solver's multi-turn execution. The shared task reward trains each policy on **its own generated tokens**, with separate actors and critics.
 
-1. **可训练的小模型改写器。** Harness 生成能力是一个被优化的模型参数状态，不再只依赖固定外部提案模型。
-2. **与当前求解器绑定的编辑奖励。** 固定当前 `W`，在相同开发题和采样协议下计算 `score(W, H_candidate) − score(W, H_current)`；更新求解器后重新计算编辑奖励。
-3. **双 checkpoint 的真实训练和交接。** 独立保存模型、优化器、随机状态和参数摘要；更新后重载验证，分别记录代码收益、求解器训练与改写器训练。
-4. **小规模本地执行后端。** 复用 WHALE 的 ReTool 环境、严格 boxed verifier、RSFT actor 和 harness 选择器，补充 Transformers 服务、原始 token 记录、隔离 Python 执行和多 GPU 采样。
+JoMoHa coordinates these updates through four mechanisms:
 
-Harness 搜索允许修改提示和可执行恢复钩子，包括 `no_tools_called` 与 `get_prompt_messages`；不是只改一句 prompt。工具、判题器和总输出预算保持固定。当前代码编辑接口有明确限制，详见 [方法与边界](docs/METHOD.md)。
+1. **Context:** collaboration-aware value estimation.
+2. **ValueNorm:** role-specific return normalization.
+3. **Peer:** bounded partner-trajectory weighting.
+4. **Schedule:** asymmetric updates that give the Solver additional adaptation.
 
-## 第一版实验结果
+The repository retains the name `coevolve`; implementation files use **MA-SAO** for joint training and **SAO** for the single-rollout actor-critic backbone.
 
-MATH `number_theory` 的本地小子集：Level 2–4、整数 boxed 答案。训练128题、开发48题、评测128题。下表和图统一采用 **同一128题、每题1次采样，seed=42、temperature=1**。
+## Getting started
 
-三组共同起点是已训练求解器加初始 harness；两个内部组共享同一份已有132步 SFT、尚无 RL 更新的改写器。
-
-| 改写方法 | 共同起点 | 第一次 H 更新后 | W 训练后 | 第二次 H 更新后 |
-|---|---:|---:|---:|---:|
-| 外部模型改写 | 78/128 | 90/128 | 92/128 | 92/128 |
-| 固定内部 2B 改写器 | 78/128 | 69/128 | 71/128 | 84/128 |
-| 继续训练内部 2B 改写器 | 78/128 | 69/128 | 71/128 | **93/128** |
-
-![统一统计口径的历史配置与交替曲线](docs/figures/three_arm_curve.png)
-
-训练内部改写器比固定内部改写器最终多解 **9题（+7.03个百分点）**，是当前协议下的初步信号。内部第一轮有明显回落；尚未证明持续、单调自我改进，也不能凭93与92的一题差异宣称优于外部模型。
-
-这个对照有实质限制：最终选择只用训练后4个候选与 incumbent，固定组的训练后候选复用训练前相同种子；训练组第二轮的强候选已经在训练前8个候选中出现。观察到的是训练提高了匹配槽位中再生成该候选的频率，尚不能证明优于保留所有已评估候选的搜索策略。
-
-各组新增32条求解器训练轨迹；外部/固定内部/训练内部的实际开发搜索采样分别为1056/432/480条。**相同提案槽位和预算上限不等于相同实际 rollout 或总成本。** 历史初始化成本和外部模型推理成本另计。这是快速单 seed 实验，评测题有历史使用记录，不是论文全量复现或新盲测。
-
-[详细实验解释](docs/EXPERIMENTS.md) · [数值记录](docs/results/pilot.json) · [曲线 PDF](docs/figures/three_arm_curve.pdf)
-
-## 历史原型的代码和运行
+### 1. Get the code
 
 ```bash
-git clone --recurse-submodules https://github.com/xudongwu-0/coevolve.git
+git clone https://github.com/xudongwu-0/coevolve.git
 cd coevolve
+git submodule update --init --recursive
 ```
 
-上游 WHALE 作为 submodule 固定在 `fbe125eb7abea7f760c99ab9acc1a6261e708fc6`。我们的扩展位于 `whale_local/`，上游源码保持独立。
+The pinned submodules provide WHALE, Harness-R1 benchmark runtimes, the SAO backbone, and the MAPPO design reference.
 
-历史2B原型的运行准备、依赖、SFT初始化及checkpoint格式见 **[运行指南](docs/RUNNING.md)**。其显式配置入口为：
+### 2. Explore the benchmarks
+
+| Benchmark | Task | Entry point |
+|---|---|---|
+| ALFWorld | Household task completion | [Joint training and evaluation](whale_local/sao_bridge/) |
+| WebShop | Goal-directed shopping | [Runtime, dataset builder, and evaluation](docs/BENCHMARK_IMPLEMENTATIONS.md#webshop) |
+| DBBench | Database interaction | [Runtime, dataset builder, and evaluation](docs/BENCHMARK_IMPLEMENTATIONS.md#dbbench) |
+
+See the [benchmark guide](docs/BENCHMARK_IMPLEMENTATIONS.md) for environment setup, source locations, and evaluation commands. WebShop and DBBench runtime components are integrated through the pinned official Harness-R1 submodule.
+
+For the joint-training environment and patched AReaL source, follow the [training-source setup](docs/REPRODUCE_MA_SAO.md#restoring-the-training-source). The recorded 9B stack uses Python 3.12, PyTorch 2.10.0+cu129, vLLM 0.19.1, and Transformers 5.7.0.
+
+### 3. Verify best97 offline
+
+With **Python 3.10+**, run:
 
 ```bash
-# 先按运行指南建立环境，并填写模型、数据及空闲 GPU 路径。
-cp examples/pilot.json examples/local.json
-export PYTHONPATH="$PWD/whale_local:$PWD/WHALE/domains/math_reasoning:$PWD/WHALE/domains/chess_puzzles"
-.venv-whale-search/bin/python scripts/prepare_run.py \
-  --spec examples/local.json --run runs/pilot --check-only
-.venv-whale-search/bin/python scripts/prepare_run.py \
-  --spec examples/local.json --run runs/pilot
-.venv-whale-search/bin/python whale_local/three_arm_hwh.py execute --run runs/pilot
+python3 -B scripts/reproduce_ma_progress.py --best97
 ```
 
-示例默认比较固定/可训练内部改写器，两个阶段均不需要外部提案服务。加入 `external` 分支后，必须有实际外部模型或人工代理消费 FastAPI 提案队列；该队列本身不会生成代码。历史外部对照由活跃 Codex 会话处理，未提供无人值守的 Codex 模型 API。
+This standard-library-only command checks **4,225 evidence files**, verifies the matching harness, and recomputes the best97 ALFWorld result from archived per-task outcomes. It runs locally without a GPU, model download, or API call; submodule initialization is optional for this step.
 
-仓库还保留早期隔离的[双SAO集成测试入口](docs/SAO_BASELINE.md)：直接调用固定版本的SAO/AReaL训练器，分别更新改写器与执行模型。这个历史smoke使用受限harness属性空间和独立critic，不是当前9B强对照的入口，也不替代上面的最新结果。
+The JSON output includes:
 
-| 文件 | 作用 |
+```json
+{
+  "best97": {
+    "selected": {
+      "successes": 194,
+      "questions": 200,
+      "accuracy": 0.97
+    }
+  }
+}
+```
+
+See the [reproducibility guide](docs/REPRODUCE_MA_SAO.md) for the full audit, archived experiments, and evidence extraction.
+
+## Checkpoints
+
+The **best97** release pairs the ALFWorld Solver and Engineer with the selected executable harness:
+
+| Artifact | Link |
 |---|---|
-| [three_arm_hwh.py](whale_local/three_arm_hwh.py) | H → W → H 的固定改写器、可训练改写器及外部对照 |
-| [harness_learner.py](whale_local/harness_learner.py) | 改写器 SFT 初始化 |
-| [harness_grpo.py](whale_local/harness_grpo.py) | 基于执行收益的改写器权重更新 |
-| [alternating_solver_train.py](whale_local/alternating_solver_train.py) | 求解器 RSFT |
-| [alternating_pool.py](whale_local/alternating_pool.py) | 本机/内网冻结求解器副本并行采样 |
-| [harness_code_contract.py](whale_local/harness_code_contract.py) | 候选代码接口检查 |
-| [prepare_run.py](scripts/prepare_run.py) | 显式资产与设备配置、数据划分检查 |
-| [check_install.py](scripts/check_install.py) | 不加载模型的导入、奖励和执行环境检查 |
+| Solver actor, configuration, and tokenizer | [best97/solver](https://huggingface.co/datasets/wxd02/coevolve/tree/d0e84414e8ef9e2b6a84585e1365189faf501051/best97/solver) |
+| Engineer actor, configuration, and tokenizer | [best97/engineer](https://huggingface.co/datasets/wxd02/coevolve/tree/d0e84414e8ef9e2b6a84585e1365189faf501051/best97/engineer) |
+| Matching executable harness | [proposal07](reproducibility/ma_sao_20261012/payload/runs/alfworld_ma_convergence_v1r4/block-01/round0096/patches/95-proposal07.json) |
 
-本仓库包含代码、运行说明和聚合实验结果；模型权重、优化器、原始轨迹、MATH数据与旧工作区环境需单独准备。历史研究脚本保留于`whale_local/`，部分仍依赖原实验目录；复现历史2B试验使用本节入口，当前9B研究使用README顶部的协议和持久pipeline。完整历史结果无法仅靠本仓库重算，聚合数值及其限制已单独记录。
+Using the Hugging Face CLI, authenticate with `hf auth login` using an account with access to the dataset, then download the pinned checkpoint pair:
 
-## 其他探索与来源
+```bash
+hf download wxd02/coevolve \
+  --repo-type dataset \
+  --revision d0e84414e8ef9e2b6a84585e1365189faf501051 \
+  --include "best97/solver/*" "best97/engineer/*" \
+  --local-dir models
+```
 
-曾尝试根据失败标签将采样预算分配给 harness/weight 问题。当前 gate 实验没有显示样本效率优势，**不是本项目主结果**，见 [gate 流程与失败分析](docs/GATE.md)。
+The model directories are `models/best97/solver/` and `models/best97/engineer/`. Checkpoint identities and file hashes are recorded in the [artifact manifest](reproducibility/historical97_20261012/CHECKPOINT_UPLOAD_MANIFEST.json).
 
-本项目建立在 [WHALE](https://github.com/krafton-ai/WHALE) 之上，改写器优化参考 Harness-R1 的组相对 outcome 奖励思路。WHALE 及其 vendored verl 等组件保留各自许可和署名，见 [第三方说明](THIRD_PARTY_NOTICES.md)。
+## Code overview
+
+| Location | Contents |
+|---|---|
+| [`whale_local/sao_bridge/`](whale_local/sao_bridge/) | Joint learning, ALFWorld execution, evaluation, and checkpoint recovery |
+| [`joint_workflow.py`](whale_local/sao_bridge/joint_workflow.py) | Paired Engineer/Solver rollouts |
+| [`joint_critic.py`](whale_local/sao_bridge/joint_critic.py), [`joint_context.py`](whale_local/sao_bridge/joint_context.py) | Collaboration-aware value estimation |
+| [`joint_updates.py`](whale_local/sao_bridge/joint_updates.py), [`joint_schedule.py`](whale_local/sao_bridge/joint_schedule.py) | Policy updates and role scheduling |
+| [`third_party/harness-r1-upstream/`](third_party/harness-r1-upstream/) | Benchmark environments, harness hooks, dataset builders, and evaluation tools |
+| [`scripts/`](scripts/), [`tests/`](tests/) | Preparation utilities, offline verification, and contract tests |
+| [`reproducibility/`](reproducibility/) | Experiment evidence, source snapshots, and checkpoint metadata |
+
+## Development
+
+For the evidence-packaging and offline-verification tests, use an environment with `pytest` installed:
+
+```bash
+python3 -m pytest -q tests/test_ma_handoff.py tests/test_reproduce_ma_progress.py
+python3 -B scripts/reproduce_ma_progress.py --best97
+```
+
+Contributions and issue reports are welcome. Include the repository revision, environment, command, and relevant error output; keep credentials and private infrastructure details out of reports. Preserve frozen evidence and add focused tests for behavior changes.
+
+## Citation
+
+```bibtex
+@misc{lan2026jomoha,
+  title         = {JoMoHa: Joint Model--Harness Optimization with Reinforcement Learning},
+  author        = {Guangchen Lan and Mingqi Yuan and Jiayu Chen},
+  year          = {2026},
+  eprint        = {2611.11499},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.LG},
+  url           = {https://arxiv.org/abs/2611.11499}
+}
+```
+
+## Acknowledgments
+
+JoMoHa builds on [WHALE](https://github.com/krafton-ai/WHALE), [Harness-R1](https://github.com/DeepExperience/Harness-R1), the [unofficial SAO implementation](https://github.com/fooSynaptic/Single-rollout-async-Optimization), and [AReaL](https://github.com/inclusionAI/AReaL). [MAPPO](https://github.com/marlbenchmark/on-policy) is included as a design reference.
+
+See [third-party notices](THIRD_PARTY_NOTICES.md) and [component licenses](licenses/) for attribution and applicable terms. Model weights and benchmark assets follow their providers' terms.

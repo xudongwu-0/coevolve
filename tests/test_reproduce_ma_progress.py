@@ -116,6 +116,26 @@ def bundle(tmp_path):
         path.parent.mkdir(parents=True)
         path.write_text("".join(json.dumps({"global_step": step, "metrics": {"loss": 0.2}}) + "\n"
                                 for step in range(76)))
+    best97 = reproduce.BEST97_RUN
+    save(best97 / "round0096/patches/95-proposal07.json", {
+        "schema_version": "harness-r1-patch-v1", "benchmark": "alfworld", "actions": [],
+    })
+    for suffix, successes in (("joint_harness", 194), ("no_patch", 185)):
+        report = {
+            "domain": "alfworld", "question_count": 200, "samples_per_question": 1,
+            "metric": "mean@1", "accuracy": successes / 200,
+            "results": [
+                {"task_id": task, "sample_index": 0, "reward": int(index < successes)}
+                for index, task in enumerate(main)
+            ],
+        }
+        save(best97 / f"round0096_{suffix}_report.json", report)
+        if suffix == "joint_harness":
+            save(
+                best97 / "round0096/evaluation200/attempt-01/reports"
+                / "af8f607201d8a33fc24700422ee1b1169e830df854ff3022a63e0842d2dcdb76.json",
+                report,
+            )
     export_git_payload(output, [path for path in project.rglob("*") if path.is_file()], project=project)
     (output / "STATE.json").write_text(json.dumps({
         "schema": "ma-sao-progress-handoff-v1", "study": study.as_posix(),
@@ -138,6 +158,61 @@ def test_offline_audit_reproduces_exact_scores_splits_and_recovery_boundary(bund
     assert result["data_split"]["train_main_task_overlap"] == 0
     assert result["without_peer_metric_rounds"] == {"editor": 76, "solver": 76}
     assert result["native_metadata"]["without_peer"]["completed_rounds"] == 72
+    assert result["training_allowed"] is False and result["gpu_or_api_used"] is False
+
+
+def test_best97_recomputes_scores_and_binds_the_harness(bundle):
+    evidence = reproduce.Evidence(bundle)
+    result = reproduce.best97_audit(evidence)
+    assert result["selected"]["successes"] == 194
+    assert result["selected"]["questions"] == 200
+    assert result["selected"]["accuracy"] == 0.97
+    assert result["no_patch"]["successes"] == 185
+    assert result["no_patch"]["accuracy"] == 0.925
+    assert result["harness_sha256"] == sha256(evidence.path(result["harness"]))
+    for name in ("selected", "no_patch"):
+        assert result[name]["sha256"] == sha256(evidence.path(result[name]["report"]))
+
+
+@pytest.mark.parametrize("change", ["domain", "outcomes", "coverage", "score"])
+def test_best97_rejects_mismatched_reports(bundle, change):
+    evidence = reproduce.Evidence(bundle)
+    suffix = "no_patch" if change == "score" else "joint_harness"
+    path = evidence.path(reproduce.BEST97_RUN / f"round0096_{suffix}_report.json")
+    report = json.loads(path.read_text())
+    if change == "domain":
+        report["domain"] = "webshop"
+    elif change == "outcomes":
+        report["results"][0]["reward"] = 0
+        report["results"][-1]["reward"] = 1
+    elif change == "coverage":
+        report["results"][-1]["task_id"] = report["results"][0]["task_id"]
+    else:
+        report["results"][0]["reward"] = 0
+        report["accuracy"] = 184 / 200
+    path.write_text(json.dumps(report))
+    with pytest.raises(ValueError):
+        reproduce.best97_audit(evidence)
+
+
+def test_best97_requires_the_matching_alfworld_harness(bundle):
+    evidence = reproduce.Evidence(bundle)
+    path = evidence.path(reproduce.BEST97_RUN / "round0096/patches/95-proposal07.json")
+    path.write_text(json.dumps({"schema_version": "harness-r1-patch-v1", "benchmark": "dbbench"}))
+    with pytest.raises(ValueError, match="ALFWorld patch schema"):
+        reproduce.best97_audit(evidence)
+    path.unlink()
+    with pytest.raises(FileNotFoundError):
+        reproduce.best97_audit(evidence)
+
+
+def test_best97_cli_preserves_existing_audits(bundle, monkeypatch, capsys):
+    monkeypatch.setattr(sys, "argv", ["reproduce_ma_progress.py", "--bundle", str(bundle), "--best97"])
+    reproduce.main()
+    result = json.loads(capsys.readouterr().out)
+    assert result["status"] == "passed"
+    assert result["best97"]["selected"]["accuracy"] == 0.97
+    assert result["full"]["144"]["selected"]["accuracy"] == 0.93
     assert result["training_allowed"] is False and result["gpu_or_api_used"] is False
 
 
