@@ -76,22 +76,6 @@ python3 -B scripts/reproduce_ma_progress.py --best97
 
 This standard-library-only command checks **4,225 evidence files**, verifies the matching harness, and recomputes the best97 ALFWorld result from archived per-task outcomes. It runs locally without a GPU, model download, or API call; submodule initialization is optional for this step.
 
-The JSON output includes:
-
-```json
-{
-  "best97": {
-    "selected": {
-      "successes": 194,
-      "questions": 200,
-      "accuracy": 0.97
-    }
-  }
-}
-```
-
-See the [reproducibility guide](docs/REPRODUCE_MA_SAO.md) for the full audit, archived experiments, and evidence extraction.
-
 ## Checkpoints
 
 The **best97** release pairs the ALFWorld Solver and Engineer with the selected executable harness:
