@@ -124,9 +124,9 @@ Contributions and issue reports are welcome. Include the repository revision, en
 ## Citation
 
 ```bibtex
-@misc{lan2026jomoha,
+@misc{wu2026jomohajointmodelharnessoptimization,
   title         = {JoMoHa: Joint Model--Harness Optimization with Reinforcement Learning},
-  author        = {Guangchen Lan and Mingqi Yuan and Jiayu Chen},
+  author        = {Xudong Wu and Guangchen Lan and Mingqi Yuan and Jiayu Chen},
   year          = {2026},
   eprint        = {2611.11499},
   archivePrefix = {arXiv},
