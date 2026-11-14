@@ -1,11 +1,12 @@
 # WebShop: isolated successful-context self-distillation pilot
 
-Status, 2026-11-14: **CPU implementation/contract validation only; no new WebShop
-model score or training result.** This is an opt-in Solver-only experimental
+Status, 2026-11-14: **The real CPU environment/search check passes; a bounded
+native-model gate is being tested. No new full-budget WebShop benchmark score
+or training improvement is established.** This is an opt-in Solver-only experimental
 path, not a change to the ALFWorld Engineer/Solver loop, a continuation of its
 checkpoints, or permission to interrupt the primary SFT job.
 
-## What was actually available
+## Initial state and recovered environment
 
 The local checkout and `origin/main` contained WebShop's pinned Harness-R1
 implementation, strict identity tests, and setup instructions, but no Coevolve
@@ -23,18 +24,59 @@ A real, model-free preflight with the existing 9B model path found:
   and JDK tools in the checked interpreter/host.
 - The local 9B `config.json` exists; weights were not loaded or validated.
 
-Consequently, a before/after benchmark score is **unavailable**, not zero.
+Consequently, a before/after benchmark score was **unavailable**, not zero.
 Unit-test pass counts and toy-policy optimizer tests are not WebShop successes.
-No GPU workload, inference server, resource waiter, SFT edit, package
-installation, or service reconfiguration was performed.
+The initial CPU-only implementation pass performed no GPU workload, inference
+server, resource waiter, SFT edit, package installation, or service reconfiguration.
 
 An additional CPU preparation attempt created only a disposable isolated venv
 and resolved the optional environment requirements with `pip --dry-run`.
 Acquiring a complete public source checkout via `git clone` required an
 interactive tool approval unavailable in this session and was denied. No
-alternative acquisition was attempted to bypass that denial; no JDK, product
-data, or WebShop dependencies were installed. The source/JDK/data setup remains
-an explicit prerequisite, not a completed preparation.
+alternative acquisition was attempted at that point. The user then explicitly
+authorized a read-only archive route and isolated dependency recovery:
+
+- The pinned GitHub API source tar archive downloaded successfully; its
+  SHA-256 is `d16d0e6ea2d2fa8647569b9358bb56db09945d8ed58bb10f23967a76ce17824f`.
+  Only the WebShop source and root licenses/notices were safely extracted.
+  The nested Princeton WebShop MIT license is retained alongside the source.
+- The three public files came from
+  `https://huggingface.co/datasets/HongbangYuan/webshop/resolve/main/`:
+  `items_shuffle_1000.json`, `items_ins_v2_1000.json`, and `items_human_ins.json`.
+  They occupy about 9.4 MiB; their content hashes are preserved in the environment receipt.
+- Existing local Java probes found no JDK. A default-user node probe failed
+  SSH authentication; the subsequently supplied authorized helper works.
+  An isolated Temurin JDK 17.0.21+9 archive was downloaded from the public
+  `adoptium/temurin17-binaries` release. Verified archive SHA-256:
+  `8b9b611d917e3dfd8419d3566b5949226f69b052fed7e109c1368add1dfe8711`.
+- A new `runs/webshop_self_distillation_20261114/env` venv uses the existing
+  Coevolve venv's site-packages read-only, with all new packages confined to
+  its own overlay. Neither the primary SFT environment nor the old Coevolve
+  interpreter was modified. Pins are in `requirements/webshop-environment.txt`.
+  Display-only Rich and HTML-registration Selenium use compatibility pins;
+  WebShop text environment code is unchanged.
+- Initial failures identified missing FAISS and Selenium imports. Both are now
+  explicitly declared and installed. Import **Pyserini before jnius** so its
+  classpath is configured before the JVM starts. Direct `WebAgentTextEnv`
+  construction avoids the released Gym 0.24 `gym.make` warning path.
+- The unmodified upstream converter and a single-thread Lucene indexer indexed
+  **1,000 documents with zero errors**. `environment-check` constructed the
+  actual in-process Flask/SimServer, loaded **6,910 goals**, and twice repeated
+  task0/reset/`search[shoes]` at goal seed233 with exactly identical manifests
+  and transitions, yielding12 product/navigation clickables. This checks the
+  real environment, not a mock, and starts no HTTP daemon or model.
+
+Persistent runtime paths, all under `runs/webshop_self_distillation_20261114/`:
+`reference/source/agent_system/environments/env_package/webshop/webshop/`,
+`env/`, `java/jdk-17.0.21+9/`, `PREFLIGHT_READY.json`, and
+`REAL_ENVIRONMENT_CHECK.json`. Runtime assets are ignored, not committed.
+
+The user-reported historical baseline is **success45, score74**. Its original
+checkpoint, denominator/task IDs, corpus, goal ordering, sampling and units have
+not yet been verified. Do not equate these numbers with a newly measured subset
+or automatically assert that they mean0.45/0.74. New reports explicitly use
+success fraction and environment mean task score on `[0,1]`; multiplying by100
+is presentation only, never a new metric or a way to make mismatched runs comparable.
 
 ## Public reference and license
 
@@ -133,8 +175,9 @@ Use an existing isolated interpreter with torch/pytest, or separately install
 `requirements/webshop-pilot.txt`. Do **not** install anything into primary SFT's
 environment. All scratch/cache paths below are inside the project.
 The optional CPU environment pins are in
-`requirements/webshop-environment.txt`; dependency resolution was checked, but
-actual installation and Python/JNI/Lucene compatibility were not validated.
+`requirements/webshop-environment.txt`; actual Python3.12/JDK17/JNI/Lucene
+imports and a real deterministic search transition have now been validated
+in the isolated overlay.
 
 ```bash
 mkdir -p .cache
@@ -155,12 +198,29 @@ download data, construct a search engine, or claim runtime validation.
 It only checks files/dependencies/JDK presence; an actual environment reset and
 model gate are still required. Output paths must be new to protect old evidence.
 
-Validation on 2026-11-14: **64 pilot tests passed** on CPU, including a real
+Validation on 2026-11-14: **68 pilot tests passed** on CPU, including a real
 tiny Hugging Face transformer generation/log-probability/LoRA-gradient check
 and the full train → adapter save → evaluate → paired-compare CLI round trip
 with an explicitly labelled CPU toy environment. Five upstream deprecation
 warnings were emitted. The existing pinned Harness-R1 WebShop identity suite
 also passed **5 tests**. Neither test run is a benchmark evaluation.
+The combined suite passed73 tests in45.23seconds with5 upstream deprecation warnings.
+
+For the real CPU check with the prepared runtime (no GPU lease is needed):
+
+```bash
+BASE=/absolute/path/to/coevolve/runs/webshop_self_distillation_20261114
+CUDA_VISIBLE_DEVICES="" OMP_NUM_THREADS=2 OPENBLAS_NUM_THREADS=2 \
+  JAVA_HOME="$BASE/java/jdk-17.0.21+9" \
+  PATH="$BASE/java/jdk-17.0.21+9/bin:$PATH" \
+  JAVA_TOOL_OPTIONS="-Xmx2g -XX:ActiveProcessorCount=2 -XX:-UsePerfData -Djava.io.tmpdir=$BASE/.cache" \
+  TMPDIR="$BASE/.cache" \
+  "$BASE/env/bin/python" -m whale_local.webshop environment-check \
+  --config configs/webshop_success_sd_pilot.json \
+  --env-root "$BASE/reference/source/agent_system/environments/env_package/webshop/webshop" \
+  --task-id 0 --action "search[shoes]" \
+  --output runs/webshop/new_environment_check.json
+```
 
 ## Preparing the environment, without touching primary SFT
 
@@ -260,9 +320,42 @@ success teacher; report that outcome instead of repeatedly relaunching.
 
 ## Required next result
 
-First satisfy CPU environment/search readiness, then obtain a bounded exact
-GPU lease without displacing primary SFT. Run the same initial-model GRPO and
-successful-context arms with identical fixed task/seed/budget manifests.
-Publish their actual per-task comparison, including regressions and failures.
-Until then, the improvement is a tested experimental mechanism and retest
-pipeline, **not a demonstrated benchmark win**.
+CPU environment/search readiness is satisfied. The parent explicitly released
+nodes25/26 for WebShop through2026-11-15 00:00UTC; nodes22/24 remain exclusively
+for primary SFT and are not WebShop resources. Authorized probes found both
+WebShop nodes idle. Runs use numeric UID/GID1008:1008, never a username-derived
+chown, a separate cache/home, `PROCESS.json` PID/start-tick identity, and a hard
+per-command timeout in addition to the model-forward lease checks.
+
+The staged plan is:
+
+1. `configs/webshop_model_gate.json`: two fixed tasks, one action each, at the
+   actual512-token/4096-context settings. One GPU, hard600-second wall limit.
+   This is a format/memory/throughput check, **not task success evaluation**.
+   The first native gate on node25GPU0 passed: both responses executed valid
+   search actions, zero invalid actions,330 generated tokens in11.33seconds
+   (~29tokens/s),160.74seconds including setup,19.68GB peak CUDA allocation.
+   The one-action cap makes its0/2 terminal successes uninformative about task
+   success. Exact UID1008/start-tick identity was recorded; GPU0 was verified
+   empty after exit. The coordinator's helper returns stdout as a string,
+   not a CompletedProcess; an initial post-run status-formatting error did not
+   invalidate the completed per-task/report files or leave a GPU worker.
+2. `configs/webshop_subset_gate.json`: fixed evaluation IDs0–31, seed0,
+   15actions/512tokens/goal seed233; train IDs500–503, four groups×eight
+   trajectories. Preserve an initial-model baseline, then match GRPO and
+   `success_sd` initial weights, LoRA layout, training budget and evaluation.
+   Use separate immutable source snapshots and new output directories.
+3. Before any full-data expansion, require at least32 fixed evaluation tasks,
+   matched training controls, an actually nonzero teacher signal and gradient,
+   paired success-difference task-bootstrap95% CI strictly above0,
+   score-difference CI not below0, and exact two-sided McNemar p≤0.05 for the
+   single-seed paired binary outcomes. This is a conservative screening gate,
+   not a guarantee of multi-training-seed robustness or a permission to
+   automatically start another experiment. With multiple rollout seeds,
+   cluster bootstrap by task and omit the naive McNemar p-value.
+
+Report partial task score separately from success and include confidence
+intervals. A point improvement on eight questions, a mocked environment, an
+all-failure/no-teacher update, or a differently seeded/corpused45/74 run cannot
+pass this gate. Until an actual paired result exists, this remains a tested
+experimental mechanism and retest pipeline, **not a demonstrated benchmark win**.

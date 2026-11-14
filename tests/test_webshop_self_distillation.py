@@ -11,6 +11,7 @@ import torch
 from whale_local.webshop.core import (
     Episode, Protocol, Sample, Turn, collect_episode, compare_reports, digest,
     evaluation_report, parse_action, prompt_for, successful_context, training_rows,
+    wilson_interval, bootstrap_mean_interval,
 )
 from whale_local.webshop.objective import policy_loss
 from whale_local.webshop.runtime import (
@@ -391,6 +392,43 @@ def test_paired_report_recomputes_counts_and_does_not_trust_aggregate_score():
     assert result["baseline_successes"] == 2 and result["improved_successes"] == 3
     assert result["success_rate_delta"] == 0.25
     assert result["rescued"] == 1 and result["regressed"] == 0
+    assert result["mcnemar_exact_two_sided"] is None
+    assert not result["subset_evidence_gate"]["passed"]
+
+
+def test_confidence_intervals_have_correct_scale_and_deterministic_resampling():
+    lower, upper = wilson_interval(0, 32)
+    assert lower < 1e-10 and 0.10 < upper < 0.11
+    assert wilson_interval(32, 32)[1] > 0.999
+    assert bootstrap_mean_interval([0.25] * 8, 11) == [0.25, 0.25]
+    assert bootstrap_mean_interval([0, 1, 0.5], 11) == bootstrap_mean_interval([0, 1, 0.5], 11)
+
+
+def test_prespecified_subset_gate_requires_real_teacher_signal_and_matched_training():
+    protocol = Protocol(train_ids=(500, 501, 502, 503), eval_ids=tuple(range(32)),
+                        eval_seeds=(0,), group_size=2, updates=1)
+    a_episodes = [episode(task_id=task, split="eval", seed=0, success=task < 16)
+                  for task in protocol.eval_ids]
+    b_episodes = [episode(task_id=task, split="eval", seed=0, success=task < 22)
+                  for task in protocol.eval_ids]
+    a = evaluation_report(a_episodes, protocol, "toy-control", {})
+    b = evaluation_report(b_episodes, protocol, "toy-improved", {})
+    for report in (a, b):
+        report["base_model_identity"] = {"weights": "toy-fixture"}
+        report["implementation_identity"] = {"code": "toy-fixture"}
+        report["training"] = {
+            "base_model": "toy", "base_model_identity": report["base_model_identity"],
+            "implementation_identity": report["implementation_identity"],
+            "protocol": protocol.as_dict(), "assets": {}, "trainable_parameters": 4,
+            "metrics": [{"teacher_tokens": 1, "teacher_gap_abs_mean": 0.1, "gradient_norm": 0.5}],
+        }
+    comparison = compare_reports(a, b)
+    assert comparison["mcnemar_exact_two_sided"] == 0.03125
+    assert comparison["subset_evidence_gate"]["passed"]
+    b["training"]["metrics"][0]["teacher_tokens"] = 0
+    assert not compare_reports(a, b)["subset_evidence_gate"]["passed"]
+    b["training"] = None
+    assert not compare_reports(a, b)["subset_evidence_gate"]["passed"]
 
 
 @pytest.mark.parametrize("mutation", ["assets", "protocol", "goal", "duplicate", "missing", "score"])
@@ -444,6 +482,38 @@ def test_train_cli_refuses_before_environment_or_model_initialization(tmp_path, 
             "--method", "success_sd", "--output", str(tmp_path / "output"),
         ])
     assert not (tmp_path / "output").exists()
+
+
+def test_environment_check_requires_hidden_gpus_before_loading_environment(tmp_path, monkeypatch):
+    monkeypatch.delenv("CUDA_VISIBLE_DEVICES", raising=False)
+    with pytest.raises(ValueError, match="CPU environment check"):
+        main(["environment-check", "--config", str(tmp_path / "no-config"),
+              "--env-root", str(tmp_path), "--output", str(tmp_path / "receipt.json")])
+
+
+def test_cpu_environment_check_writes_deterministic_transition_receipt(tmp_path, monkeypatch):
+    import importlib
+    cli = importlib.import_module("whale_local.webshop.__main__")
+
+    class LocalEnv(Shop):
+        def __init__(self, path, protocol):
+            super().__init__()
+            self.assets = {"products": "test-fixture"}
+
+        def close(self):
+            pass
+
+    monkeypatch.setenv("CUDA_VISIBLE_DEVICES", "")
+    monkeypatch.setattr(cli, "WebShopEnvironment", LocalEnv)
+    monkeypatch.setattr(cli, "preflight", lambda *args: {"ready": True})
+    config = tmp_path / "config.json"
+    config.write_text(json.dumps(small_protocol().as_dict()))
+    output = tmp_path / "environment.json"
+    assert main(["environment-check", "--config", str(config), "--env-root", str(tmp_path),
+                 "--action", "search[shoes]", "--output", str(output)]) == 0
+    receipt = json.loads(output.read_text())
+    assert receipt["healthy"] and receipt["deterministic_repeats"] == 2
+    assert not receipt["model_used"] and not receipt["gpu_used"] and not receipt["http_service_started"]
 
 
 def lease_file(tmp_path, monkeypatch):

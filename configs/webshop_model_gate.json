@@ -1,0 +1,13 @@
+{
+  "train_ids": [500],
+  "eval_ids": [0, 1],
+  "eval_seeds": [0],
+  "max_steps": 1,
+  "max_new_tokens": 512,
+  "max_context_tokens": 4096,
+  "group_size": 2,
+  "updates": 1,
+  "goal_seed": 233,
+  "seed": 1000043,
+  "eval_temperature": 0.4
+}

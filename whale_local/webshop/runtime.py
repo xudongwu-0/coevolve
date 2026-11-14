@@ -48,6 +48,16 @@ def implementation_identity():
     return {p.name: file_sha256(p) for p in sorted(Path(__file__).parent.glob("*.py"))}
 
 
+def process_identity():
+    stat = Path("/proc/self/stat").read_text().rsplit(") ", 1)[1].split()
+    return {
+        "pid": os.getpid(), "uid": os.getuid(), "gid": os.getgid(),
+        "start_ticks": int(stat[19]), "hostname": socket.gethostname(),
+        "process_group": os.getpgrp(),
+        "cuda_visible_devices": os.environ.get("CUDA_VISIBLE_DEVICES"),
+    }
+
+
 def preflight(env_root: Path, model: Path | None = None):
     required = [
         "web_agent_site/envs/web_agent_text_env.py",
@@ -59,7 +69,8 @@ def preflight(env_root: Path, model: Path | None = None):
     if not any(index.glob("segments*")):
         missing.append(str(index / "segments*"))
     missing_modules = [
-        name for name in ("gym", "bs4", "spacy", "pyserini", "jnius", "torch", "transformers", "peft")
+        name for name in ("gym", "bs4", "spacy", "pyserini", "jnius", "torch", "transformers",
+                          "peft", "cleantext", "flask", "rich", "rank_bm25", "faiss", "selenium")
         if importlib.util.find_spec(name) is None
     ]
     missing_tools = [name for name in ("javac", "java") if shutil.which(name) is None]
@@ -255,6 +266,16 @@ class HFPolicy:
         self.guard()
         with self.model.disable_adapter():
             return response_log_probs(self.model, prompt_ids, response_ids)
+
+    def runtime_metrics(self):
+        import torch
+        if self.device.type != "cuda":
+            return {"device": str(self.device)}
+        return {
+            "device": str(self.device), "gpu_name": torch.cuda.get_device_name(self.device),
+            "max_memory_allocated_bytes": torch.cuda.max_memory_allocated(self.device),
+            "max_memory_reserved_bytes": torch.cuda.max_memory_reserved(self.device),
+        }
 
 
 def response_log_probs(model, prompt_ids, response_ids, *, grad=False):

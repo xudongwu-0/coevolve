@@ -3,16 +3,17 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
 import time
 
 from .core import (
-    Protocol, REFERENCE, collect_episode, compare_reports, evaluation_report,
-    training_rows,
+    Protocol, REFERENCE, collect_episode, compare_reports, digest, evaluation_report,
+    parse_action, training_rows,
 )
 from .runtime import (
     HFPolicy, WebShopEnvironment, check_lease, implementation_identity,
-    model_identity, preflight, write_json,
+    model_identity, preflight, process_identity, write_json,
 )
 
 
@@ -42,9 +43,13 @@ def optimize_group(policy, episodes, protocol, method, optimizer):
     ]
     optimizer.zero_grad(set_to_none=True)
     total_loss = 0.0
+    teacher_tokens, teacher_gap_absolute = 0, 0.0
     for row, teacher, reference in zip(rows, teacher_scores, reference_scores):
         student = policy.log_probs(row.student_prompt_ids, row.response_ids, grad=True)
         old = torch.tensor(row.old_log_probs, device=student.device)
+        if teacher is not None:
+            teacher_tokens += teacher.numel()
+            teacher_gap_absolute += float((teacher - old).abs().sum())
         response_mask = torch.ones_like(student, dtype=torch.bool)[None, :]
         loss, _metrics = policy_loss(
             student[None, :], old[None, :], response_mask,
@@ -62,7 +67,11 @@ def optimize_group(policy, episodes, protocol, method, optimizer):
     parameters = [p for p in policy.model.parameters() if p.requires_grad]
     norm = torch.nn.utils.clip_grad_norm_(parameters, max_norm=1.0, error_if_nonfinite=True)
     optimizer.step()
-    return {**statistics, "loss": total_loss, "gradient_norm": float(norm), "optimizer_steps": 1}
+    return {
+        **statistics, "loss": total_loss, "gradient_norm": float(norm), "optimizer_steps": 1,
+        "teacher_tokens": teacher_tokens,
+        "teacher_gap_abs_mean": teacher_gap_absolute / teacher_tokens if teacher_tokens else 0.0,
+    }
 
 
 def parser():
@@ -76,6 +85,12 @@ def parser():
     compare.add_argument("--baseline", type=Path, required=True)
     compare.add_argument("--improved", type=Path, required=True)
     compare.add_argument("--output", type=Path, required=True)
+    environment = commands.add_parser("environment-check", help="CPU-only real environment reset/action check")
+    environment.add_argument("--config", type=Path, required=True)
+    environment.add_argument("--env-root", type=Path, required=True)
+    environment.add_argument("--task-id", type=int, default=0)
+    environment.add_argument("--action", default="search[shoes]")
+    environment.add_argument("--output", type=Path, required=True)
     for name in ("train", "evaluate"):
         command = commands.add_parser(name)
         command.add_argument("--config", type=Path, required=True)
@@ -106,6 +121,46 @@ def main(argv=None):
         write_json(args.output, result)
         print(json.dumps(result, indent=2))
         return 0
+    if args.command == "environment-check":
+        if os.environ.get("CUDA_VISIBLE_DEVICES") != "":
+            raise ValueError("CPU environment check requires explicit CUDA_VISIBLE_DEVICES=''")
+        protocol = Protocol.from_dict(json.loads(args.config.read_text()))
+        if args.task_id not in (*protocol.train_ids, *protocol.eval_ids):
+            raise ValueError("Environment-check task is absent from the fixed protocol")
+        if parse_action(args.action) is None:
+            raise ValueError("Environment-check action must be a single valid search/click")
+        prerequisites = preflight(args.env_root.resolve())
+        if not prerequisites["ready"]:
+            raise RuntimeError("Preflight failed: " + json.dumps(prerequisites))
+        env = WebShopEnvironment(args.env_root, protocol)
+        try:
+            repeats = []
+            for _ in range(2):
+                initial, _instruction, manifest = env.reset(args.task_id)
+                observation, score, done, info = env.step(args.action)
+                repeats.append({
+                    "task_manifest": manifest, "initial_observation": initial,
+                    "action": args.action, "observation": observation, "task_score": score,
+                    "terminated": done, "invalid": bool(info.get("invalid", False)),
+                    "available_actions": env.available_actions(),
+                })
+            if digest(repeats[0]) != digest(repeats[1]):
+                raise RuntimeError("Repeated real environment reset/action is not deterministic")
+            if repeats[0]["invalid"] or repeats[0]["initial_observation"] == repeats[0]["observation"]:
+                raise RuntimeError("Action did not produce a valid environment transition")
+            result = {
+                "schema": "coevolve_webshop_environment_check_v1",
+                "healthy": True, "deterministic_repeats": 2, "assets": env.assets,
+                "transition": repeats[0], "goal_seed": protocol.goal_seed,
+                "model_used": False, "gpu_used": False, "http_service_started": False,
+                "interpretation": "Real in-process WebShop SimServer/search check; not a model benchmark.",
+            }
+            write_json(args.output, result)
+            print(json.dumps({key: value for key, value in result.items()
+                              if key not in {"assets", "transition"}}, indent=2))
+        finally:
+            env.close()
+        return 0
     protocol = Protocol.from_dict(json.loads(args.config.read_text()))
     episodes_needed = (
         protocol.updates * protocol.group_size if args.command == "train"
@@ -120,6 +175,8 @@ def main(argv=None):
     if not prerequisites["ready"]:
         raise RuntimeError("Preflight failed: " + json.dumps(prerequisites))
     args.output.mkdir(parents=True, exist_ok=False)
+    write_json(args.output / "PROCESS.json", process_identity())
+    wall_started = time.monotonic()
     env = WebShopEnvironment(args.env_root, protocol)
     try:
         guard()
@@ -159,6 +216,8 @@ def main(argv=None):
                 "adapter_identity": model_identity(args.output / "adapter"),
                 "implementation_identity": implementation_identity(),
                 "metrics": metrics, "elapsed_seconds": time.monotonic() - started,
+                "total_wall_seconds": time.monotonic() - wall_started,
+                "runtime": policy.runtime_metrics() if hasattr(policy, "runtime_metrics") else {},
                 "trainable_parameters": sum(
                     p.numel() for p in policy.model.parameters() if p.requires_grad
                 ),
@@ -195,6 +254,8 @@ def main(argv=None):
                 episodes, protocol, str(args.adapter or args.model), env.assets, training,
             )
             report["elapsed_seconds"] = time.monotonic() - started
+            report["total_wall_seconds"] = time.monotonic() - wall_started
+            report["runtime"] = policy.runtime_metrics() if hasattr(policy, "runtime_metrics") else {}
             report["base_model_identity"] = policy.model_identity
             report["implementation_identity"] = implementation_identity()
             report["adapter_identity"] = model_identity(args.adapter) if args.adapter else None

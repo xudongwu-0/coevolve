@@ -5,6 +5,7 @@ from dataclasses import asdict, dataclass, field
 import hashlib
 import json
 import math
+import random
 import re
 from typing import Any
 
@@ -35,6 +36,25 @@ def digest(value: Any) -> str:
     payload = json.dumps(canonical(value), sort_keys=True, ensure_ascii=False,
                          separators=(",", ":"), allow_nan=False)
     return hashlib.sha256(payload.encode()).hexdigest()
+
+
+def wilson_interval(successes: int, count: int) -> list[float]:
+    if not 0 <= successes <= count or count < 1:
+        raise ValueError("Invalid binary outcome counts")
+    z = 1.959963984540054
+    proportion = successes / count
+    denominator = 1 + z * z / count
+    center = (proportion + z * z / (2 * count)) / denominator
+    half = z * math.sqrt(proportion * (1 - proportion) / count + z * z / (4 * count * count))
+    return [max(0.0, center - half / denominator), min(1.0, center + half / denominator)]
+
+
+def bootstrap_mean_interval(values: list[float], seed: int, draws: int = 5000) -> list[float]:
+    if not values or draws < 100:
+        raise ValueError("Bootstrap requires observations and at least 100 draws")
+    rng = random.Random(seed)
+    samples = sorted(sum(rng.choices(values, k=len(values))) / len(values) for _ in range(draws))
+    return [samples[int(0.025 * draws)], samples[min(draws - 1, int(0.975 * draws))]]
 
 
 @dataclass(frozen=True)
@@ -324,6 +344,14 @@ def evaluation_report(episodes: list[Episode], protocol: Protocol, model: str,
     ]
     mean = sum(by_seed) / len(by_seed)
     variance = sum((x - mean) ** 2 for x in by_seed) / max(len(by_seed) - 1, 1)
+    task_success = [
+        sum(e.success for e in episodes if e.task_id == task) / len(protocol.eval_seeds)
+        for task in protocol.eval_ids
+    ]
+    task_scores = [
+        sum(e.task_score for e in episodes if e.task_id == task) / len(protocol.eval_seeds)
+        for task in protocol.eval_ids
+    ]
     return {
         "schema": "coevolve_webshop_eval_v1", "reference": REFERENCE,
         "protocol": protocol.as_dict(), "model": model, "assets": assets,
@@ -335,9 +363,20 @@ def evaluation_report(episodes: list[Episode], protocol: Protocol, model: str,
             "mean_task_score": sum(e.task_score for e in episodes) / len(episodes),
             "invalid_actions": sum(t.invalid for e in episodes for t in e.turns),
             "generated_tokens": sum(len(t.sample.token_ids) for e in episodes for t in e.turns),
+            "success_rate_task_bootstrap95": bootstrap_mean_interval(task_success, protocol.seed),
+            "task_score_task_bootstrap95": bootstrap_mean_interval(task_scores, protocol.seed),
+            "success_wilson95_by_seed": [
+                wilson_interval(sum(e.success for e in episodes if e.seed == seed), len(protocol.eval_ids))
+                for seed in protocol.eval_seeds
+            ],
         },
         "episodes": [e.as_dict() for e in episodes],
         "interpretation": "Local fixed-goal protocol; not a reproduction of the reference scores.",
+        "metric_scales": {
+            "success_rate": "fraction in [0,1], terminal task score exactly1",
+            "mean_task_score": "mean environment reward in [0,1]; multiply by100 only for presentation",
+            "confidence_intervals": "95%; task-resampled, conditional on this single training run",
+        },
     }
 
 
@@ -392,11 +431,50 @@ def compare_reports(baseline: dict, improved: dict) -> dict:
             raise ValueError(f"Goal identity mismatch for task/seed {key}")
     gains = sum(not a[k]["success"] and b[k]["success"] for k in a)
     losses = sum(a[k]["success"] and not b[k]["success"] for k in a)
+    protocol = Protocol.from_dict(baseline["protocol"])
+    success_deltas, score_deltas = [], []
+    for task in protocol.eval_ids:
+        keys = [key for key in a if key[0] == task]
+        success_deltas.append(sum(float(b[k]["success"]) - float(a[k]["success"]) for k in keys) / len(keys))
+        score_deltas.append(sum(b[k]["task_score"] - a[k]["task_score"] for k in keys) / len(keys))
+    success_ci = bootstrap_mean_interval(success_deltas, protocol.seed)
+    score_ci = bootstrap_mean_interval(score_deltas, protocol.seed)
+    discordant = gains + losses
+    mcnemar = (
+        min(1.0, 2 * sum(math.comb(discordant, k) for k in range(min(gains, losses) + 1))
+            / (2 ** discordant)) if discordant else 1.0
+    ) if len(protocol.eval_seeds) == 1 else None
+    teacher_engaged = bool(
+        b_training and any(
+            metric.get("teacher_tokens", 0) > 0
+            and metric.get("teacher_gap_abs_mean", 0) > 1e-6
+            and metric.get("gradient_norm", 0) > 1e-8
+            for metric in b_training["metrics"]
+        )
+    )
+    gate = bool(
+        matched_training and len(protocol.eval_ids) >= 32 and teacher_engaged
+        and mcnemar is not None and mcnemar <= 0.05
+        and success_ci[0] > 0 and score_ci[0] >= 0
+    )
     return {
         "paired_episodes": len(a), "rescued": gains, "regressed": losses,
         "baseline_successes": sum(e["success"] for e in a.values()),
         "improved_successes": sum(e["success"] for e in b.values()),
         "success_rate_delta": (gains - losses) / len(a),
         "matched_training_budget": matched_training,
+        "success_rate_delta_task_bootstrap95": success_ci,
+        "mean_task_score_delta": sum(score_deltas) / len(score_deltas),
+        "task_score_delta_task_bootstrap95": score_ci,
+        "mcnemar_exact_two_sided": mcnemar,
+        "subset_evidence_gate": {
+            "passed": gate, "teacher_signal_engaged": teacher_engaged,
+            "minimum_tasks": 32, "requires_matched_training": True,
+            "requires_single_fixed_rollout_seed": True,
+            "requires_success_delta_ci_strictly_positive": True,
+            "requires_score_delta_ci_nonnegative": True,
+            "requires_mcnemar_p_at_most": 0.05,
+            "authorization": "Evidence flag only; never launches or expands an experiment.",
+        },
         "interpretation": "Paired descriptive result; rollout seeds are not training seeds.",
     }
