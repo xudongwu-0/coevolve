@@ -1,0 +1,11 @@
+{
+  "purpose": "Reference-aligned executable commands; debug0/1, clean test32-63, train500-503",
+  "git_commit": "db969bc0257b6ac66d747eeb381a47aae1190754",
+  "source_files": {
+    "whale_local/webshop/__init__.py": "5af7711008b3aaf3c688ee813b516bf30a1d5464ffe543272819ff22b5117407",
+    "whale_local/webshop/__main__.py": "19ab8d06c583168cd4fdc03c5d6567f2ff2b8c5bbd441b2bb4026dc60559ab0c",
+    "whale_local/webshop/core.py": "f0fee4aa6fd32aa3cf4797e27b91df4148a17ebbbcc0dc774191c389462b58bc",
+    "whale_local/webshop/objective.py": "10e3c90f6a3423430dd9bf7a7b597d19867d224fb8e1efa16fd1c1ed496b819a",
+    "whale_local/webshop/runtime.py": "f9e48052b69c0ce642cf4afcc104255f20d2823828ce857f4790f155c1519b17"
+  }
+}

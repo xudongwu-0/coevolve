@@ -1,0 +1,32 @@
+{
+  "paired_episodes": 32,
+  "rescued": 0,
+  "regressed": 2,
+  "baseline_successes": 9,
+  "improved_successes": 7,
+  "success_rate_delta": -0.0625,
+  "matched_training_budget": true,
+  "success_rate_delta_task_bootstrap95": [
+    -0.15625,
+    0.0
+  ],
+  "mean_task_score_delta": -0.05766369047619047,
+  "task_score_delta_task_bootstrap95": [
+    -0.1380952380952381,
+    0.0015624999999999997
+  ],
+  "mcnemar_exact_two_sided": 0.5,
+  "subset_evidence_gate": {
+    "passed": false,
+    "teacher_signal_engaged": true,
+    "minimum_tasks": 32,
+    "requires_matched_training": true,
+    "requires_single_fixed_rollout_seed": true,
+    "requires_success_delta_ci_strictly_positive": true,
+    "requires_score_delta_ci_nonnegative": true,
+    "requires_mcnemar_p_at_most": 0.025,
+    "candidate_family_size": 2,
+    "authorization": "Evidence flag only; never launches or expands an experiment."
+  },
+  "interpretation": "Paired descriptive result; rollout seeds are not training seeds."
+}

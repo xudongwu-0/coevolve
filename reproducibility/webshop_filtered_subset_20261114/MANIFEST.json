@@ -1,0 +1,38 @@
+{
+  "schema": "coevolve_webshop_subset_bundle_v1",
+  "variant": "filtered",
+  "interpretation": "Saved single-seed subset evidence, not a new model evaluation.",
+  "analysis_implementation_identity": {
+    "reproduction_script": "7dc8fbb165480548674364857bb7153d852fb66b1acc98dba6520e3cce36bcf7",
+    "core": "a8e38f28681ba82cb1dc1de7915f3c8d65d57d177a929128de30e350cacb81f6"
+  },
+  "files": {
+    "SOURCE_MANIFEST.json": {
+      "sha256": "89a538dac51b711e35b5faf431fb33725c0f0ea808f1c900fa142ec4ab6ee88a",
+      "bytes": 989
+    },
+    "grpo.json": {
+      "sha256": "35cc625e46ada6ea4998305320384ad05fb8793571e10c86b1e96d116fb5a4bc",
+      "bytes": 43622
+    },
+    "initial.json": {
+      "sha256": "8a008a55afa948f3ac1bbd3351d1d0f73c2ec96d8f973428312a0799c42c8545",
+      "bytes": 32943
+    },
+    "paired.json": {
+      "sha256": "666777369c2b668a9cb0f8d5077190ad3269036c793e5e9427e3733dd2be2112",
+      "bytes": 987
+    },
+    "success_sd.json": {
+      "sha256": "30688c4bf12401bbe699c4c276f30bff289195ca5fc5c5b208df021d213d2df5",
+      "bytes": 43719
+    }
+  },
+  "historical_user_baseline": {
+    "success_reported": 45,
+    "score_reported": 74,
+    "units_and_manifest_verified": false,
+    "comparable": false
+  },
+  "gpu_or_api_used_by_reproduction": false
+}

@@ -1,0 +1,17 @@
+{
+  "purpose": "Verified no-op filtered teacher candidate; untouched test128-159; train500-503;32episodes/arm",
+  "git_commit": "18ae3aa75fc059fbf2e290b7795707eceefdcdb2",
+  "source_files": {
+    "whale_local/webshop/__init__.py": "5af7711008b3aaf3c688ee813b516bf30a1d5464ffe543272819ff22b5117407",
+    "whale_local/webshop/__main__.py": "19ab8d06c583168cd4fdc03c5d6567f2ff2b8c5bbd441b2bb4026dc60559ab0c",
+    "whale_local/webshop/core.py": "a8e38f28681ba82cb1dc1de7915f3c8d65d57d177a929128de30e350cacb81f6",
+    "whale_local/webshop/objective.py": "10e3c90f6a3423430dd9bf7a7b597d19867d224fb8e1efa16fd1c1ed496b819a",
+    "whale_local/webshop/runtime.py": "f9e48052b69c0ce642cf4afcc104255f20d2823828ce857f4790f155c1519b17"
+  },
+  "actor_function_asts_identical_to_strict_v3": true,
+  "runtime_file_identical_to_v3": true,
+  "objective_file_identical_to_v3": true,
+  "candidate_family_size": 2,
+  "analysis_alpha_per_candidate": 0.025,
+  "designed_before_trained_heldout_evaluation": true
+}
