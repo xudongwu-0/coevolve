@@ -104,6 +104,24 @@ grace, and node25GPU0 was then verified empty. No other process was signalled.
 The corrected four-action/two-task protocol gate must pass before restarting
 the fixed32 comparison with one common frozen corrected source.
 
+The second protocol probe then exposed a separate action-affordance defect:
+showing the raw `{"has_search_bar": true, "clickables": ["search"]}` object led
+the model to repeatedly choose `click[search]`. The underlying text environment
+explicitly treats that UI button as a no-op; the wrapper also undercounted these
+as valid clicks. The pinned reference's `env_manager.py` instead formats
+executable `search[<your query>]`/`click[label]` strings. The pilot now does so,
+omits the known non-executable search button, explains direct query submission,
+and correctly marks `click[search]` invalid without altering environment reward.
+Both failed probes and their original validity flags remain unchanged as raw
+evidence; the second probe is not presented as a successful format gate.
+
+Tasks0/1 are consequently **protocol-debug tasks**, not clean test tasks.
+Before any successful comparison or training, the fixed32 comparison manifest
+was moved to IDs32–63, never inspected or used for these repairs. The original
+aborted0–31 proposal is retained in its frozen snapshot; no old/new scores are
+mixed across these manifests. Train IDs remain500–503. This exclusion avoids
+claiming a clean heldout result on tasks used to debug the interface.
+
 Separately, a native node26 learner smoke completed two one-action train-only
 episodes, real backpropagation, AdamW step and LoRA adapter/tokenizer save:
 199.93seconds including setup,30.996GB peak allocation,51,265,024 trainable
@@ -230,13 +248,13 @@ download data, construct a search engine, or claim runtime validation.
 It only checks files/dependencies/JDK presence; an actual environment reset and
 model gate are still required. Output paths must be new to protect old evidence.
 
-Validation on 2026-11-14: **72 pilot tests passed** on CPU, including a real
+Validation on 2026-11-14: **73 pilot tests passed** on CPU, including a real
 tiny Hugging Face transformer generation/log-probability/LoRA-gradient check
 and the full train → adapter save → evaluate → paired-compare CLI round trip
 with an explicitly labelled CPU toy environment. Five upstream deprecation
 warnings were emitted. The existing pinned Harness-R1 WebShop identity suite
 also passed **5 tests**. Neither test run is a benchmark evaluation.
-The combined suite passed77 tests in50.84seconds with5 upstream deprecation warnings.
+The combined suite passed78 tests in46.94seconds with5 upstream deprecation warnings.
 
 For the real CPU check with the prepared runtime (no GPU lease is needed):
 
@@ -375,7 +393,7 @@ The staged plan is:
    The subsequent first full-budget run exposed the thinking/parser defect
    described above; use `configs/webshop_protocol_gate.json` (four actions on
    the same two IDs) with the corrected reference-aligned mode before proceeding.
-2. `configs/webshop_subset_gate.json`: fixed evaluation IDs0–31, seed0,
+2. `configs/webshop_subset_gate.json`: fixed evaluation IDs32–63, seed0,
    15actions/512tokens/goal seed233; train IDs500–503, four groups×eight
    trajectories. Preserve an initial-model baseline, then match GRPO and
    `success_sd` initial weights, LoRA layout, training budget and evaluation.

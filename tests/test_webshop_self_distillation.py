@@ -12,6 +12,7 @@ from whale_local.webshop.core import (
     Episode, Protocol, Sample, Turn, collect_episode, compare_reports, digest,
     evaluation_report, parse_action, prompt_for, successful_context, training_rows,
     wilson_interval, bootstrap_mean_interval,
+    format_available_actions,
 )
 from whale_local.webshop.objective import policy_loss
 from whale_local.webshop.runtime import (
@@ -116,6 +117,14 @@ def test_hf_chat_template_matches_reference_disabled_thinking():
     assert policy.render("system", "user") == "rendered prompt"
     assert calls[0]["enable_thinking"] is False
     assert Protocol().enable_thinking is False
+
+
+def test_search_affordance_is_a_real_command_not_a_raw_clickable_ui_button():
+    actions = format_available_actions({"has_search_bar": True, "clickables": ["search"]})
+    assert actions == ["search[<your query>]"]
+    assert format_available_actions({
+        "has_search_bar": False, "clickables": ["B012345678", "red", "Buy Now"],
+    }) == ["click[B012345678]", "click[red]", "click[Buy Now]"]
 
 
 def test_collection_budget_invalid_response_and_terminal_success():
@@ -383,6 +392,9 @@ def test_environment_adapter_clears_only_its_own_stale_session_and_flags_invalid
         def get_instruction_text(self):
             return "red mug"
 
+        def available_actions(self):
+            return {"has_search_bar": True, "clickables": ["search", "Buy Now"]}
+
         def get_available_actions(self):
             return self.available_actions()
 
@@ -394,6 +406,7 @@ def test_environment_adapter_clears_only_its_own_stale_session_and_flags_invalid
     assert manifest["task_id"] == 500 and manifest["goal_seed"] == 233
     assert adapter.step("click[unseen]")[3]["invalid"]
     assert not adapter.step("click[Buy Now]")[3]["invalid"]
+    assert adapter.step("click[search]")[3]["invalid"]
 
 
 def reports():

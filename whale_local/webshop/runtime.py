@@ -170,7 +170,8 @@ class WebShopEnvironment:
         clickables = self.available_actions().get("clickables", [])
         invalid = parsed is None or (
             action.startswith("click[")
-            and action[6:-1].lower() not in {label.lower() for label in clickables}
+            and (action[6:-1].lower() == "search"
+                 or action[6:-1].lower() not in {label.lower() for label in clickables})
         )
         observation, score, done, info = self.env.step(action)
         return observation, float(score), bool(done), {**dict(info or {}), "invalid": invalid}
