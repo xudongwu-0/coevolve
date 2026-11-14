@@ -1,0 +1,12 @@
+# Optional CPU WebShop/search overlay, based on the pinned public reference.
+# Install only into a NEW isolated environment, never primary SFT's interpreter.
+numpy==2.2.6
+gym==0.24.0
+beautifulsoup4==4.11.1
+Flask==2.1.2
+Werkzeug==2.3.8
+pyserini==0.17.0
+pyjnius==1.7.0
+spacy==3.8.7
+thefuzz==0.19.0
+rank-bm25==0.2.2

@@ -1,0 +1,7 @@
+# Isolated optional pilot. Do not install into the primary SFT environment.
+torch==2.10.0
+transformers==5.7.0
+peft>=0.18,<0.20
+accelerate>=1.10,<2
+# WebShop's environment/search dependencies and assets must be prepared separately.
+# See docs/WEBSHOP_SELF_DISTILLATION.md; preflight never installs or downloads them.

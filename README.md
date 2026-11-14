@@ -21,6 +21,13 @@
   对应 Harness、原始评测和[上传回执](reproducibility/historical97_20261012/HF_REMOTE_VERIFIED.json)
   的入口见[说明](docs/BENCHMARK_IMPLEMENTATIONS.md#historical-alfworld-97-checkpoint)。
 
+### WebShop 独立自蒸馏试验（2026-11-14，尚无模型成绩）
+
+[成功轨迹反馈、自蒸馏目标与固定题号复测](docs/WEBSHOP_SELF_DISTILLATION.md)
+提供默认不启动的 Solver-only GRPO / successful-context 对照入口及 CPU 测试。
+未改动主 SFT 或现有 ALFWorld 训练；真实训练/评测必须先补齐 WebShop 环境，
+并取得主 SFT 释放后的单卡、限时、明确授权。**不是已验证的 WebShop 提分结果。**
+
 ## 当前任务与主要结论
 
 ### 2026-10-12：可离线复算的代码与数据交接
