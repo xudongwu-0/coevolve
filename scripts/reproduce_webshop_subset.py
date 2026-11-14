@@ -54,14 +54,17 @@ def sha256(path):
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def write_bundle(run_root, destination):
+def write_bundle(run_root, destination, variant="strict"):
     if destination.exists():
         raise ValueError("Never overwrite an evidence bundle")
+    if variant not in {"strict", "filtered"}:
+        raise ValueError("Unknown subset variant")
+    prefix, version = ("", "v3") if variant == "strict" else ("filtered_", "v4")
     reports = {}
     for role, name in (
-        ("initial", "baseline32_node25_v3"),
-        ("grpo", "grpo_eval32_node25_v3"),
-        ("success_sd", "sd_eval32_node26_v3"),
+        ("initial", f"{prefix}baseline32_node25_{version}"),
+        ("grpo", f"{prefix}grpo_eval32_node25_{version}"),
+        ("success_sd", f"{prefix}sd_eval32_node26_{version}"),
     ):
         reports[role] = compact_report(json.loads((run_root / name / "REPORT.json").read_text()))
         recompute_metrics(reports[role])
@@ -72,12 +75,17 @@ def write_bundle(run_root, destination):
         (destination / f"{role}.json").write_text(json.dumps(report, indent=2) + "\n")
     (destination / "paired.json").write_text(json.dumps(paired, indent=2) + "\n")
     (destination / "SOURCE_MANIFEST.json").write_bytes(
-        (run_root / "frozen/subset-v3/MANIFEST.json").read_bytes(),
+        (run_root / f"frozen/subset-{version}/MANIFEST.json").read_bytes(),
     )
     files = sorted(destination.glob("*.json"))
     manifest = {
         "schema": "coevolve_webshop_subset_bundle_v1",
+        "variant": variant,
         "interpretation": "Saved single-seed subset evidence, not a new model evaluation.",
+        "analysis_implementation_identity": {
+            "reproduction_script": sha256(Path(__file__)),
+            "core": sha256(ROOT / "whale_local/webshop/core.py"),
+        },
         "files": {path.name: {"sha256": sha256(path), "bytes": path.stat().st_size} for path in files},
         "historical_user_baseline": {
             "success_reported": 45, "score_reported": 74,
@@ -114,9 +122,10 @@ def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--bundle", type=Path, default=ROOT / "reproducibility/webshop_subset_20261114")
     parser.add_argument("--emit-from", type=Path)
+    parser.add_argument("--variant", choices=("strict", "filtered"), default="strict")
     args = parser.parse_args(argv)
     if args.emit_from is not None:
-        write_bundle(args.emit_from, args.bundle)
+        write_bundle(args.emit_from, args.bundle, args.variant)
     print(json.dumps(reproduce(args.bundle), indent=2))
     return 0
 

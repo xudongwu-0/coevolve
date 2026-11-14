@@ -173,11 +173,17 @@ defaults are unchanged.
    actual normalized sampling log probabilities. Training samples at temperature
    1, top-p 1, with no top-k truncation. No teacher action is substituted for a
    policy action. Invalid responses consume an environment step.
-2. **Success, not failure imitation.** Select the shortest *other* completed
+2. **Success, not failure imitation.** The original strict pilot selects the shortest *other* completed
    successful trajectory with no invalid actions from the same current-policy/task-identity group.
    Never use evaluation episodes, partial purchases, cross-task trajectories,
    or the student's own success as its teacher example. No successful peer
    means no distillation signal.
+   The separately preregistered filtered-path pilot additionally permits a
+   real successful episode with invalid turns **only when every omitted
+   invalid turn has exactly equal before/after observations**. It teaches only
+   the remaining real valid actions and labels the omission explicitly.
+   State-changing invalid turns, failed episodes and evaluation episodes are
+   rejected. All original student turns/tokens/rewards/budgets remain intact.
 3. **Feedback is teacher-only.** The teacher receives the successful
    observation/action/result path and terminal success feedback in addition
    to the student's current prompt. The student prompt is unchanged. If needed,
@@ -255,13 +261,13 @@ download data, construct a search engine, or claim runtime validation.
 It only checks files/dependencies/JDK presence; an actual environment reset and
 model gate are still required. Output paths must be new to protect old evidence.
 
-Validation on 2026-11-14: **75 pilot tests passed** on CPU, including a real
+Validation on 2026-11-14: **78 pilot tests passed** on CPU, including a real
 tiny Hugging Face transformer generation/log-probability/LoRA-gradient check
 and the full train → adapter save → evaluate → paired-compare CLI round trip
 with an explicitly labelled CPU toy environment. Five upstream deprecation
 warnings were emitted. The existing pinned Harness-R1 WebShop identity suite
 also passed **5 tests**. Neither test run is a benchmark evaluation.
-The combined suite passed80 tests in47.35seconds with5 upstream deprecation warnings.
+The combined suite passed83 tests in46.81seconds with5 upstream deprecation warnings.
 
 ## Measured fixed-subset results
 
@@ -447,11 +453,29 @@ The staged plan is:
 3. Before any full-data expansion, require at least32 fixed evaluation tasks,
    matched training controls, an actually nonzero teacher signal and gradient,
    paired success-difference task-bootstrap95% CI strictly above0,
-   score-difference CI not below0, and exact two-sided McNemar p≤0.05 for the
+   score-difference CI not below0, and exact two-sided McNemar p≤0.025 for the
    single-seed paired binary outcomes. This is a conservative screening gate,
    not a guarantee of multi-training-seed robustness or a permission to
    automatically start another experiment. With multiple rollout seeds,
    cluster bootstrap by task and omit the naive McNemar p-value.
+
+The family comprises two prespecified subset candidates: original strict
+successful targets (test IDs32–63) and verified-no-op-filtered targets
+(`configs/webshop_filtered_subset_gate.json`, untouched test IDs128–159).
+Both use the same4 training tasks/32episodes and matched GRPO controls.
+The second candidate was motivated solely by train-task501: its only real
+success had two invalid turns with unchanged observations, causing the strict
+pilot to discard every teacher target for that group. The new teacher summary
+omits only these proven no-ops; it does not invent a successful student action
+or remove student loss tokens.
+
+Both candidates, fresh second test IDs and the Bonferroni threshold0.05/2=0.025
+were declared **before either trained policy's heldout evaluation**. The first
+raw initial-model baseline was already visible; it is not used as a promotion
+comparison or a source of teacher targets. Do not rank candidate point scores
+across different test subsets: only their respective paired-control effects
+are meaningful. The second pilot is bounded to32training episodes/arm on
+node25/26GPU1, not a full-data expansion.
 
 Report partial task score separately from success and include confidence
 intervals. A point improvement on eight questions, a mocked environment, an

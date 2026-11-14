@@ -1,0 +1,22 @@
+{
+  "train_ids": [500, 501, 502, 503],
+  "eval_ids": [128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139, 140, 141, 142, 143, 144, 145, 146, 147, 148, 149, 150, 151, 152, 153, 154, 155, 156, 157, 158, 159],
+  "eval_seeds": [0],
+  "seed": 1000043,
+  "goal_seed": 233,
+  "max_steps": 15,
+  "max_new_tokens": 512,
+  "max_context_tokens": 4096,
+  "history_turns": 3,
+  "group_size": 8,
+  "updates": 4,
+  "learning_rate": 0.00001,
+  "distill_coefficient": 0.5,
+  "gap_clip": 5.0,
+  "ppo_clip": 0.2,
+  "reference_kl_coefficient": 0.01,
+  "eval_temperature": 0.4,
+  "num_products": 1000,
+  "enable_thinking": false,
+  "teacher_target_mode": "verified_noop_filtered"
+}

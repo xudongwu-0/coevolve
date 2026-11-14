@@ -13,6 +13,7 @@ from whale_local.webshop.core import (
     evaluation_report, parse_action, prompt_for, successful_context, training_rows,
     wilson_interval, bootstrap_mean_interval,
     format_available_actions,
+    teacher_path,
 )
 from whale_local.webshop.objective import policy_loss
 from whale_local.webshop.runtime import (
@@ -201,6 +202,36 @@ def test_success_with_invalid_actions_is_not_a_teacher_example():
     rows, statistics = training_rows([good, bad], Codec(), small_protocol())
     assert statistics["successes"] == 1
     assert all(row.teacher_prompt_ids is None for row in rows)
+
+
+def test_verified_noop_filtered_target_keeps_all_student_tokens_and_omits_only_teacher_noops():
+    good, bad = episode(), episode(False, seed=11)
+    invalid = Turn("old", [2], Sample("invalid", [7], [-1.0]),
+                   "An item", None, "An item", True)
+    good.turns.insert(0, invalid)
+    rows, statistics = training_rows(
+        [good, bad], Codec(), small_protocol(teacher_target_mode="verified_noop_filtered"),
+    )
+    assert len(rows) == 3 and rows[0].response_ids == [7]
+    assert good.turns[0] is invalid and invalid.invalid
+    assert rows[-1].teacher_prompt_ids is not None
+    feedback = bytes(rows[-1].teacher_prompt_ids).decode()
+    assert "Omitted 1 verified invalid no-op" in feedback
+    assert "Action: None" not in feedback and "Action: click[Buy Now]" in feedback
+    assert statistics["filtered_success_targets"] == 1
+    assert statistics["verified_noop_turns_omitted_from_target_pool"] == 1
+
+
+def test_filtered_targets_reject_state_changing_invalid_actions_and_evaluation_success():
+    good = episode()
+    good.turns.insert(0, Turn(
+        "old", [2], Sample("invalid", [7], [-1.0]),
+        "Before", None, "Changed", True,
+    ))
+    with pytest.raises(ValueError, match="changed the observation"):
+        teacher_path(good, "verified_noop_filtered")
+    with pytest.raises(ValueError, match="successful training"):
+        teacher_path(episode(split="eval", task_id=0), "verified_noop_filtered")
 
 
 def test_success_context_compacts_without_truncating_student_state():
@@ -449,7 +480,7 @@ def test_prespecified_subset_gate_requires_real_teacher_signal_and_matched_train
                         eval_seeds=(0,), group_size=2, updates=1)
     a_episodes = [episode(task_id=task, split="eval", seed=0, success=task < 16)
                   for task in protocol.eval_ids]
-    b_episodes = [episode(task_id=task, split="eval", seed=0, success=task < 22)
+    b_episodes = [episode(task_id=task, split="eval", seed=0, success=task < 23)
                   for task in protocol.eval_ids]
     a = evaluation_report(a_episodes, protocol, "toy-control", {})
     b = evaluation_report(b_episodes, protocol, "toy-improved", {})
@@ -463,7 +494,7 @@ def test_prespecified_subset_gate_requires_real_teacher_signal_and_matched_train
             "metrics": [{"teacher_tokens": 1, "teacher_gap_abs_mean": 0.1, "gradient_norm": 0.5}],
         }
     comparison = compare_reports(a, b)
-    assert comparison["mcnemar_exact_two_sided"] == 0.03125
+    assert comparison["mcnemar_exact_two_sided"] == 0.015625
     assert comparison["subset_evidence_gate"]["passed"]
     b["training"]["metrics"][0]["teacher_tokens"] = 0
     assert not compare_reports(a, b)["subset_evidence_gate"]["passed"]
@@ -629,19 +660,22 @@ def test_compact_evidence_recomputes_actual_metrics_without_response_text():
         reproduction.recompute_metrics(compact)
 
 
-def test_offline_bundle_recomputes_and_rejects_modified_payload(tmp_path):
+@pytest.mark.parametrize("variant", ["strict", "filtered"])
+def test_offline_bundle_recomputes_and_rejects_modified_payload(tmp_path, variant):
     reproduction = load_reproduction_module()
     report, _ = reports()
     runtime = tmp_path / "runtime"
-    for name in ("baseline32_node25_v3", "grpo_eval32_node25_v3", "sd_eval32_node26_v3"):
+    prefix, version = ("", "v3") if variant == "strict" else ("filtered_", "v4")
+    for name in (f"{prefix}baseline32_node25_{version}", f"{prefix}grpo_eval32_node25_{version}",
+                 f"{prefix}sd_eval32_node26_{version}"):
         path = runtime / name
         path.mkdir(parents=True)
         (path / "REPORT.json").write_text(json.dumps(report))
-    source = runtime / "frozen/subset-v3"
+    source = runtime / f"frozen/subset-{version}"
     source.mkdir(parents=True)
     (source / "MANIFEST.json").write_text('{"purpose":"toy fixture only"}')
     destination = tmp_path / "bundle"
-    reproduction.write_bundle(runtime, destination)
+    reproduction.write_bundle(runtime, destination, variant)
     result = reproduction.reproduce(destination)
     assert result["metrics"]["initial"]["successes"] == 2
     assert result["gpu_or_api_used"] is False

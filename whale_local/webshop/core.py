@@ -15,6 +15,7 @@ REFERENCE = {
     "commit": "35a44f5c5647b1785ad23ddf0ffbd196b695bf86",
     "license": "Apache-2.0",
 }
+PROMOTION_ALPHA = 0.025
 SYSTEM = (
     "Complete the shopping instruction in WebShop. Use only search[query] or "
     "click[visible label]. Submit a search directly with search[query]; "
@@ -80,6 +81,7 @@ class Protocol:
     eval_temperature: float = 0.4
     num_products: int = 1000
     enable_thinking: bool = False
+    teacher_target_mode: str = "clean"
 
     def __post_init__(self):
         for name in ("train_ids", "eval_ids", "eval_seeds"):
@@ -108,6 +110,8 @@ class Protocol:
             raise ValueError("history_turns must be nonnegative")
         if type(self.enable_thinking) is not bool:
             raise ValueError("enable_thinking must be a boolean")
+        if self.teacher_target_mode not in {"clean", "verified_noop_filtered"}:
+            raise ValueError("Unknown teacher target mode")
         for name in ("learning_rate", "gap_clip", "eval_temperature"):
             if not math.isfinite(getattr(self, name)) or getattr(self, name) <= 0:
                 raise ValueError(f"{name} must be finite and positive")
@@ -268,17 +272,38 @@ def collect_episode(env, policy, protocol: Protocol, task_id: int, split: str, s
     return episode
 
 
-def successful_context(episode: Episode, compact: bool = False) -> str:
+def teacher_path(episode: Episode, mode: str = "clean") -> list[Turn]:
     if episode.split != "train" or not episode.success:
         raise ValueError("Only completed successful training episodes are teacher targets")
+    if mode not in {"clean", "verified_noop_filtered"}:
+        raise ValueError("Unknown teacher target mode")
+    invalid = [turn for turn in episode.turns if turn.invalid]
+    if invalid and mode == "clean":
+        raise ValueError("Clean targets cannot contain invalid actions")
+    if any(turn.observation != turn.next_observation for turn in invalid):
+        raise ValueError("Cannot omit an invalid action that changed the observation")
+    turns = [turn for turn in episode.turns if not turn.invalid]
+    if not turns or any(turn.action is None for turn in turns):
+        raise ValueError("Teacher path must contain authentic valid actions")
+    return turns
+
+
+def successful_context(episode: Episode, compact: bool = False, mode: str = "clean") -> str:
+    turns = teacher_path(episode, mode)
+    omitted = len(episode.turns) - len(turns)
+    annotation = (
+        f"Omitted {omitted} verified invalid no-op turns with unchanged observations; "
+        "the remaining actions came from this real successful episode.\n"
+        if omitted else ""
+    )
     return (
         "Verified successful example for the SAME shopping task. This is training-only "
         "hindsight, not the current browser state. Use it as feedback, not as the next "
         "action to copy blindly.\n"
-        + "\n".join(
+        + annotation + "\n".join(
             f"Action: {t.action}" if compact else
             f"Observation: {t.observation}\nAction: {t.action}\nResult: {t.next_observation}"
-            for t in episode.turns
+            for t in turns
         )
         + "\nTerminal task score: 1.0; purchase satisfied the task."
     )
@@ -308,11 +333,14 @@ def training_rows(episodes: list[Episode], codec, protocol: Protocol,
     rewards = [e.reward for e in episodes]
     mean = sum(rewards) / len(rewards)
     std = math.sqrt(sum((x - mean) ** 2 for x in rewards) / len(rewards))
-    targets = sorted(
-        (i for i, e in enumerate(episodes)
-         if e.success and e.turns and all(t.action is not None and not t.invalid for t in e.turns)),
-        key=lambda i: (sum(len(t.sample.token_ids) for t in episodes[i].turns), i),
-    )
+    paths = {}
+    for index, episode in enumerate(episodes):
+        if episode.success:
+            try:
+                paths[index] = teacher_path(episode, protocol.teacher_target_mode)
+            except ValueError:
+                continue
+    targets = sorted(paths, key=lambda i: (sum(len(t.sample.token_ids) for t in paths[i]), i))
     rows = []
     teacher_rows = 0
     teacher_overflow = 0
@@ -325,11 +353,12 @@ def training_rows(episodes: list[Episode], codec, protocol: Protocol,
             teacher_ids = None
             if use_distillation and target is not None:
                 # Student prompt/token IDs are never changed by privileged feedback.
-                feedback = successful_context(episodes[target])
+                feedback = successful_context(episodes[target], mode=protocol.teacher_target_mode)
                 teacher_prompt = codec.privileged(turn.prompt, feedback)
                 candidate = codec.encode(teacher_prompt)
                 if len(candidate) + len(turn.sample.token_ids) > protocol.max_context_tokens:
-                    feedback = successful_context(episodes[target], compact=True)
+                    feedback = successful_context(episodes[target], compact=True,
+                                                  mode=protocol.teacher_target_mode)
                     candidate = codec.encode(codec.privileged(turn.prompt, feedback))
                     teacher_compacted += 1
                 if len(candidate) + len(turn.sample.token_ids) <= protocol.max_context_tokens:
@@ -347,6 +376,11 @@ def training_rows(episodes: list[Episode], codec, protocol: Protocol,
         "teacher_context_compacted": teacher_compacted,
         "zero_reward_variance": std == 0,
         "generated_action_tokens": sum(len(r.response_ids) for r in rows),
+        "eligible_success_targets": len(targets),
+        "filtered_success_targets": sum(len(paths[i]) < len(episodes[i].turns) for i in targets),
+        "verified_noop_turns_omitted_from_target_pool": sum(
+            len(episodes[i].turns) - len(paths[i]) for i in targets
+        ),
     }
 
 
@@ -480,7 +514,7 @@ def compare_reports(baseline: dict, improved: dict) -> dict:
     )
     gate = bool(
         matched_training and len(protocol.eval_ids) >= 32 and teacher_engaged
-        and mcnemar is not None and mcnemar <= 0.05
+        and mcnemar is not None and mcnemar <= PROMOTION_ALPHA
         and success_ci[0] > 0 and score_ci[0] >= 0
     )
     return {
@@ -499,7 +533,8 @@ def compare_reports(baseline: dict, improved: dict) -> dict:
             "requires_single_fixed_rollout_seed": True,
             "requires_success_delta_ci_strictly_positive": True,
             "requires_score_delta_ci_nonnegative": True,
-            "requires_mcnemar_p_at_most": 0.05,
+            "requires_mcnemar_p_at_most": PROMOTION_ALPHA,
+            "candidate_family_size": 2,
             "authorization": "Evidence flag only; never launches or expands an experiment.",
         },
         "interpretation": "Paired descriptive result; rollout seeds are not training seeds.",
