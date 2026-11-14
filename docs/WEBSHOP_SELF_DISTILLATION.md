@@ -1,9 +1,11 @@
 # WebShop: isolated successful-context self-distillation pilot
 
-Status, 2026-11-14: **The real CPU/search and corrected native protocol gates
-pass. A real fixed32-task initial-model baseline is complete; matched
-train-subset pilots are running. No learned improvement or full-benchmark
-result is established.** This is an opt-in Solver-only experimental
+Status, 2026-11-14: **Both real paired subset experiments are complete. Neither
+self-distillation candidate passed its high-confidence performance gate.
+No full run was started, and all16 leased GPUs were verified empty.**
+See the [complete empirical report](WEBSHOP_SUBSET_RESULTS_20261114.md),
+including per-ID outcomes, costs, checkpoint hashes and old45/74 reconciliation.
+This is an opt-in Solver-only experimental
 path, not a change to the ALFWorld Engineer/Solver loop, a continuation of its
 checkpoints, or permission to interrupt the primary SFT job.
 
@@ -284,8 +286,8 @@ temperature0.4**. Protocol-debug IDs0/1 are excluded. Values are fractions on
 | Condition | Success | Mean task score | Evidence |
 |---|---:|---:|---|
 | Initial model | **15/32 =46.875%** | **0.55771645/1 =55.771645/100** | Real completed model/environment evaluation |
-| Matched GRPO control | Pending | Pending | Train-subset pilot only; no result claimed |
-| Successful-context arm | Pending | Pending | Train-subset pilot only; no result claimed |
+| Matched GRPO control | 11/32 =34.375% | 46.5590/100 | Real completed loaded-adapter evaluation |
+| Successful-context arm | 12/32 =37.500% | 50.7554/100 | Real completed loaded-adapter evaluation; no reliable gain |
 
 Initial-model Wilson95% success interval: **30.8694–63.5505%**.
 Task-bootstrap95% mean-score interval: **40.5850–71.4881/100**.
@@ -296,17 +298,24 @@ rollout/training setting, not a full500-task benchmark or multi-seed result.
 In particular, this row is **not comparable to the user-reported45/74**
 without the original checkpoint, manifest and metric-scale evidence.
 
-The two matched pilots each use train IDs500–503,8rollouts/task and4optimizer
+The two matched pilots each used train IDs500–503,8rollouts/task and4optimizer
 updates (32episodes), with identical initial base/LoRA layouts and seeds.
 Only the successful-context coefficient/teacher scoring differs. Their native
-training receipts must establish actual teacher-token and gradient signal;
+training receipts establish actual teacher-token and gradient signal;
 the earlier zero-gradient one-action learner smoke does not count as learning.
 
-The optional model-free evidence tool
-`python3 scripts/reproduce_webshop_subset.py` recomputes stored compact per-task
-results and paired confidence gates once the final bundle is emitted. It never
+The model-free evidence tool
+`python3 scripts/reproduce_webshop_subset.py` recomputes the committed compact
+per-task results and paired confidence gates. It never
 loads a model or opens a GPU/network connection; offline recomputation is not
 a new model evaluation. Payload hashes detect changed evidence.
+
+The separately preregistered filtered-path cohort (IDs128–159) completed with
+initial/GRPO/SD successes7/9/7 and scores41.5079/45.1538/39.3874 out of100.
+Its paired SD effect is -6.25pp with CI[-15.625,0]pp and McNemar p0.5.
+The strict cohort's +3.125pp effect has CI[-6.25,+12.5]pp and p1.0.
+**Both performance gates fail; neither result justifies a full run.**
+Do not compare absolute points across the different task subsets.
 
 For the real CPU check with the prepared runtime (no GPU lease is needed):
 

@@ -1,0 +1,22 @@
+{
+  "schema": "coevolve_webshop_review_manifest_v1",
+  "files": {
+    "FINAL_GPU_RELEASE.json": {
+      "sha256": "2de804bfd246314c3ebf5ba06a5248daa186a001e0bf816608f54f100e3d7c0b",
+      "bytes": 467
+    },
+    "HISTORICAL_BASELINE_RECONCILIATION.json": {
+      "sha256": "c7dfd690318018bcaff88b34575e80ac935d4d8ec22256a07be5c2aecc61a64f",
+      "bytes": 6613
+    },
+    "REVIEW.json": {
+      "sha256": "cd06efa33ce3373d2c24ade58fe39f3443d5b12d946322375921b870e72a40e0",
+      "bytes": 40873
+    },
+    "per_task.csv": {
+      "sha256": "2fb7ba5d92872e2eac8b8878a8dfc54581b9e6a12c5596dffe05c6546e97f4a1",
+      "bytes": 7498
+    }
+  },
+  "interpretation": "All metrics derived from completed real native reports; no full run and no claimed win"
+}

@@ -1,0 +1,10 @@
+{
+  "timestamp_utc": "2026-11-14T18:57:10.228829+00:00",
+  "only_nodes25_26_probed": true,
+  "raw_nvidia_smi": {
+    "dev-NDH200-025": "0, 0 MiB\n1, 0 MiB\n2, 0 MiB\n3, 0 MiB\n4, 0 MiB\n5, 0 MiB\n6, 0 MiB\n7, 0 MiB\n",
+    "dev-NDH200-026": "0, 0 MiB\n1, 0 MiB\n2, 0 MiB\n3, 0 MiB\n4, 0 MiB\n5, 0 MiB\n6, 0 MiB\n7, 0 MiB\n"
+  },
+  "serving_service_kept": false,
+  "cleanup_scope": "Only owned PID/UID/start-tick guarded processes; no global kill or service change"
+}

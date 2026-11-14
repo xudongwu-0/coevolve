@@ -1,0 +1,1129 @@
+{
+  "schema": "coevolve_webshop_review_v1",
+  "timestamp_utc": "2026-11-14T18:58:47.266028+00:00",
+  "recommendation": "Do not launch full training/evaluation or deploy either distillation checkpoint on this evidence. Both preregistered paired high-confidence gates failed.",
+  "full_run_started": false,
+  "candidate_family_size": 2,
+  "promotion_alpha_per_candidate": 0.025,
+  "base_model": "existing local BF16 Qwen3.5-9B, not primary-SFT QAT weights",
+  "base_model_content_fingerprint": "7aa77ee543c8d8280dec60e9d0359ebea79abec5522055b2987ff5e49f0d66d9",
+  "base_model_identity": {
+    "model.safetensors-00001-of-00004.safetensors": "db6f444b43d318c92f360a13a25561a6a65b10c0631b8ed305a426dbaa6c380e",
+    "model.safetensors-00002-of-00004.safetensors": "31c7d7e2dd5d207840b31cc59083c8f4c4718959149e0358c0364052bb9a0330",
+    "model.safetensors-00003-of-00004.safetensors": "7ec36ba3a4176a44c3c0876ad80c56a2f70c84bf008d82e9501df642f17dadec",
+    "model.safetensors-00004-of-00004.safetensors": "b62b0c4cd7e44edee103ee8f4fe225f246d5e768e07bfd5f25b63a8aa1fdd0c6",
+    "config.json": "d0883072e01861ed0b2d47be3c16c36a8e81c224c7ffaa310c6558fb3f932b05",
+    "tokenizer.json": "5f9e4d4901a92b997e463c1f46055088b6cca5ca61a6522d1b9f64c4bb81cb42",
+    "tokenizer_config.json": "316230d6a809701f4db5ea8f8fc862bc3a6f3229c937c174e674ff3ca0a64ac8"
+  },
+  "benchmark_asset_fingerprint": "d7b3302242f5fdf2066eeb92a1339a13a43b2daa7c777fc417bace54432c4956",
+  "benchmark_assets": {
+    "data/items_shuffle_1000.json": "30a4765c3a327af72d9a9a95a6b2486d516f0fa1d3ecd83681901ce82a21b269",
+    "data/items_ins_v2_1000.json": "f88a36314a397b53b3d9c3fa5878e5f7b26d35019a51ec83fbedeca61a948f6f",
+    "data/items_human_ins.json": "cf78667548a71786e1d9049c24b802e48e1084ad4bb021cae56ce1f6d96954a3",
+    "search_engine/indexes_1k/_0.fdm": "c385ed352d0fab44587f1f42b036c068d281d7c2860800cb8c2ab21e16ec51e4",
+    "search_engine/indexes_1k/_0.fdt": "f3d68ba182ca7eac3f321fb0f830672834042a0e0a292b46712cf0574a9e4749",
+    "search_engine/indexes_1k/_0.fdx": "1dcd213f16f34848385c29e526c0f5109507569a152cf04d731376e5cd14bada",
+    "search_engine/indexes_1k/_0.fnm": "1958b394dd84842c8fd6960f86ef01cf61951b080680a6ef1fed9181d7e0940a",
+    "search_engine/indexes_1k/_0.nvd": "d802d5abea783d499397c47a31bf5826f1c50b6412b2afdd58ed03a47fdf5366",
+    "search_engine/indexes_1k/_0.nvm": "3074f956861873b4a48011c6a5c25c4101ec7e162e8e14ab6b7912da579a27f1",
+    "search_engine/indexes_1k/_0.si": "04310dde2062cf9f9498b998b312f086e7426526eeedc751ad698d358a5cf6ac",
+    "search_engine/indexes_1k/_0.tvd": "3cad5b7e978f9303ed5d162becb02a0a9852e68cdd2566d9c2e2844ec05cad1f",
+    "search_engine/indexes_1k/_0.tvm": "ca6ba4a8a4efe2f775dc1127705b121d52b863cb9aa161eb7ea8ce8a4eba4cb7",
+    "search_engine/indexes_1k/_0.tvx": "48c1a5060052c27cb51f08364fddd4fcca0340f96e70092529efec621187fd75",
+    "search_engine/indexes_1k/_0_Lucene80_0.dvd": "c4a1b4708649438e8448e38fa6ca415b7ba5d9840d551514a3c91d2cde58bdb9",
+    "search_engine/indexes_1k/_0_Lucene80_0.dvm": "397274d36fa3d3e9a1cf0b49fc680cc32caa895e1bd547a77f0e4e49b3a527c2",
+    "search_engine/indexes_1k/_0_Lucene84_0.doc": "0a020d6bd2accddc1d67202ef0a4dd07659bae48a8ac90d4a927e9c110aa983a",
+    "search_engine/indexes_1k/_0_Lucene84_0.pos": "9f71fb2d3a2509b251330027de51c8a3e6977043b6bcbd2ab3c29e28653b8e6b",
+    "search_engine/indexes_1k/_0_Lucene84_0.tim": "579d3df483893dacab3a83672cabe2dd9b9184cd73c728e6c002a3270575e261",
+    "search_engine/indexes_1k/_0_Lucene84_0.tip": "846981db86924cb67a359d5ca7085630b230300364fcfae05e08145b27eeb1ce",
+    "search_engine/indexes_1k/_0_Lucene84_0.tmd": "f19b6c6cdf132bc15a4daf7a15391a5db3c73da6ace7cbd442a9d1af17393704",
+    "search_engine/indexes_1k/segments_1": "b03bc6405d295d099739f5aa20e966d6e3a08b4320ab64ee2a3d75a2b142b98e",
+    "search_engine/convert_product_file_format.py": "27541423b531fd6c348b3d20522ecea7fbf2d724d864921d13691fa284ad4e53",
+    "search_engine/lucene_searcher.py": "905be2081ffa4c9f93e1b106de4c012ac9677c8043dd264ae92a68dc2a287fa0",
+    "web_agent_site/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "web_agent_site/app.py": "f9393af973fd2d0343c8b68e89572e6139ebc8d6a2309a145c554a80284e81cb",
+    "web_agent_site/attributes/annotate.py": "f64f3f8be3af15794821506014b97c1abc75424973ab9b06d4af4b9c2dec4a45",
+    "web_agent_site/attributes/generate_attrs.py": "b6e079d6765966e1c244e7de31d444c17423d912d24f0ef08844c32daa2efe3a",
+    "web_agent_site/engine/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "web_agent_site/engine/engine.py": "3baeb0f06b1f7d20ea4e5cfff561f37b8bbfb298928d7387d051ea9faa340b2c",
+    "web_agent_site/engine/goal.py": "9703c8583244e2041182eb14856186b998145ab16ce2ba9aef8cb680877c8ed5",
+    "web_agent_site/engine/normalize.py": "1962113ac9e209a636d4f181b2c70544bbea59b03adca9847e48287158d794fb",
+    "web_agent_site/envs/__init__.py": "7cdf100d019fd715d605ff0cd0f0d3d4285d7f7b2dbe4e4634e9a1266ab5e854",
+    "web_agent_site/envs/web_agent_site_env.py": "7b3a43c0250ef2215e2ac1e613ebafbcfbea053a24fcbb773541dc634f124981",
+    "web_agent_site/envs/web_agent_text_env.py": "d53c09893a1314106c48040e871e83f91f4987a20344c00c2f8332343c0eec4f",
+    "web_agent_site/models/__init__.py": "06a57f9b9ff18e749dff8b9bbb69cf78819a7515fb79a414ba2c3e2ee27ed626",
+    "web_agent_site/models/models.py": "c6edfa60c4c8522c1a0ce35233166d2b824ba3184541223905f7d11a21ac9f7a",
+    "web_agent_site/utils.py": "bdd6df3b869cf3fe028169add3611d1b811ae663ae4f79520617c26b20614970"
+  },
+  "cohorts": {
+    "strict": {
+      "protocol": {
+        "train_ids": [
+          500,
+          501,
+          502,
+          503
+        ],
+        "eval_ids": [
+          32,
+          33,
+          34,
+          35,
+          36,
+          37,
+          38,
+          39,
+          40,
+          41,
+          42,
+          43,
+          44,
+          45,
+          46,
+          47,
+          48,
+          49,
+          50,
+          51,
+          52,
+          53,
+          54,
+          55,
+          56,
+          57,
+          58,
+          59,
+          60,
+          61,
+          62,
+          63
+        ],
+        "eval_seeds": [
+          0
+        ],
+        "seed": 1000043,
+        "goal_seed": 233,
+        "max_steps": 15,
+        "max_new_tokens": 512,
+        "max_context_tokens": 4096,
+        "history_turns": 3,
+        "group_size": 8,
+        "updates": 4,
+        "learning_rate": 1e-05,
+        "distill_coefficient": 0.5,
+        "gap_clip": 5.0,
+        "ppo_clip": 0.2,
+        "reference_kl_coefficient": 0.01,
+        "eval_temperature": 0.4,
+        "num_products": 1000,
+        "enable_thinking": false
+      },
+      "source_manifest": {
+        "purpose": "Reference-aligned executable commands; debug0/1, clean test32-63, train500-503",
+        "git_commit": "db969bc0257b6ac66d747eeb381a47aae1190754",
+        "source_files": {
+          "whale_local/webshop/__init__.py": "5af7711008b3aaf3c688ee813b516bf30a1d5464ffe543272819ff22b5117407",
+          "whale_local/webshop/__main__.py": "19ab8d06c583168cd4fdc03c5d6567f2ff2b8c5bbd441b2bb4026dc60559ab0c",
+          "whale_local/webshop/core.py": "f0fee4aa6fd32aa3cf4797e27b91df4148a17ebbbcc0dc774191c389462b58bc",
+          "whale_local/webshop/objective.py": "10e3c90f6a3423430dd9bf7a7b597d19867d224fb8e1efa16fd1c1ed496b819a",
+          "whale_local/webshop/runtime.py": "f9e48052b69c0ce642cf4afcc104255f20d2823828ce857f4790f155c1519b17"
+        }
+      },
+      "metrics": {
+        "initial": {
+          "episodes": 32,
+          "successes": 15,
+          "success_rate": 0.46875,
+          "seed_success_rates": [
+            0.46875
+          ],
+          "seed_sample_std": 0.0,
+          "mean_task_score": 0.5577164502164502,
+          "invalid_actions": 20,
+          "generated_tokens": 15931,
+          "success_rate_task_bootstrap95": [
+            0.3125,
+            0.65625
+          ],
+          "task_score_task_bootstrap95": [
+            0.4058495670995671,
+            0.7148809523809524
+          ],
+          "success_wilson95_by_seed": [
+            [
+              0.30869387108068835,
+              0.6355048288102536
+            ]
+          ]
+        },
+        "grpo": {
+          "episodes": 32,
+          "successes": 11,
+          "success_rate": 0.34375,
+          "seed_success_rates": [
+            0.34375
+          ],
+          "seed_sample_std": 0.0,
+          "mean_task_score": 0.46558982683982686,
+          "invalid_actions": 45,
+          "generated_tokens": 39745,
+          "success_rate_task_bootstrap95": [
+            0.1875,
+            0.53125
+          ],
+          "task_score_task_bootstrap95": [
+            0.31375,
+            0.6243235930735931
+          ],
+          "success_wilson95_by_seed": [
+            [
+              0.20410437924433172,
+              0.5168891202103778
+            ]
+          ]
+        },
+        "success_sd": {
+          "episodes": 32,
+          "successes": 12,
+          "success_rate": 0.375,
+          "seed_success_rates": [
+            0.375
+          ],
+          "seed_sample_std": 0.0,
+          "mean_task_score": 0.5075541125541125,
+          "invalid_actions": 34,
+          "generated_tokens": 30979,
+          "success_rate_task_bootstrap95": [
+            0.21875,
+            0.5625
+          ],
+          "task_score_task_bootstrap95": [
+            0.3504599567099567,
+            0.6654761904761904
+          ],
+          "success_wilson95_by_seed": [
+            [
+              0.22933887309454212,
+              0.5474559264692255
+            ]
+          ]
+        }
+      },
+      "actual_evaluation_cost": {
+        "initial": {
+          "actions": 353,
+          "generated_tokens": 15931,
+          "invalid_actions": 20,
+          "total_wall_seconds": 682.7882356159389,
+          "runtime": {
+            "device": "cuda:0",
+            "gpu_name": "NVIDIA H200",
+            "max_memory_allocated_bytes": 21009439232,
+            "max_memory_reserved_bytes": 25216155648
+          }
+        },
+        "grpo": {
+          "actions": 346,
+          "generated_tokens": 39745,
+          "invalid_actions": 45,
+          "total_wall_seconds": 2121.354511421174,
+          "runtime": {
+            "device": "cuda:0",
+            "gpu_name": "NVIDIA H200",
+            "max_memory_allocated_bytes": 21217024512,
+            "max_memory_reserved_bytes": 24687673344
+          }
+        },
+        "success_sd": {
+          "actions": 351,
+          "generated_tokens": 30979,
+          "invalid_actions": 34,
+          "total_wall_seconds": 1713.3902088114992,
+          "runtime": {
+            "device": "cuda:0",
+            "gpu_name": "NVIDIA H200",
+            "max_memory_allocated_bytes": 21210793472,
+            "max_memory_reserved_bytes": 22340960256
+          }
+        }
+      },
+      "training": {
+        "grpo": {
+          "method": "grpo",
+          "updates": 4,
+          "episodes": 32,
+          "sampled_successes": 3.0,
+          "actions": 397,
+          "generated_tokens": 37417,
+          "teacher_tokens": 0,
+          "filtered_success_targets": 0,
+          "noops_omitted_from_target_pool": 0,
+          "total_wall_seconds": 2583.1172425048426,
+          "runtime": {
+            "device": "cuda:0",
+            "gpu_name": "NVIDIA H200",
+            "max_memory_allocated_bytes": 89021777408,
+            "max_memory_reserved_bytes": 108179488768
+          },
+          "trainable_parameters": 51265024,
+          "adapter_identity": {
+            "adapter_model.safetensors": "b1d4212e89d31af82bf353057036dbf6f4c1368dc356934391526c297334439c",
+            "tokenizer.json": "06b9509352d2af50381ab2247e083b80d32d5c0aba91c272ca9ff729b6a0e523",
+            "tokenizer_config.json": "bee8eba30f0eb4af73c0fe2cd06d0f89b657d7819941c438157ec42f7c80ea87",
+            "adapter_config.json": "afeb9fd8ee8d952f2659baba025fc6ed2278d873da6f658a5afe3dd224b2c004"
+          },
+          "checkpoint_directory": "/mnt/3fs/xudong/coevolve/runs/webshop_self_distillation_20261114/grpo_train32_node25_v3/adapter",
+          "metrics": [
+            {
+              "update": 0,
+              "task_id": 500,
+              "episodes": 8,
+              "successes": 1.0,
+              "action_turns": 86,
+              "teacher_turns": 0,
+              "teacher_context_overflow": 0,
+              "teacher_context_compacted": 0,
+              "zero_reward_variance": false,
+              "generated_action_tokens": 6418,
+              "loss": 0.0009188057550057463,
+              "gradient_norm": 0.7722861170768738,
+              "optimizer_steps": 1,
+              "teacher_tokens": 0,
+              "teacher_gap_abs_mean": 0.0
+            },
+            {
+              "update": 1,
+              "task_id": 501,
+              "episodes": 8,
+              "successes": 0.0,
+              "action_turns": 120,
+              "teacher_turns": 0,
+              "teacher_context_overflow": 0,
+              "teacher_context_compacted": 0,
+              "zero_reward_variance": true,
+              "generated_action_tokens": 8088,
+              "loss": 4.3617125853263486e-06,
+              "gradient_norm": 0.0008023144910112023,
+              "optimizer_steps": 1,
+              "teacher_tokens": 0,
+              "teacher_gap_abs_mean": 0.0
+            },
+            {
+              "update": 2,
+              "task_id": 502,
+              "episodes": 8,
+              "successes": 2.0,
+              "action_turns": 71,
+              "teacher_turns": 0,
+              "teacher_context_overflow": 0,
+              "teacher_context_compacted": 0,
+              "zero_reward_variance": false,
+              "generated_action_tokens": 10766,
+              "loss": -0.00012052076254062596,
+              "gradient_norm": 0.5057580471038818,
+              "optimizer_steps": 1,
+              "teacher_tokens": 0,
+              "teacher_gap_abs_mean": 0.0
+            },
+            {
+              "update": 3,
+              "task_id": 503,
+              "episodes": 8,
+              "successes": 0.0,
+              "action_turns": 120,
+              "teacher_turns": 0,
+              "teacher_context_overflow": 0,
+              "teacher_context_compacted": 0,
+              "zero_reward_variance": true,
+              "generated_action_tokens": 12145,
+              "loss": 8.27165882958432e-06,
+              "gradient_norm": 0.0014659431762993336,
+              "optimizer_steps": 1,
+              "teacher_tokens": 0,
+              "teacher_gap_abs_mean": 0.0
+            }
+          ]
+        },
+        "success_sd": {
+          "method": "success_sd",
+          "updates": 4,
+          "episodes": 32,
+          "sampled_successes": 4.0,
+          "actions": 379,
+          "generated_tokens": 35091,
+          "teacher_tokens": 26588,
+          "filtered_success_targets": 0,
+          "noops_omitted_from_target_pool": 0,
+          "total_wall_seconds": 2541.596686685458,
+          "runtime": {
+            "device": "cuda:0",
+            "gpu_name": "NVIDIA H200",
+            "max_memory_allocated_bytes": 97071642112,
+            "max_memory_reserved_bytes": 112491233280
+          },
+          "trainable_parameters": 51265024,
+          "adapter_identity": {
+            "adapter_model.safetensors": "b2ccc7516ab034024c5d29ea63ebc62341ee35af11baeb9c1a576b2a91f9618e",
+            "tokenizer.json": "06b9509352d2af50381ab2247e083b80d32d5c0aba91c272ca9ff729b6a0e523",
+            "tokenizer_config.json": "bee8eba30f0eb4af73c0fe2cd06d0f89b657d7819941c438157ec42f7c80ea87",
+            "adapter_config.json": "afeb9fd8ee8d952f2659baba025fc6ed2278d873da6f658a5afe3dd224b2c004"
+          },
+          "checkpoint_directory": "/mnt/3fs/xudong/coevolve/runs/webshop_self_distillation_20261114/sd_train32_node26_v3/adapter",
+          "metrics": [
+            {
+              "update": 0,
+              "task_id": 500,
+              "episodes": 8,
+              "successes": 1.0,
+              "action_turns": 86,
+              "teacher_turns": 79,
+              "teacher_context_overflow": 0,
+              "teacher_context_compacted": 79,
+              "zero_reward_variance": false,
+              "generated_action_tokens": 6418,
+              "loss": 0.036350119674760095,
+              "gradient_norm": 1.0826166868209839,
+              "optimizer_steps": 1,
+              "teacher_tokens": 6169,
+              "teacher_gap_abs_mean": 0.1461258569506158
+            },
+            {
+              "update": 1,
+              "task_id": 501,
+              "episodes": 8,
+              "successes": 1.0,
+              "action_turns": 115,
+              "teacher_turns": 0,
+              "teacher_context_overflow": 0,
+              "teacher_context_compacted": 0,
+              "zero_reward_variance": false,
+              "generated_action_tokens": 7311,
+              "loss": -9.032757621454252e-05,
+              "gradient_norm": 0.4022320806980133,
+              "optimizer_steps": 1,
+              "teacher_tokens": 0,
+              "teacher_gap_abs_mean": 0.0
+            },
+            {
+              "update": 2,
+              "task_id": 502,
+              "episodes": 8,
+              "successes": 1.0,
+              "action_turns": 77,
+              "teacher_turns": 74,
+              "teacher_context_overflow": 0,
+              "teacher_context_compacted": 16,
+              "zero_reward_variance": false,
+              "generated_action_tokens": 13363,
+              "loss": 0.025588175862209156,
+              "gradient_norm": 0.648287832736969,
+              "optimizer_steps": 1,
+              "teacher_tokens": 12676,
+              "teacher_gap_abs_mean": 0.126809628063777
+            },
+            {
+              "update": 3,
+              "task_id": 503,
+              "episodes": 8,
+              "successes": 1.0,
+              "action_turns": 101,
+              "teacher_turns": 93,
+              "teacher_context_overflow": 0,
+              "teacher_context_compacted": 93,
+              "zero_reward_variance": false,
+              "generated_action_tokens": 7999,
+              "loss": 0.030859646549006917,
+              "gradient_norm": 0.7297778725624084,
+              "optimizer_steps": 1,
+              "teacher_tokens": 7743,
+              "teacher_gap_abs_mean": 0.13998364443836264
+            }
+          ]
+        }
+      },
+      "paired_sd_vs_grpo": {
+        "paired_episodes": 32,
+        "rescued": 2,
+        "regressed": 1,
+        "baseline_successes": 11,
+        "improved_successes": 12,
+        "success_rate_delta": 0.03125,
+        "matched_training_budget": true,
+        "success_rate_delta_task_bootstrap95": [
+          -0.0625,
+          0.125
+        ],
+        "mean_task_score_delta": 0.04196428571428572,
+        "task_score_delta_task_bootstrap95": [
+          -0.05803571428571429,
+          0.15089285714285716
+        ],
+        "mcnemar_exact_two_sided": 1.0,
+        "subset_evidence_gate": {
+          "passed": false,
+          "teacher_signal_engaged": true,
+          "minimum_tasks": 32,
+          "requires_matched_training": true,
+          "requires_single_fixed_rollout_seed": true,
+          "requires_success_delta_ci_strictly_positive": true,
+          "requires_score_delta_ci_nonnegative": true,
+          "requires_mcnemar_p_at_most": 0.025,
+          "candidate_family_size": 2,
+          "authorization": "Evidence flag only; never launches or expands an experiment."
+        },
+        "interpretation": "Paired descriptive result; rollout seeds are not training seeds."
+      },
+      "sd_vs_initial_descriptive": {
+        "paired_episodes": 32,
+        "rescued": 0,
+        "regressed": 3,
+        "baseline_successes": 15,
+        "improved_successes": 12,
+        "success_rate_delta": -0.09375,
+        "matched_training_budget": false,
+        "success_rate_delta_task_bootstrap95": [
+          -0.21875,
+          0.0
+        ],
+        "mean_task_score_delta": -0.05016233766233766,
+        "task_score_delta_task_bootstrap95": [
+          -0.17962662337662338,
+          0.06858766233766234
+        ],
+        "mcnemar_exact_two_sided": 0.25,
+        "subset_evidence_gate": {
+          "passed": false,
+          "teacher_signal_engaged": true,
+          "minimum_tasks": 32,
+          "requires_matched_training": true,
+          "requires_single_fixed_rollout_seed": true,
+          "requires_success_delta_ci_strictly_positive": true,
+          "requires_score_delta_ci_nonnegative": true,
+          "requires_mcnemar_p_at_most": 0.025,
+          "candidate_family_size": 2,
+          "authorization": "Evidence flag only; never launches or expands an experiment."
+        },
+        "interpretation": "Paired descriptive result; rollout seeds are not training seeds."
+      },
+      "per_id_binary_changes_sd_vs_grpo": {
+        "rescued": [
+          42,
+          60
+        ],
+        "regressed": [
+          55
+        ],
+        "both_success": [
+          32,
+          33,
+          38,
+          41,
+          44,
+          51,
+          52,
+          53,
+          56,
+          57
+        ],
+        "both_failure": [
+          34,
+          35,
+          36,
+          37,
+          39,
+          40,
+          43,
+          45,
+          46,
+          47,
+          48,
+          49,
+          50,
+          54,
+          58,
+          59,
+          61,
+          62,
+          63
+        ]
+      },
+      "full_run_recommended": false
+    },
+    "filtered": {
+      "protocol": {
+        "train_ids": [
+          500,
+          501,
+          502,
+          503
+        ],
+        "eval_ids": [
+          128,
+          129,
+          130,
+          131,
+          132,
+          133,
+          134,
+          135,
+          136,
+          137,
+          138,
+          139,
+          140,
+          141,
+          142,
+          143,
+          144,
+          145,
+          146,
+          147,
+          148,
+          149,
+          150,
+          151,
+          152,
+          153,
+          154,
+          155,
+          156,
+          157,
+          158,
+          159
+        ],
+        "eval_seeds": [
+          0
+        ],
+        "seed": 1000043,
+        "goal_seed": 233,
+        "max_steps": 15,
+        "max_new_tokens": 512,
+        "max_context_tokens": 4096,
+        "history_turns": 3,
+        "group_size": 8,
+        "updates": 4,
+        "learning_rate": 1e-05,
+        "distill_coefficient": 0.5,
+        "gap_clip": 5.0,
+        "ppo_clip": 0.2,
+        "reference_kl_coefficient": 0.01,
+        "eval_temperature": 0.4,
+        "num_products": 1000,
+        "enable_thinking": false,
+        "teacher_target_mode": "verified_noop_filtered"
+      },
+      "source_manifest": {
+        "purpose": "Verified no-op filtered teacher candidate; untouched test128-159; train500-503;32episodes/arm",
+        "git_commit": "18ae3aa75fc059fbf2e290b7795707eceefdcdb2",
+        "source_files": {
+          "whale_local/webshop/__init__.py": "5af7711008b3aaf3c688ee813b516bf30a1d5464ffe543272819ff22b5117407",
+          "whale_local/webshop/__main__.py": "19ab8d06c583168cd4fdc03c5d6567f2ff2b8c5bbd441b2bb4026dc60559ab0c",
+          "whale_local/webshop/core.py": "a8e38f28681ba82cb1dc1de7915f3c8d65d57d177a929128de30e350cacb81f6",
+          "whale_local/webshop/objective.py": "10e3c90f6a3423430dd9bf7a7b597d19867d224fb8e1efa16fd1c1ed496b819a",
+          "whale_local/webshop/runtime.py": "f9e48052b69c0ce642cf4afcc104255f20d2823828ce857f4790f155c1519b17"
+        },
+        "actor_function_asts_identical_to_strict_v3": true,
+        "runtime_file_identical_to_v3": true,
+        "objective_file_identical_to_v3": true,
+        "candidate_family_size": 2,
+        "analysis_alpha_per_candidate": 0.025,
+        "designed_before_trained_heldout_evaluation": true
+      },
+      "metrics": {
+        "initial": {
+          "episodes": 32,
+          "successes": 7,
+          "success_rate": 0.21875,
+          "seed_success_rates": [
+            0.21875
+          ],
+          "seed_sample_std": 0.0,
+          "mean_task_score": 0.4150793650793651,
+          "invalid_actions": 17,
+          "generated_tokens": 16123,
+          "success_rate_task_bootstrap95": [
+            0.09375,
+            0.375
+          ],
+          "task_score_task_bootstrap95": [
+            0.2586805555555556,
+            0.5653769841269841
+          ],
+          "success_wilson95_by_seed": [
+            [
+              0.11023836252604186,
+              0.3875499364924353
+            ]
+          ]
+        },
+        "grpo": {
+          "episodes": 32,
+          "successes": 9,
+          "success_rate": 0.28125,
+          "seed_success_rates": [
+            0.28125
+          ],
+          "seed_sample_std": 0.0,
+          "mean_task_score": 0.4515376984126984,
+          "invalid_actions": 15,
+          "generated_tokens": 16844,
+          "success_rate_task_bootstrap95": [
+            0.125,
+            0.4375
+          ],
+          "task_score_task_bootstrap95": [
+            0.2910714285714286,
+            0.6093253968253969
+          ],
+          "success_wilson95_by_seed": [
+            [
+              0.15564580497742764,
+              0.45374509425916565
+            ]
+          ]
+        },
+        "success_sd": {
+          "episodes": 32,
+          "successes": 7,
+          "success_rate": 0.21875,
+          "seed_success_rates": [
+            0.21875
+          ],
+          "seed_sample_std": 0.0,
+          "mean_task_score": 0.39387400793650795,
+          "invalid_actions": 35,
+          "generated_tokens": 29701,
+          "success_rate_task_bootstrap95": [
+            0.09375,
+            0.375
+          ],
+          "task_score_task_bootstrap95": [
+            0.2378472222222222,
+            0.5463789682539683
+          ],
+          "success_wilson95_by_seed": [
+            [
+              0.11023836252604186,
+              0.3875499364924353
+            ]
+          ]
+        }
+      },
+      "actual_evaluation_cost": {
+        "initial": {
+          "actions": 346,
+          "generated_tokens": 16123,
+          "invalid_actions": 17,
+          "total_wall_seconds": 712.6697724638507,
+          "runtime": {
+            "device": "cuda:0",
+            "gpu_name": "NVIDIA H200",
+            "max_memory_allocated_bytes": 21001290240,
+            "max_memory_reserved_bytes": 21734883328
+          }
+        },
+        "grpo": {
+          "actions": 366,
+          "generated_tokens": 16844,
+          "invalid_actions": 15,
+          "total_wall_seconds": 1014.384616073221,
+          "runtime": {
+            "device": "cuda:0",
+            "gpu_name": "NVIDIA H200",
+            "max_memory_allocated_bytes": 21206321664,
+            "max_memory_reserved_bytes": 22257074176
+          }
+        },
+        "success_sd": {
+          "actions": 370,
+          "generated_tokens": 29701,
+          "invalid_actions": 35,
+          "total_wall_seconds": 1604.4264185298234,
+          "runtime": {
+            "device": "cuda:0",
+            "gpu_name": "NVIDIA H200",
+            "max_memory_allocated_bytes": 21214663168,
+            "max_memory_reserved_bytes": 22288531456
+          }
+        }
+      },
+      "training": {
+        "grpo": {
+          "method": "grpo",
+          "updates": 4,
+          "episodes": 32,
+          "sampled_successes": 6.0,
+          "actions": 391,
+          "generated_tokens": 36276,
+          "teacher_tokens": 0,
+          "filtered_success_targets": 3,
+          "noops_omitted_from_target_pool": 6,
+          "total_wall_seconds": 2532.3435621773824,
+          "runtime": {
+            "device": "cuda:0",
+            "gpu_name": "NVIDIA H200",
+            "max_memory_allocated_bytes": 89149385728,
+            "max_memory_reserved_bytes": 108185780224
+          },
+          "trainable_parameters": 51265024,
+          "adapter_identity": {
+            "adapter_model.safetensors": "8cac6c76cf97e12493d9ae65653107bf7fef0449c0519736d0a44f078433f753",
+            "tokenizer.json": "06b9509352d2af50381ab2247e083b80d32d5c0aba91c272ca9ff729b6a0e523",
+            "tokenizer_config.json": "bee8eba30f0eb4af73c0fe2cd06d0f89b657d7819941c438157ec42f7c80ea87",
+            "adapter_config.json": "afeb9fd8ee8d952f2659baba025fc6ed2278d873da6f658a5afe3dd224b2c004"
+          },
+          "checkpoint_directory": "/mnt/3fs/xudong/coevolve/runs/webshop_self_distillation_20261114/filtered_grpo_train32_node25_v4/adapter",
+          "metrics": [
+            {
+              "update": 0,
+              "task_id": 500,
+              "episodes": 8,
+              "successes": 1.0,
+              "action_turns": 86,
+              "teacher_turns": 0,
+              "teacher_context_overflow": 0,
+              "teacher_context_compacted": 0,
+              "zero_reward_variance": false,
+              "generated_action_tokens": 6418,
+              "eligible_success_targets": 1,
+              "filtered_success_targets": 0,
+              "verified_noop_turns_omitted_from_target_pool": 0,
+              "loss": 0.0009188057550057463,
+              "gradient_norm": 0.7713771462440491,
+              "optimizer_steps": 1,
+              "teacher_tokens": 0,
+              "teacher_gap_abs_mean": 0.0
+            },
+            {
+              "update": 1,
+              "task_id": 501,
+              "episodes": 8,
+              "successes": 2.0,
+              "action_turns": 113,
+              "teacher_turns": 0,
+              "teacher_context_overflow": 0,
+              "teacher_context_compacted": 0,
+              "zero_reward_variance": false,
+              "generated_action_tokens": 9349,
+              "eligible_success_targets": 2,
+              "filtered_success_targets": 2,
+              "verified_noop_turns_omitted_from_target_pool": 3,
+              "loss": -0.0002684643603405604,
+              "gradient_norm": 0.5023922324180603,
+              "optimizer_steps": 1,
+              "teacher_tokens": 0,
+              "teacher_gap_abs_mean": 0.0
+            },
+            {
+              "update": 2,
+              "task_id": 502,
+              "episodes": 8,
+              "successes": 2.0,
+              "action_turns": 80,
+              "teacher_turns": 0,
+              "teacher_context_overflow": 0,
+              "teacher_context_compacted": 0,
+              "zero_reward_variance": false,
+              "generated_action_tokens": 11960,
+              "eligible_success_targets": 2,
+              "filtered_success_targets": 1,
+              "verified_noop_turns_omitted_from_target_pool": 3,
+              "loss": -0.0002765794049451667,
+              "gradient_norm": 0.49859854578971863,
+              "optimizer_steps": 1,
+              "teacher_tokens": 0,
+              "teacher_gap_abs_mean": 0.0
+            },
+            {
+              "update": 3,
+              "task_id": 503,
+              "episodes": 8,
+              "successes": 1.0,
+              "action_turns": 112,
+              "teacher_turns": 0,
+              "teacher_context_overflow": 0,
+              "teacher_context_compacted": 0,
+              "zero_reward_variance": false,
+              "generated_action_tokens": 8549,
+              "eligible_success_targets": 1,
+              "filtered_success_targets": 0,
+              "verified_noop_turns_omitted_from_target_pool": 0,
+              "loss": -0.0001755836602556057,
+              "gradient_norm": 0.529329776763916,
+              "optimizer_steps": 1,
+              "teacher_tokens": 0,
+              "teacher_gap_abs_mean": 0.0
+            }
+          ]
+        },
+        "success_sd": {
+          "method": "success_sd",
+          "updates": 4,
+          "episodes": 32,
+          "sampled_successes": 5.0,
+          "actions": 384,
+          "generated_tokens": 36182,
+          "teacher_tokens": 22697,
+          "filtered_success_targets": 2,
+          "noops_omitted_from_target_pool": 3,
+          "total_wall_seconds": 2574.80282117147,
+          "runtime": {
+            "device": "cuda:0",
+            "gpu_name": "NVIDIA H200",
+            "max_memory_allocated_bytes": 88975575040,
+            "max_memory_reserved_bytes": 112570925056
+          },
+          "trainable_parameters": 51265024,
+          "adapter_identity": {
+            "adapter_model.safetensors": "085f1cae8f560908151f36d02f3046c0c1f291685ed1f5d36d5e01eb5530b5a7",
+            "tokenizer.json": "06b9509352d2af50381ab2247e083b80d32d5c0aba91c272ca9ff729b6a0e523",
+            "tokenizer_config.json": "bee8eba30f0eb4af73c0fe2cd06d0f89b657d7819941c438157ec42f7c80ea87",
+            "adapter_config.json": "afeb9fd8ee8d952f2659baba025fc6ed2278d873da6f658a5afe3dd224b2c004"
+          },
+          "checkpoint_directory": "/mnt/3fs/xudong/coevolve/runs/webshop_self_distillation_20261114/filtered_sd_train32_node26_v4/adapter",
+          "metrics": [
+            {
+              "update": 0,
+              "task_id": 500,
+              "episodes": 8,
+              "successes": 1.0,
+              "action_turns": 86,
+              "teacher_turns": 79,
+              "teacher_context_overflow": 0,
+              "teacher_context_compacted": 79,
+              "zero_reward_variance": false,
+              "generated_action_tokens": 6418,
+              "eligible_success_targets": 1,
+              "filtered_success_targets": 0,
+              "verified_noop_turns_omitted_from_target_pool": 0,
+              "loss": 0.036350119674760095,
+              "gradient_norm": 1.0820319652557373,
+              "optimizer_steps": 1,
+              "teacher_tokens": 6169,
+              "teacher_gap_abs_mean": 0.1461258569506158
+            },
+            {
+              "update": 1,
+              "task_id": 501,
+              "episodes": 8,
+              "successes": 2.0,
+              "action_turns": 109,
+              "teacher_turns": 109,
+              "teacher_context_overflow": 0,
+              "teacher_context_compacted": 109,
+              "zero_reward_variance": false,
+              "generated_action_tokens": 6603,
+              "eligible_success_targets": 2,
+              "filtered_success_targets": 1,
+              "verified_noop_turns_omitted_from_target_pool": 2,
+              "loss": 0.02382865011383082,
+              "gradient_norm": 0.5748312473297119,
+              "optimizer_steps": 1,
+              "teacher_tokens": 6603,
+              "teacher_gap_abs_mean": 0.11249036739992045
+            },
+            {
+              "update": 2,
+              "task_id": 502,
+              "episodes": 8,
+              "successes": 2.0,
+              "action_turns": 73,
+              "teacher_turns": 73,
+              "teacher_context_overflow": 0,
+              "teacher_context_compacted": 7,
+              "zero_reward_variance": false,
+              "generated_action_tokens": 9925,
+              "eligible_success_targets": 2,
+              "filtered_success_targets": 1,
+              "verified_noop_turns_omitted_from_target_pool": 1,
+              "loss": 0.030024137201582615,
+              "gradient_norm": 0.6000562310218811,
+              "optimizer_steps": 1,
+              "teacher_tokens": 9925,
+              "teacher_gap_abs_mean": 0.13699419595807866
+            },
+            {
+              "update": 3,
+              "task_id": 503,
+              "episodes": 8,
+              "successes": 0.0,
+              "action_turns": 116,
+              "teacher_turns": 0,
+              "teacher_context_overflow": 0,
+              "teacher_context_compacted": 0,
+              "zero_reward_variance": true,
+              "generated_action_tokens": 13236,
+              "eligible_success_targets": 0,
+              "filtered_success_targets": 0,
+              "verified_noop_turns_omitted_from_target_pool": 0,
+              "loss": 6.816336049522316e-06,
+              "gradient_norm": 0.0009069477673619986,
+              "optimizer_steps": 1,
+              "teacher_tokens": 0,
+              "teacher_gap_abs_mean": 0.0
+            }
+          ]
+        }
+      },
+      "paired_sd_vs_grpo": {
+        "paired_episodes": 32,
+        "rescued": 0,
+        "regressed": 2,
+        "baseline_successes": 9,
+        "improved_successes": 7,
+        "success_rate_delta": -0.0625,
+        "matched_training_budget": true,
+        "success_rate_delta_task_bootstrap95": [
+          -0.15625,
+          0.0
+        ],
+        "mean_task_score_delta": -0.05766369047619047,
+        "task_score_delta_task_bootstrap95": [
+          -0.1380952380952381,
+          0.0015624999999999997
+        ],
+        "mcnemar_exact_two_sided": 0.5,
+        "subset_evidence_gate": {
+          "passed": false,
+          "teacher_signal_engaged": true,
+          "minimum_tasks": 32,
+          "requires_matched_training": true,
+          "requires_single_fixed_rollout_seed": true,
+          "requires_success_delta_ci_strictly_positive": true,
+          "requires_score_delta_ci_nonnegative": true,
+          "requires_mcnemar_p_at_most": 0.025,
+          "candidate_family_size": 2,
+          "authorization": "Evidence flag only; never launches or expands an experiment."
+        },
+        "interpretation": "Paired descriptive result; rollout seeds are not training seeds."
+      },
+      "sd_vs_initial_descriptive": {
+        "paired_episodes": 32,
+        "rescued": 0,
+        "regressed": 0,
+        "baseline_successes": 7,
+        "improved_successes": 7,
+        "success_rate_delta": 0.0,
+        "matched_training_budget": false,
+        "success_rate_delta_task_bootstrap95": [
+          0.0,
+          0.0
+        ],
+        "mean_task_score_delta": -0.021205357142857144,
+        "task_score_delta_task_bootstrap95": [
+          -0.05625,
+          0.009598214285714292
+        ],
+        "mcnemar_exact_two_sided": 1.0,
+        "subset_evidence_gate": {
+          "passed": false,
+          "teacher_signal_engaged": true,
+          "minimum_tasks": 32,
+          "requires_matched_training": true,
+          "requires_single_fixed_rollout_seed": true,
+          "requires_success_delta_ci_strictly_positive": true,
+          "requires_score_delta_ci_nonnegative": true,
+          "requires_mcnemar_p_at_most": 0.025,
+          "candidate_family_size": 2,
+          "authorization": "Evidence flag only; never launches or expands an experiment."
+        },
+        "interpretation": "Paired descriptive result; rollout seeds are not training seeds."
+      },
+      "per_id_binary_changes_sd_vs_grpo": {
+        "rescued": [],
+        "regressed": [
+          139,
+          156
+        ],
+        "both_success": [
+          132,
+          133,
+          138,
+          151,
+          153,
+          154,
+          159
+        ],
+        "both_failure": [
+          128,
+          129,
+          130,
+          131,
+          134,
+          135,
+          136,
+          137,
+          140,
+          141,
+          142,
+          143,
+          144,
+          145,
+          146,
+          147,
+          148,
+          149,
+          150,
+          152,
+          155,
+          157,
+          158
+        ]
+      },
+      "full_run_recommended": false
+    }
+  },
+  "metric_scales": {
+    "success_rate": "fraction0-1; multiply by100 forpercent",
+    "mean_task_score": "mean environment reward0-1; multiply by100 for100-point display"
+  },
+  "limits": [
+    "one training seed and one rollout seed per task",
+    "4train tasks/32episodes/4LoRA updates per arm; not public100-step full fine-tuning",
+    "two distinct preregistered32-task cohorts; never compare their absolute point scores as a method effect",
+    "task-ID disjointness, not certified product-family disjointness; pretrained benchmark exposure unverified",
+    "equal environment and generation caps, not equal realized tokens/FLOPs; teacher scoring adds compute",
+    "controller root filesystem reported full; native data/artifacts/caches stayed on3FS; no forbidden temporary cleanup performed"
+  ],
+  "historical_baseline_reconciliation_file": "HISTORICAL_BASELINE_RECONCILIATION.json",
+  "final_gpu_release_file": "FINAL_GPU_RELEASE.json",
+  "serving_service_kept": false,
+  "zero_lora_native_equivalence": {
+    "purpose": "Functional zero-LoRA control, not a performance candidate",
+    "host": "dev-NDH200-025",
+    "gpu": 2,
+    "remote_returned": true,
+    "seconds": 184.48305012378842,
+    "complete_report": true,
+    "zero_lora_B_verified": true,
+    "token_identical_to_raw_debug_gate": true,
+    "metrics": {
+      "episodes": 2,
+      "successes": 0,
+      "success_rate": 0.0,
+      "seed_success_rates": [
+        0.0
+      ],
+      "seed_sample_std": 0.0,
+      "mean_task_score": 0.42857142857142855,
+      "invalid_actions": 0,
+      "generated_tokens": 510,
+      "success_rate_task_bootstrap95": [
+        0.0,
+        0.0
+      ],
+      "task_score_task_bootstrap95": [
+        0.0,
+        0.8571428571428571
+      ],
+      "success_wilson95_by_seed": [
+        [
+          0.0,
+          0.6576197724933469
+        ]
+      ]
+    },
+    "gpu_empty_after_exit": true
+  }
+}
