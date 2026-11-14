@@ -16,5 +16,6 @@
   "ppo_clip": 0.2,
   "reference_kl_coefficient": 0.01,
   "eval_temperature": 0.4,
-  "num_products": 1000
+  "num_products": 1000,
+  "enable_thinking": false
 }

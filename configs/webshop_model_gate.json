@@ -9,5 +9,6 @@
   "updates": 1,
   "goal_seed": 233,
   "seed": 1000043,
-  "eval_temperature": 0.4
+  "eval_temperature": 0.4,
+  "enable_thinking": false
 }

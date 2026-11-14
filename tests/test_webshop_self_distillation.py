@@ -96,9 +96,26 @@ def test_protocol_rejects_leakage_and_invalid_budgets(changes):
     ("search[  ]", None),
     ("<think>search[x]</think>", None),
     ("click[a[b]]", None),
+    ("Reasoning example <action>click[x]</action></think><action>click[y]</action>", "click[y]"),
+    ("<think>An unfinished thought with <action>click[x]</action>", None),
 ])
 def test_action_extraction_does_not_execute_thoughts(response, expected):
     assert parse_action(response) == expected
+
+
+def test_hf_chat_template_matches_reference_disabled_thinking():
+    policy = HFPolicy.__new__(HFPolicy)
+    calls = []
+
+    def apply_chat_template(messages, **kwargs):
+        calls.append(kwargs)
+        return "rendered prompt"
+
+    policy.tokenizer = SimpleNamespace(apply_chat_template=apply_chat_template)
+    policy.prompts, policy.enable_thinking = {}, False
+    assert policy.render("system", "user") == "rendered prompt"
+    assert calls[0]["enable_thinking"] is False
+    assert Protocol().enable_thinking is False
 
 
 def test_collection_budget_invalid_response_and_terminal_success():
@@ -134,6 +151,16 @@ def test_context_history_is_trimmed_at_whole_turn_boundary():
     text, ids = prompt_for("GOAL", "CURRENT", {"clickables": ["Buy Now"]}, [past], codec, protocol)
     assert "HISTORY" not in text and "CURRENT" in text and "GOAL" in text
     assert len(ids) + protocol.max_new_tokens <= protocol.max_context_tokens
+    assert "Action step 2/15" in text
+    assert "14 environment actions remain" in text
+
+
+def test_explicit_thinking_mode_does_not_execute_unfinished_prefilled_reasoning():
+    result = collect_episode(
+        Shop(), ScriptedPolicy(["Example <action>click[Buy Now]</action>"]),
+        small_protocol(max_steps=1, enable_thinking=True), 500, "train", 1,
+    )
+    assert result.turns[0].action is None and result.turns[0].invalid and not result.success
 
 
 def test_only_successful_train_targets_and_exact_student_token_alignment():
@@ -582,7 +609,7 @@ def test_full_cli_train_save_evaluate_compare_roundtrip_on_cpu_toy_shop(tmp_path
             torch.save(self.state_dict(), path / "pytorch_model.bin")
 
     class LocalPolicy(Codec):
-        def __init__(self, path, seed, *, train=False, adapter=None, guard):
+        def __init__(self, path, seed, *, train=False, adapter=None, guard, enable_thinking=False):
             self.guard, self.model = guard, LocalModel()
             self.model_identity = model_identity(path)
             self.tokenizer = SimpleNamespace(save_pretrained=lambda path: None)

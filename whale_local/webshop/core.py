@@ -77,6 +77,7 @@ class Protocol:
     reference_kl_coefficient: float = 0.01
     eval_temperature: float = 0.4
     num_products: int = 1000
+    enable_thinking: bool = False
 
     def __post_init__(self):
         for name in ("train_ids", "eval_ids", "eval_seeds"):
@@ -103,6 +104,8 @@ class Protocol:
             raise ValueError("Context must leave room for a prompt")
         if type(self.history_turns) is not int or self.history_turns < 0:
             raise ValueError("history_turns must be nonnegative")
+        if type(self.enable_thinking) is not bool:
+            raise ValueError("enable_thinking must be a boolean")
         for name in ("learning_rate", "gap_clip", "eval_temperature"):
             if not math.isfinite(getattr(self, name)) or getattr(self, name) <= 0:
                 raise ValueError(f"{name} must be finite and positive")
@@ -172,7 +175,13 @@ class Episode:
 
 def parse_action(text: str) -> str | None:
     # Never turn a thought containing an example action into an executed action.
-    text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
+    if "</think>" in text:
+        # Qwen may prefill <think> in the prompt, so it is absent from response text.
+        text = text.rsplit("</think>", 1)[1].strip()
+    elif "<think>" in text:
+        return None
+    else:
+        text = text.strip()
     tagged = re.findall(r"<action>\s*(.*?)\s*</action>", text, flags=re.DOTALL)
     if len(tagged) > 1:
         return None
@@ -185,8 +194,11 @@ def parse_action(text: str) -> str | None:
 
 def prompt_for(instruction: str, observation: str, actions: dict, history: list[Turn],
                codec, protocol: Protocol) -> tuple[str, list[int]]:
+    completed_steps = len(history)
     history = history[-protocol.history_turns:] if protocol.history_turns else []
     current = (
+        f"Action step {completed_steps + 1}/{protocol.max_steps}; "
+        f"{protocol.max_steps - completed_steps} environment actions remain.\n\n"
         f"Shopping instruction:\n{instruction}\n\nCurrent observation:\n{observation}\n\n"
         f"Available actions:\n{json.dumps(actions, ensure_ascii=False)}"
     )
@@ -226,7 +238,10 @@ def collect_episode(env, policy, protocol: Protocol, task_id: int, split: str, s
         sample.validate()
         if len(sample.token_ids) > protocol.max_new_tokens:
             raise ValueError("Policy exceeded per-turn generation budget")
-        action = parse_action(sample.text)
+        action = (
+            parse_action(sample.text)
+            if not protocol.enable_thinking or "</think>" in sample.text else None
+        )
         # A malformed response consumes a turn; no free retries or hidden action repair.
         following, score, done, info = env.step(action or "invalid")
         if not math.isfinite(score) or not 0 <= score <= 1:

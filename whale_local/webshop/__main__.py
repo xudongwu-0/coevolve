@@ -181,7 +181,8 @@ def main(argv=None):
     try:
         guard()
         policy = HFPolicy(args.model.resolve(), protocol.seed, train=args.command == "train",
-                          adapter=getattr(args, "adapter", None), guard=guard)
+                          adapter=getattr(args, "adapter", None), guard=guard,
+                          enable_thinking=protocol.enable_thinking)
         started = time.monotonic()
         if args.command == "train":
             import torch

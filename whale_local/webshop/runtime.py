@@ -181,7 +181,7 @@ class WebShopEnvironment:
 
 class HFPolicy:
     def __init__(self, model_path: Path, seed: int, *, train: bool = False,
-                 adapter: Path | None = None, guard):
+                 adapter: Path | None = None, guard, enable_thinking: bool = False):
         self.guard = guard
         self.guard()
         self.model_identity = model_identity(model_path)
@@ -216,11 +216,12 @@ class HFPolicy:
         self.model.eval()
         self.model.config.use_cache = True
         self.prompts = {}
+        self.enable_thinking = enable_thinking
 
     def render(self, system, user):
         prompt = self.tokenizer.apply_chat_template(
             [{"role": "system", "content": system}, {"role": "user", "content": user}],
-            tokenize=False, add_generation_prompt=True, enable_thinking=True,
+            tokenize=False, add_generation_prompt=True, enable_thinking=self.enable_thinking,
         )
         self.prompts[prompt] = (system, user)
         return prompt

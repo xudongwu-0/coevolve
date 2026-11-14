@@ -78,6 +78,38 @@ or automatically assert that they mean0.45/0.74. New reports explicitly use
 success fraction and environment mean task score on `[0,1]`; multiplying by100
 is presentation only, never a new metric or a way to make mismatched runs comparable.
 
+### Failed first protocol gate and reference-aligned correction
+
+The first full-budget subset attempt was stopped as an **infrastructure/protocol
+gate failure**, not scored against the historical45/74 result. Its first completed
+task consumed15 actions,12 invalid, with repeated512-token truncated thoughts.
+A completed376-token response also contained an example action inside thinking
+and a duplicated final action. Since Qwen prefills the opening `<think>` in the
+prompt, a response-only parser cannot assume that opening tag is present.
+
+The pinned public launcher explicitly sets
+`+data.apply_chat_template_kwargs.enable_thinking=False` at line491. The initial
+pilot incorrectly used True. This is corrected to an explicit, serialized
+`enable_thinking=false` default for **both** control and improved arms. The parser
+now uses only text after the final `</think>` and rejects unfinished thoughts;
+the prompt also records the absolute action step and remaining budget, rather
+than losing step count when history is trimmed. The15-step/512-token budgets
+are unchanged. Regression tests cover the actual prefilled/duplicated action
+failure, not just a synthetic well-formed `<think>` block.
+
+The failed v1 source snapshot, complete first trajectory, and process identities
+remain in ignored runtime evidence. Only PID3965966/UID1008/start-ticks564151557
+was signalled after exact identity checks; SIGKILL was needed after the SIGTERM
+grace, and node25GPU0 was then verified empty. No other process was signalled.
+The corrected four-action/two-task protocol gate must pass before restarting
+the fixed32 comparison with one common frozen corrected source.
+
+Separately, a native node26 learner smoke completed two one-action train-only
+episodes, real backpropagation, AdamW step and LoRA adapter/tokenizer save:
+199.93seconds including setup,30.996GB peak allocation,51,265,024 trainable
+parameters. Both returns were0, so loss/gradient and teacher tokens were0.
+That validates the native training/save path, **not policy learning or improvement**.
+
 ## Public reference and license
 
 Reviewed [aim-uofa/Self-Distillation-AgentRL](
@@ -198,13 +230,13 @@ download data, construct a search engine, or claim runtime validation.
 It only checks files/dependencies/JDK presence; an actual environment reset and
 model gate are still required. Output paths must be new to protect old evidence.
 
-Validation on 2026-11-14: **68 pilot tests passed** on CPU, including a real
+Validation on 2026-11-14: **72 pilot tests passed** on CPU, including a real
 tiny Hugging Face transformer generation/log-probability/LoRA-gradient check
 and the full train → adapter save → evaluate → paired-compare CLI round trip
 with an explicitly labelled CPU toy environment. Five upstream deprecation
 warnings were emitted. The existing pinned Harness-R1 WebShop identity suite
 also passed **5 tests**. Neither test run is a benchmark evaluation.
-The combined suite passed73 tests in45.23seconds with5 upstream deprecation warnings.
+The combined suite passed77 tests in50.84seconds with5 upstream deprecation warnings.
 
 For the real CPU check with the prepared runtime (no GPU lease is needed):
 
@@ -340,6 +372,9 @@ The staged plan is:
    empty after exit. The coordinator's helper returns stdout as a string,
    not a CompletedProcess; an initial post-run status-formatting error did not
    invalidate the completed per-task/report files or leave a GPU worker.
+   The subsequent first full-budget run exposed the thinking/parser defect
+   described above; use `configs/webshop_protocol_gate.json` (four actions on
+   the same two IDs) with the corrected reference-aligned mode before proceeding.
 2. `configs/webshop_subset_gate.json`: fixed evaluation IDs0–31, seed0,
    15actions/512tokens/goal seed233; train IDs500–503, four groups×eight
    trajectories. Preserve an initial-model baseline, then match GRPO and
