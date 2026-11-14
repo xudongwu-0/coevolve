@@ -1,8 +1,9 @@
 # WebShop: isolated successful-context self-distillation pilot
 
-Status, 2026-11-14: **The real CPU environment/search check passes; a bounded
-native-model gate is being tested. No new full-budget WebShop benchmark score
-or training improvement is established.** This is an opt-in Solver-only experimental
+Status, 2026-11-14: **The real CPU/search and corrected native protocol gates
+pass. A real fixed32-task initial-model baseline is complete; matched
+train-subset pilots are running. No learned improvement or full-benchmark
+result is established.** This is an opt-in Solver-only experimental
 path, not a change to the ALFWorld Engineer/Solver loop, a continuation of its
 checkpoints, or permission to interrupt the primary SFT job.
 
@@ -121,6 +122,12 @@ was moved to IDs32–63, never inspected or used for these repairs. The original
 aborted0–31 proposal is retained in its frozen snapshot; no old/new scores are
 mixed across these manifests. Train IDs remain500–503. This exclusion avoids
 claiming a clean heldout result on tasks used to debug the interface.
+
+The third native protocol probe, with both fixes, completed eight real actions,
+zero invalid actions and no512-token truncations, using510 generated tokens.
+Its actual actions searched, paginated, opened a product, selected an option,
+and purchased. The four-action cap makes its0/2 full successes and0.42857
+mean partial score **diagnostic only**, not a benchmark comparison.
 
 Separately, a native node26 learner smoke completed two one-action train-only
 episodes, real backpropagation, AdamW step and LoRA adapter/tokenizer save:
@@ -248,13 +255,52 @@ download data, construct a search engine, or claim runtime validation.
 It only checks files/dependencies/JDK presence; an actual environment reset and
 model gate are still required. Output paths must be new to protect old evidence.
 
-Validation on 2026-11-14: **73 pilot tests passed** on CPU, including a real
+Validation on 2026-11-14: **75 pilot tests passed** on CPU, including a real
 tiny Hugging Face transformer generation/log-probability/LoRA-gradient check
 and the full train → adapter save → evaluate → paired-compare CLI round trip
 with an explicitly labelled CPU toy environment. Five upstream deprecation
 warnings were emitted. The existing pinned Harness-R1 WebShop identity suite
 also passed **5 tests**. Neither test run is a benchmark evaluation.
-The combined suite passed78 tests in46.94seconds with5 upstream deprecation warnings.
+The combined suite passed80 tests in47.35seconds with5 upstream deprecation warnings.
+
+## Measured fixed-subset results
+
+The initial model is the existing local BF16 `Qwen3.5-9B`, not a primary-SFT
+QAT checkpoint and not the published ALFWorld97 Actor. Exact model/tokenizer
+content hashes, the frozen source manifest, index/data hashes, per-task goals,
+sampling and numeric process identities are in each runtime report.
+
+All rows below use **the same registered test IDs32–63, seed0,
+goal seed233, 1k corpus,15actions,512response tokens,4096total context, and
+temperature0.4**. Protocol-debug IDs0/1 are excluded. Values are fractions on
+`[0,1]` internally; percentage/100-point displays are explicitly labelled.
+
+| Condition | Success | Mean task score | Evidence |
+|---|---:|---:|---|
+| Initial model | **15/32 =46.875%** | **0.55771645/1 =55.771645/100** | Real completed model/environment evaluation |
+| Matched GRPO control | Pending | Pending | Train-subset pilot only; no result claimed |
+| Successful-context arm | Pending | Pending | Train-subset pilot only; no result claimed |
+
+Initial-model Wilson95% success interval: **30.8694–63.5505%**.
+Task-bootstrap95% mean-score interval: **40.5850–71.4881/100**.
+The run generated15,931 action/response tokens, recorded20 invalid actions,
+took682.79seconds including setup, and peaked at21.01GB allocated CUDA memory.
+Its GPU was verified empty after exit. These are32 fixed tasks and one
+rollout/training setting, not a full500-task benchmark or multi-seed result.
+In particular, this row is **not comparable to the user-reported45/74**
+without the original checkpoint, manifest and metric-scale evidence.
+
+The two matched pilots each use train IDs500–503,8rollouts/task and4optimizer
+updates (32episodes), with identical initial base/LoRA layouts and seeds.
+Only the successful-context coefficient/teacher scoring differs. Their native
+training receipts must establish actual teacher-token and gradient signal;
+the earlier zero-gradient one-action learner smoke does not count as learning.
+
+The optional model-free evidence tool
+`python3 scripts/reproduce_webshop_subset.py` recomputes stored compact per-task
+results and paired confidence gates once the final bundle is emitted. It never
+loads a model or opens a GPU/network connection; offline recomputation is not
+a new model evaluation. Payload hashes detect changed evidence.
 
 For the real CPU check with the prepared runtime (no GPU lease is needed):
 

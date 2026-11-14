@@ -608,6 +608,50 @@ def test_model_identity_hashes_content_not_just_path_or_size(tmp_path):
     assert model_identity(tmp_path) != before
 
 
+def load_reproduction_module():
+    import importlib.util
+    from pathlib import Path
+    path = Path(__file__).resolve().parents[1] / "scripts/reproduce_webshop_subset.py"
+    spec = importlib.util.spec_from_file_location("webshop_subset_reproduction", path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_compact_evidence_recomputes_actual_metrics_without_response_text():
+    reproduction = load_reproduction_module()
+    report, _ = reports()
+    compact = reproduction.compact_report(report)
+    assert all("turns" not in row for row in compact["episodes"])
+    assert reproduction.recompute_metrics(compact) == report["metrics"]
+    compact["metrics"]["success_rate"] = 1.0
+    with pytest.raises(ValueError, match="aggregate metrics"):
+        reproduction.recompute_metrics(compact)
+
+
+def test_offline_bundle_recomputes_and_rejects_modified_payload(tmp_path):
+    reproduction = load_reproduction_module()
+    report, _ = reports()
+    runtime = tmp_path / "runtime"
+    for name in ("baseline32_node25_v3", "grpo_eval32_node25_v3", "sd_eval32_node26_v3"):
+        path = runtime / name
+        path.mkdir(parents=True)
+        (path / "REPORT.json").write_text(json.dumps(report))
+    source = runtime / "frozen/subset-v3"
+    source.mkdir(parents=True)
+    (source / "MANIFEST.json").write_text('{"purpose":"toy fixture only"}')
+    destination = tmp_path / "bundle"
+    reproduction.write_bundle(runtime, destination)
+    result = reproduction.reproduce(destination)
+    assert result["metrics"]["initial"]["successes"] == 2
+    assert result["gpu_or_api_used"] is False
+    assert not result["paired"]["subset_evidence_gate"]["passed"]
+    path = destination / "initial.json"
+    path.write_text(path.read_text() + " ")
+    with pytest.raises(ValueError, match="payload changed"):
+        reproduction.reproduce(destination)
+
+
 def test_full_cli_train_save_evaluate_compare_roundtrip_on_cpu_toy_shop(tmp_path, monkeypatch):
     import importlib
     cli = importlib.import_module("whale_local.webshop.__main__")
