@@ -82,6 +82,10 @@ class Protocol:
     num_products: int = 1000
     enable_thinking: bool = False
     teacher_target_mode: str = "clean"
+    grpo_profile: str = "legacy_episode"
+    invalid_action_penalty: float = 0.1
+    success_reward: float = 10.0
+    solver_harness: str = ""
 
     def __post_init__(self):
         for name in ("train_ids", "eval_ids", "eval_seeds"):
@@ -112,10 +116,14 @@ class Protocol:
             raise ValueError("enable_thinking must be a boolean")
         if self.teacher_target_mode not in {"clean", "verified_noop_filtered"}:
             raise ValueError("Unknown teacher target mode")
-        for name in ("learning_rate", "gap_clip", "eval_temperature"):
+        if self.grpo_profile not in {"legacy_episode", "reference_step"}:
+            raise ValueError("Unknown GRPO profile")
+        if not isinstance(self.solver_harness, str) or len(self.solver_harness) > 8192:
+            raise ValueError("Frozen Solver harness guidance must be a bounded string")
+        for name in ("learning_rate", "gap_clip", "eval_temperature", "success_reward"):
             if not math.isfinite(getattr(self, name)) or getattr(self, name) <= 0:
                 raise ValueError(f"{name} must be finite and positive")
-        for name in ("distill_coefficient", "reference_kl_coefficient"):
+        for name in ("distill_coefficient", "reference_kl_coefficient", "invalid_action_penalty"):
             if not math.isfinite(getattr(self, name)) or getattr(self, name) < 0:
                 raise ValueError(f"{name} must be finite and nonnegative")
         if not 0 < self.ppo_clip < 1:
@@ -222,7 +230,11 @@ def prompt_for(instruction: str, observation: str, actions: dict, history: list[
             f"Previous observation:\n{t.observation}\nPrevious action:\n"
             f"{t.action or '[invalid response]'}" for t in history
         )
-        prompt = codec.render(SYSTEM, (previous + "\n\n" if previous else "") + current)
+        system = SYSTEM + (
+            "\n\nFrozen SAO Solver harness guidance:\n" + protocol.solver_harness
+            if protocol.solver_harness else ""
+        )
+        prompt = codec.render(system, (previous + "\n\n" if previous else "") + current)
         ids = codec.encode(prompt)
         if len(ids) + protocol.max_new_tokens <= protocol.max_context_tokens:
             return prompt, ids
@@ -330,12 +342,25 @@ def training_rows(episodes: list[Episode], codec, protocol: Protocol,
         raise ValueError("GRPO group must share exact task identity and behavior version")
     if len({e.seed for e in episodes}) != len(episodes):
         raise ValueError("Rollout group seeds must be distinct")
+    if protocol.grpo_profile == "reference_step" and use_distillation:
+        raise ValueError("Reference-aligned SAO GRPO does not permit distillation")
+    step_rewards = [
+        float(episode.success) * protocol.success_reward - protocol.invalid_action_penalty * float(turn.invalid)
+        for episode in episodes for turn in episode.turns
+    ]
+    if protocol.grpo_profile == "reference_step":
+        if len(step_rewards) < 2 or any(not e.turns for e in episodes):
+            raise ValueError("Reference GRPO requires a complete nonempty task rollout group")
+        mean = sum(step_rewards) / len(step_rewards)
+        std = math.sqrt(sum((x - mean) ** 2 for x in step_rewards) / (len(step_rewards) - 1))
+    else:
+        rewards = [e.reward for e in episodes]
+        mean = sum(rewards) / len(rewards)
+        std = math.sqrt(sum((x - mean) ** 2 for x in rewards) / len(rewards))
     rewards = [e.reward for e in episodes]
-    mean = sum(rewards) / len(rewards)
-    std = math.sqrt(sum((x - mean) ** 2 for x in rewards) / len(rewards))
     paths = {}
     for index, episode in enumerate(episodes):
-        if episode.success:
+        if use_distillation and episode.success:
             try:
                 paths[index] = teacher_path(episode, protocol.teacher_target_mode)
             except ValueError:
@@ -349,6 +374,9 @@ def training_rows(episodes: list[Episode], codec, protocol: Protocol,
         advantage = (episode.reward - mean) / (std + 1e-6) if std else 0.0
         target = next((i for i in targets if i != index), None)
         for turn in episode.turns:
+            if protocol.grpo_profile == "reference_step":
+                score = float(episode.success) * protocol.success_reward - protocol.invalid_action_penalty * float(turn.invalid)
+                advantage = (score - mean) / (std + 1e-6) if std else 0.0
             turn.sample.validate()
             teacher_ids = None
             if use_distillation and target is not None:
@@ -381,6 +409,13 @@ def training_rows(episodes: list[Episode], codec, protocol: Protocol,
         "verified_noop_turns_omitted_from_target_pool": sum(
             len(episodes[i].turns) - len(paths[i]) for i in targets
         ),
+        "grpo_profile": protocol.grpo_profile,
+        "reward_statistics_scope": "all_action_turns_in_exact_task_group"
+        if protocol.grpo_profile == "reference_step" else "one_outcome_per_episode",
+        "reward_mean": mean, "reward_std": std,
+        "invalid_action_turns": sum(t.invalid for e in episodes for t in e.turns),
+        "valid_action_ratio": sum(not t.invalid for e in episodes for t in e.turns) / len(step_rewards)
+        if step_rewards else 0.0,
     }
 
 
@@ -440,13 +475,22 @@ def evaluation_report(episodes: list[Episode], protocol: Protocol, model: str,
     }
 
 
-def compare_reports(baseline: dict, improved: dict) -> dict:
+def compare_reports(baseline: dict, improved: dict, *, comparison: str = "distillation") -> dict:
+    if comparison not in {"distillation", "sao_grpo"}:
+        raise ValueError("Unknown paired comparison")
     for report in (baseline, improved):
         if report.get("schema") != "coevolve_webshop_eval_v1":
             raise ValueError("Unsupported evaluation report")
     # Training method/checkpoint may differ. Collection/evaluation budgets may not.
     left = {**baseline["protocol"]}
     right = {**improved["protocol"]}
+    if comparison == "sao_grpo":
+        if (left.get("grpo_profile") != "legacy_episode"
+                or right.get("grpo_profile") != "reference_step"
+                or left.get("distill_coefficient") != 0 or right.get("distill_coefficient") != 0):
+            raise ValueError("SAO comparison must pair non-distilled legacy/reference GRPO")
+        left.pop("grpo_profile")
+        right.pop("grpo_profile")
     if left != right or baseline["assets"] != improved["assets"]:
         raise ValueError("Protocol or benchmark asset mismatch")
     for name in ("base_model_identity", "implementation_identity"):
@@ -458,9 +502,17 @@ def compare_reports(baseline: dict, improved: dict) -> dict:
     matched_training = a_training is not None and b_training is not None
     if matched_training:
         for name in ("base_model", "base_model_identity", "implementation_identity",
-                     "protocol", "assets", "trainable_parameters"):
+                     "assets", "trainable_parameters"):
             if a_training[name] != b_training[name]:
                 raise ValueError(f"Training control mismatch: {name}")
+        a_protocol, b_protocol = dict(a_training["protocol"]), dict(b_training["protocol"])
+        if comparison == "sao_grpo":
+            if a_training["method"] != "grpo" or b_training["method"] != "grpo":
+                raise ValueError("SAO comparison cannot include a distilled checkpoint")
+            a_protocol.pop("grpo_profile")
+            b_protocol.pop("grpo_profile")
+        if a_protocol != b_protocol:
+            raise ValueError("Training control mismatch: protocol")
         for training in (a_training, b_training):
             if len(training["metrics"]) != training["protocol"]["updates"]:
                 raise ValueError("Training did not complete its declared update budget")
@@ -512,12 +564,19 @@ def compare_reports(baseline: dict, improved: dict) -> dict:
             for metric in b_training["metrics"]
         )
     )
+    learning_engaged = bool(
+        b_training and any(metric.get("gradient_norm", 0) > 1e-8
+                           and metric.get("reward_std", 0) > 0
+                           for metric in b_training["metrics"])
+    )
     gate = bool(
-        matched_training and len(protocol.eval_ids) >= 32 and teacher_engaged
+        matched_training and len(protocol.eval_ids) >= 32
+        and (learning_engaged if comparison == "sao_grpo" else teacher_engaged)
         and mcnemar is not None and mcnemar <= PROMOTION_ALPHA
         and success_ci[0] > 0 and score_ci[0] >= 0
     )
     return {
+        "comparison": comparison, "learning_signal_engaged": learning_engaged,
         "paired_episodes": len(a), "rescued": gains, "regressed": losses,
         "baseline_successes": sum(e["success"] for e in a.values()),
         "improved_successes": sum(e["success"] for e in b.values()),

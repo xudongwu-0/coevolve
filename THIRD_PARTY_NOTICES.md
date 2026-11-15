@@ -59,3 +59,15 @@ upstream at the pinned revision. Its original license is included at
 It supplements, rather than replaces, the attribution and licenses of the
 upstream submodules. Generated task evidence and task-path catalogues do not
 provide new rights to underlying benchmark assets or model weights.
+
+## WebShop SAO GRPO design reference
+
+The optional `whale_local/sao_bridge/webshop_grpo.py` Solver backend follows
+the reward, grouped-advantage and token-aggregation design of
+[aim-uofa/Self-Distillation-AgentRL](https://github.com/aim-uofa/Self-Distillation-AgentRL),
+pinned at `35a44f5c5647b1785ad23ddf0ffbd196b695bf86`.
+That repository and its verl-agent components retain their Apache-2.0 notices;
+the nested WebShop environment retains its own MIT license. Public reference
+sources and assets are stored separately and are not relicensed as Coevolve
+code. The new local backend is explicitly a non-distilled GRPO adaptation,
+not an official SAO implementation or a claim to reproduce upstream scores.

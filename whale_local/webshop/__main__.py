@@ -41,6 +41,7 @@ def optimize_group(policy, episodes, protocol, method, optimizer):
         sum(len(t.sample.token_ids) for t in episode.turns)
         for episode in episodes
     ]
+    generated_tokens = sum(counts)
     optimizer.zero_grad(set_to_none=True)
     total_loss = 0.0
     teacher_tokens, teacher_gap_absolute = 0, 0.0
@@ -61,7 +62,11 @@ def optimize_group(policy, episodes, protocol, method, optimizer):
             reference_log_probs=reference[None, :] if reference is not None else None,
             reference_kl_coefficient=protocol.reference_kl_coefficient,
         )
-        weight = len(row.response_ids) / counts[row.episode_index] / len(episodes)
+        weight = (
+            len(row.response_ids) / generated_tokens
+            if protocol.grpo_profile == "reference_step"
+            else len(row.response_ids) / counts[row.episode_index] / len(episodes)
+        )
         (loss * weight).backward()
         total_loss += float(loss.detach()) * weight
     parameters = [p for p in policy.model.parameters() if p.requires_grad]
@@ -71,6 +76,7 @@ def optimize_group(policy, episodes, protocol, method, optimizer):
         **statistics, "loss": total_loss, "gradient_norm": float(norm), "optimizer_steps": 1,
         "teacher_tokens": teacher_tokens,
         "teacher_gap_abs_mean": teacher_gap_absolute / teacher_tokens if teacher_tokens else 0.0,
+        "loss_aggregation": "token_mean" if protocol.grpo_profile == "reference_step" else "episode_mean",
     }
 
 
@@ -85,6 +91,7 @@ def parser():
     compare.add_argument("--baseline", type=Path, required=True)
     compare.add_argument("--improved", type=Path, required=True)
     compare.add_argument("--output", type=Path, required=True)
+    compare.add_argument("--comparison", choices=("distillation", "sao_grpo"), default="distillation")
     environment = commands.add_parser("environment-check", help="CPU-only real environment reset/action check")
     environment.add_argument("--config", type=Path, required=True)
     environment.add_argument("--env-root", type=Path, required=True)
@@ -117,6 +124,7 @@ def main(argv=None):
     if args.command == "compare":
         result = compare_reports(
             json.loads(args.baseline.read_text()), json.loads(args.improved.read_text()),
+            comparison=args.comparison,
         )
         write_json(args.output, result)
         print(json.dumps(result, indent=2))
@@ -212,6 +220,10 @@ def main(argv=None):
             write_json(args.output / "TRAINING.json", {
                 "schema": "coevolve_webshop_training_v1", "reference": REFERENCE,
                 "method": args.method, "protocol": protocol.as_dict(),
+                "training_backend": "SAO Solver reference-step GRPO"
+                if protocol.grpo_profile == "reference_step" else "legacy episode GRPO control",
+                "sao_stage": "solver", "engineer_updated": False,
+                "frozen_solver_harness_sha256": digest(protocol.solver_harness),
                 "base_model": str(args.model.resolve()), "assets": env.assets,
                 "base_model_identity": policy.model_identity,
                 "adapter_identity": model_identity(args.output / "adapter"),
