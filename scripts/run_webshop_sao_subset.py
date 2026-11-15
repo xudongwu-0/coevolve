@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 import re
 import shlex
+import subprocess
 import sys
 import time
 
@@ -106,7 +107,7 @@ def main():
     error = None
     try:
         ops_1019.remote(args.host, ["bash", "-lc", script], timeout=args.minutes * 60 + 90)
-    except RuntimeError as failure:
+    except (RuntimeError, subprocess.TimeoutExpired) as failure:
         error = failure
         status.update(status="failed", error=str(failure))
     receipt = output / ("TRAINING.json" if args.mode == "train" else "REPORT.json")

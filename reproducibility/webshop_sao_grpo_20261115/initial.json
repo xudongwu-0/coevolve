@@ -1,0 +1,786 @@
+{
+  "schema": "coevolve_webshop_eval_v1",
+  "reference": {
+    "repository": "https://github.com/aim-uofa/Self-Distillation-AgentRL",
+    "commit": "35a44f5c5647b1785ad23ddf0ffbd196b695bf86",
+    "license": "Apache-2.0"
+  },
+  "protocol": {
+    "train_ids": [
+      600,
+      604,
+      608,
+      612,
+      616,
+      620,
+      624,
+      628
+    ],
+    "eval_ids": [
+      256,
+      257,
+      258,
+      259,
+      260,
+      261,
+      262,
+      263,
+      264,
+      265,
+      266,
+      267,
+      268,
+      269,
+      270,
+      271,
+      272,
+      273,
+      274,
+      275,
+      276,
+      277,
+      278,
+      279,
+      280,
+      281,
+      282,
+      283,
+      284,
+      285,
+      286,
+      287
+    ],
+    "eval_seeds": [
+      0
+    ],
+    "seed": 1000043,
+    "goal_seed": 233,
+    "max_steps": 15,
+    "max_new_tokens": 512,
+    "max_context_tokens": 4096,
+    "history_turns": 3,
+    "group_size": 8,
+    "updates": 8,
+    "learning_rate": 1e-05,
+    "distill_coefficient": 0,
+    "gap_clip": 5.0,
+    "ppo_clip": 0.2,
+    "reference_kl_coefficient": 0.01,
+    "eval_temperature": 0.4,
+    "num_products": 1000,
+    "enable_thinking": false,
+    "teacher_target_mode": "clean",
+    "grpo_profile": "legacy_episode",
+    "invalid_action_penalty": 0.1,
+    "success_reward": 10.0,
+    "solver_harness": ""
+  },
+  "model": "/mnt/3fs/xudong/coevolve/assets/Qwen3.5-9B",
+  "assets": {
+    "data/items_shuffle_1000.json": "30a4765c3a327af72d9a9a95a6b2486d516f0fa1d3ecd83681901ce82a21b269",
+    "data/items_ins_v2_1000.json": "f88a36314a397b53b3d9c3fa5878e5f7b26d35019a51ec83fbedeca61a948f6f",
+    "data/items_human_ins.json": "cf78667548a71786e1d9049c24b802e48e1084ad4bb021cae56ce1f6d96954a3",
+    "search_engine/indexes_1k/_0.fdm": "c385ed352d0fab44587f1f42b036c068d281d7c2860800cb8c2ab21e16ec51e4",
+    "search_engine/indexes_1k/_0.fdt": "f3d68ba182ca7eac3f321fb0f830672834042a0e0a292b46712cf0574a9e4749",
+    "search_engine/indexes_1k/_0.fdx": "1dcd213f16f34848385c29e526c0f5109507569a152cf04d731376e5cd14bada",
+    "search_engine/indexes_1k/_0.fnm": "1958b394dd84842c8fd6960f86ef01cf61951b080680a6ef1fed9181d7e0940a",
+    "search_engine/indexes_1k/_0.nvd": "d802d5abea783d499397c47a31bf5826f1c50b6412b2afdd58ed03a47fdf5366",
+    "search_engine/indexes_1k/_0.nvm": "3074f956861873b4a48011c6a5c25c4101ec7e162e8e14ab6b7912da579a27f1",
+    "search_engine/indexes_1k/_0.si": "04310dde2062cf9f9498b998b312f086e7426526eeedc751ad698d358a5cf6ac",
+    "search_engine/indexes_1k/_0.tvd": "3cad5b7e978f9303ed5d162becb02a0a9852e68cdd2566d9c2e2844ec05cad1f",
+    "search_engine/indexes_1k/_0.tvm": "ca6ba4a8a4efe2f775dc1127705b121d52b863cb9aa161eb7ea8ce8a4eba4cb7",
+    "search_engine/indexes_1k/_0.tvx": "48c1a5060052c27cb51f08364fddd4fcca0340f96e70092529efec621187fd75",
+    "search_engine/indexes_1k/_0_Lucene80_0.dvd": "c4a1b4708649438e8448e38fa6ca415b7ba5d9840d551514a3c91d2cde58bdb9",
+    "search_engine/indexes_1k/_0_Lucene80_0.dvm": "397274d36fa3d3e9a1cf0b49fc680cc32caa895e1bd547a77f0e4e49b3a527c2",
+    "search_engine/indexes_1k/_0_Lucene84_0.doc": "0a020d6bd2accddc1d67202ef0a4dd07659bae48a8ac90d4a927e9c110aa983a",
+    "search_engine/indexes_1k/_0_Lucene84_0.pos": "9f71fb2d3a2509b251330027de51c8a3e6977043b6bcbd2ab3c29e28653b8e6b",
+    "search_engine/indexes_1k/_0_Lucene84_0.tim": "579d3df483893dacab3a83672cabe2dd9b9184cd73c728e6c002a3270575e261",
+    "search_engine/indexes_1k/_0_Lucene84_0.tip": "846981db86924cb67a359d5ca7085630b230300364fcfae05e08145b27eeb1ce",
+    "search_engine/indexes_1k/_0_Lucene84_0.tmd": "f19b6c6cdf132bc15a4daf7a15391a5db3c73da6ace7cbd442a9d1af17393704",
+    "search_engine/indexes_1k/segments_1": "b03bc6405d295d099739f5aa20e966d6e3a08b4320ab64ee2a3d75a2b142b98e",
+    "search_engine/convert_product_file_format.py": "27541423b531fd6c348b3d20522ecea7fbf2d724d864921d13691fa284ad4e53",
+    "search_engine/lucene_searcher.py": "905be2081ffa4c9f93e1b106de4c012ac9677c8043dd264ae92a68dc2a287fa0",
+    "web_agent_site/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "web_agent_site/app.py": "f9393af973fd2d0343c8b68e89572e6139ebc8d6a2309a145c554a80284e81cb",
+    "web_agent_site/attributes/annotate.py": "f64f3f8be3af15794821506014b97c1abc75424973ab9b06d4af4b9c2dec4a45",
+    "web_agent_site/attributes/generate_attrs.py": "b6e079d6765966e1c244e7de31d444c17423d912d24f0ef08844c32daa2efe3a",
+    "web_agent_site/engine/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "web_agent_site/engine/engine.py": "3baeb0f06b1f7d20ea4e5cfff561f37b8bbfb298928d7387d051ea9faa340b2c",
+    "web_agent_site/engine/goal.py": "9703c8583244e2041182eb14856186b998145ab16ce2ba9aef8cb680877c8ed5",
+    "web_agent_site/engine/normalize.py": "1962113ac9e209a636d4f181b2c70544bbea59b03adca9847e48287158d794fb",
+    "web_agent_site/envs/__init__.py": "7cdf100d019fd715d605ff0cd0f0d3d4285d7f7b2dbe4e4634e9a1266ab5e854",
+    "web_agent_site/envs/web_agent_site_env.py": "7b3a43c0250ef2215e2ac1e613ebafbcfbea053a24fcbb773541dc634f124981",
+    "web_agent_site/envs/web_agent_text_env.py": "d53c09893a1314106c48040e871e83f91f4987a20344c00c2f8332343c0eec4f",
+    "web_agent_site/models/__init__.py": "06a57f9b9ff18e749dff8b9bbb69cf78819a7515fb79a414ba2c3e2ee27ed626",
+    "web_agent_site/models/models.py": "c6edfa60c4c8522c1a0ce35233166d2b824ba3184541223905f7d11a21ac9f7a",
+    "web_agent_site/utils.py": "bdd6df3b869cf3fe028169add3611d1b811ae663ae4f79520617c26b20614970"
+  },
+  "training": null,
+  "metrics": {
+    "episodes": 32,
+    "successes": 8,
+    "success_rate": 0.25,
+    "seed_success_rates": [
+      0.25
+    ],
+    "seed_sample_std": 0.0,
+    "mean_task_score": 0.4726934523809524,
+    "invalid_actions": 16,
+    "generated_tokens": 18409,
+    "success_rate_task_bootstrap95": [
+      0.125,
+      0.40625
+    ],
+    "task_score_task_bootstrap95": [
+      0.3304811507936508,
+      0.621453373015873
+    ],
+    "success_wilson95_by_seed": [
+      [
+        0.1325240091850904,
+        0.4210655899424448
+      ]
+    ]
+  },
+  "episodes": [
+    {
+      "task_id": 256,
+      "split": "eval",
+      "seed": 0,
+      "task_manifest": {
+        "task_id": 256,
+        "goal_seed": 233,
+        "goal_sha256": "80bb8e00f91da5aa5c174958236f70f549b74b29534fcc12723aabd3da11cff4",
+        "instruction_sha256": "578121ddf7006a340d6929c1e6bfde341f0792417d7cd6c4aab25949909dd8e6",
+        "product_prices_sha256": "74e0f3450c674a2c9a3ef8a8973e33539d5ee34a4c562fab3988ea301af5aad1",
+        "assets_sha256": "d7b3302242f5fdf2066eeb92a1339a13a43b2daa7c777fc417bace54432c4956"
+      },
+      "policy_version": 0,
+      "task_score": 0.0,
+      "terminated": false,
+      "stop_reason": "max_steps",
+      "success": false,
+      "reward": 0.0
+    },
+    {
+      "task_id": 257,
+      "split": "eval",
+      "seed": 0,
+      "task_manifest": {
+        "task_id": 257,
+        "goal_seed": 233,
+        "goal_sha256": "161dff9e8213ac789d9747a24f67d138727c6a28fb15bea5a9d2840f072349f1",
+        "instruction_sha256": "d7163fcce872039acdb1ee66e45635d3eb5d503f9d17a72ece08c799328362f9",
+        "product_prices_sha256": "74e0f3450c674a2c9a3ef8a8973e33539d5ee34a4c562fab3988ea301af5aad1",
+        "assets_sha256": "d7b3302242f5fdf2066eeb92a1339a13a43b2daa7c777fc417bace54432c4956"
+      },
+      "policy_version": 0,
+      "task_score": 0.75,
+      "terminated": true,
+      "stop_reason": "terminal",
+      "success": false,
+      "reward": 0.0
+    },
+    {
+      "task_id": 258,
+      "split": "eval",
+      "seed": 0,
+      "task_manifest": {
+        "task_id": 258,
+        "goal_seed": 233,
+        "goal_sha256": "5014e2f6ad95ad812864baa367f51b63009578e2593526dcc35867e7260b40f1",
+        "instruction_sha256": "91c2f0776083f150d129a0fbaf4b70e23010f678d5de5babbd050d34eb4202bc",
+        "product_prices_sha256": "74e0f3450c674a2c9a3ef8a8973e33539d5ee34a4c562fab3988ea301af5aad1",
+        "assets_sha256": "d7b3302242f5fdf2066eeb92a1339a13a43b2daa7c777fc417bace54432c4956"
+      },
+      "policy_version": 0,
+      "task_score": 0.7142857142857143,
+      "terminated": true,
+      "stop_reason": "terminal",
+      "success": false,
+      "reward": 0.0
+    },
+    {
+      "task_id": 259,
+      "split": "eval",
+      "seed": 0,
+      "task_manifest": {
+        "task_id": 259,
+        "goal_seed": 233,
+        "goal_sha256": "2a94c8bf24033a982d1ee0310f2b25887610b61dee75cc0712cb3a0008d57d00",
+        "instruction_sha256": "e65a39d160d38e11093c46b1a69dc453c1cc61d53c6592d804f14fd501139d38",
+        "product_prices_sha256": "74e0f3450c674a2c9a3ef8a8973e33539d5ee34a4c562fab3988ea301af5aad1",
+        "assets_sha256": "d7b3302242f5fdf2066eeb92a1339a13a43b2daa7c777fc417bace54432c4956"
+      },
+      "policy_version": 0,
+      "task_score": 0.0,
+      "terminated": false,
+      "stop_reason": "max_steps",
+      "success": false,
+      "reward": 0.0
+    },
+    {
+      "task_id": 260,
+      "split": "eval",
+      "seed": 0,
+      "task_manifest": {
+        "task_id": 260,
+        "goal_seed": 233,
+        "goal_sha256": "d34bbe2ac18b36f2ef090d10911e61d865212ccddc8f49666a6b247e311d190e",
+        "instruction_sha256": "3d4e15eaf2b5f53dcc536c5ce85512f4ba5b708073189c5bf289b6d9a9705459",
+        "product_prices_sha256": "74e0f3450c674a2c9a3ef8a8973e33539d5ee34a4c562fab3988ea301af5aad1",
+        "assets_sha256": "d7b3302242f5fdf2066eeb92a1339a13a43b2daa7c777fc417bace54432c4956"
+      },
+      "policy_version": 0,
+      "task_score": 1.0,
+      "terminated": true,
+      "stop_reason": "terminal",
+      "success": true,
+      "reward": 1.0
+    },
+    {
+      "task_id": 261,
+      "split": "eval",
+      "seed": 0,
+      "task_manifest": {
+        "task_id": 261,
+        "goal_seed": 233,
+        "goal_sha256": "fb09d86edefbb7af2c1342dd144352e40e0640bc882741aab45db2d177d36e72",
+        "instruction_sha256": "fe19f362cd17a0bf1aa4e0ee57aae529b61e2a998097309a4757c6d4da9a67db",
+        "product_prices_sha256": "74e0f3450c674a2c9a3ef8a8973e33539d5ee34a4c562fab3988ea301af5aad1",
+        "assets_sha256": "d7b3302242f5fdf2066eeb92a1339a13a43b2daa7c777fc417bace54432c4956"
+      },
+      "policy_version": 0,
+      "task_score": 0.6666666666666666,
+      "terminated": true,
+      "stop_reason": "terminal",
+      "success": false,
+      "reward": 0.0
+    },
+    {
+      "task_id": 262,
+      "split": "eval",
+      "seed": 0,
+      "task_manifest": {
+        "task_id": 262,
+        "goal_seed": 233,
+        "goal_sha256": "6757217bcd058be2c9ecf04e2ef3b8f3ff97b850683537af72e486d1837b272e",
+        "instruction_sha256": "c6dff08cbc922e0484c5fd952e1faf504f91a0daccb8d7149b381dd13af81f69",
+        "product_prices_sha256": "74e0f3450c674a2c9a3ef8a8973e33539d5ee34a4c562fab3988ea301af5aad1",
+        "assets_sha256": "d7b3302242f5fdf2066eeb92a1339a13a43b2daa7c777fc417bace54432c4956"
+      },
+      "policy_version": 0,
+      "task_score": 0.0,
+      "terminated": false,
+      "stop_reason": "max_steps",
+      "success": false,
+      "reward": 0.0
+    },
+    {
+      "task_id": 263,
+      "split": "eval",
+      "seed": 0,
+      "task_manifest": {
+        "task_id": 263,
+        "goal_seed": 233,
+        "goal_sha256": "920fa4ac19688d6f02aa60d04f11c6af9b623335fdcddd06eec7b64ef6ce3594",
+        "instruction_sha256": "8d35732b40beeba711d827e17ff5425f401f4edeac55c735e23b672ad197d2db",
+        "product_prices_sha256": "74e0f3450c674a2c9a3ef8a8973e33539d5ee34a4c562fab3988ea301af5aad1",
+        "assets_sha256": "d7b3302242f5fdf2066eeb92a1339a13a43b2daa7c777fc417bace54432c4956"
+      },
+      "policy_version": 0,
+      "task_score": 0.0,
+      "terminated": false,
+      "stop_reason": "max_steps",
+      "success": false,
+      "reward": 0.0
+    },
+    {
+      "task_id": 264,
+      "split": "eval",
+      "seed": 0,
+      "task_manifest": {
+        "task_id": 264,
+        "goal_seed": 233,
+        "goal_sha256": "d9317b2a4f8a66e5ec6375544bcd27f9e99c1813ae91ccd41f2fe4ed918e3a70",
+        "instruction_sha256": "fb777f5a6672cb15f42f43e9e8f109962da87c72a648366f4dbdb2743551bc2d",
+        "product_prices_sha256": "74e0f3450c674a2c9a3ef8a8973e33539d5ee34a4c562fab3988ea301af5aad1",
+        "assets_sha256": "d7b3302242f5fdf2066eeb92a1339a13a43b2daa7c777fc417bace54432c4956"
+      },
+      "policy_version": 0,
+      "task_score": 0.0,
+      "terminated": false,
+      "stop_reason": "max_steps",
+      "success": false,
+      "reward": 0.0
+    },
+    {
+      "task_id": 265,
+      "split": "eval",
+      "seed": 0,
+      "task_manifest": {
+        "task_id": 265,
+        "goal_seed": 233,
+        "goal_sha256": "0012b8fcd579b235f9d0692c8c1f171e7d46e1675b868e8c18fce37dc26b7654",
+        "instruction_sha256": "73bd31c2b3944a470e9330d454624c71884adbbc7e4c651f8d8adc6c65254f9e",
+        "product_prices_sha256": "74e0f3450c674a2c9a3ef8a8973e33539d5ee34a4c562fab3988ea301af5aad1",
+        "assets_sha256": "d7b3302242f5fdf2066eeb92a1339a13a43b2daa7c777fc417bace54432c4956"
+      },
+      "policy_version": 0,
+      "task_score": 1.0,
+      "terminated": true,
+      "stop_reason": "terminal",
+      "success": true,
+      "reward": 1.0
+    },
+    {
+      "task_id": 266,
+      "split": "eval",
+      "seed": 0,
+      "task_manifest": {
+        "task_id": 266,
+        "goal_seed": 233,
+        "goal_sha256": "97d510361e78da79d3a278b1e219c7cbdb22cb5168ffab5c32ed99435e8338bc",
+        "instruction_sha256": "77587f7e451ec2fc534725f07b87adb476d9b9f98fe4ff2065a5b439bb0a4fe9",
+        "product_prices_sha256": "74e0f3450c674a2c9a3ef8a8973e33539d5ee34a4c562fab3988ea301af5aad1",
+        "assets_sha256": "d7b3302242f5fdf2066eeb92a1339a13a43b2daa7c777fc417bace54432c4956"
+      },
+      "policy_version": 0,
+      "task_score": 0.0,
+      "terminated": false,
+      "stop_reason": "max_steps",
+      "success": false,
+      "reward": 0.0
+    },
+    {
+      "task_id": 267,
+      "split": "eval",
+      "seed": 0,
+      "task_manifest": {
+        "task_id": 267,
+        "goal_seed": 233,
+        "goal_sha256": "199b564590dea1c3ef9dbf56ab97d010532153e343d56263de794cf326434a36",
+        "instruction_sha256": "992905c71ef414dc6697e052d5e70a9f30300c92ffef75b5085337610a24fdb6",
+        "product_prices_sha256": "74e0f3450c674a2c9a3ef8a8973e33539d5ee34a4c562fab3988ea301af5aad1",
+        "assets_sha256": "d7b3302242f5fdf2066eeb92a1339a13a43b2daa7c777fc417bace54432c4956"
+      },
+      "policy_version": 0,
+      "task_score": 0.42857142857142855,
+      "terminated": true,
+      "stop_reason": "terminal",
+      "success": false,
+      "reward": 0.0
+    },
+    {
+      "task_id": 268,
+      "split": "eval",
+      "seed": 0,
+      "task_manifest": {
+        "task_id": 268,
+        "goal_seed": 233,
+        "goal_sha256": "4644a9483c27873b5c565200f65910f6e765ca904cd41055877525bb9514aa66",
+        "instruction_sha256": "b39e1209f95b7372b4422071155fd3379619780fd2d2e2832a9355e91c0a66e6",
+        "product_prices_sha256": "74e0f3450c674a2c9a3ef8a8973e33539d5ee34a4c562fab3988ea301af5aad1",
+        "assets_sha256": "d7b3302242f5fdf2066eeb92a1339a13a43b2daa7c777fc417bace54432c4956"
+      },
+      "policy_version": 0,
+      "task_score": 0.0,
+      "terminated": false,
+      "stop_reason": "max_steps",
+      "success": false,
+      "reward": 0.0
+    },
+    {
+      "task_id": 269,
+      "split": "eval",
+      "seed": 0,
+      "task_manifest": {
+        "task_id": 269,
+        "goal_seed": 233,
+        "goal_sha256": "c6441effc64478f677d45be8b04f12029d23cbadc9640a7d7e3e7a363c2cfa0a",
+        "instruction_sha256": "f56c16d01b60575913c212df546791240c9fb284d59cda6fb4c64fa790ee5450",
+        "product_prices_sha256": "74e0f3450c674a2c9a3ef8a8973e33539d5ee34a4c562fab3988ea301af5aad1",
+        "assets_sha256": "d7b3302242f5fdf2066eeb92a1339a13a43b2daa7c777fc417bace54432c4956"
+      },
+      "policy_version": 0,
+      "task_score": 0.8888888888888888,
+      "terminated": true,
+      "stop_reason": "terminal",
+      "success": false,
+      "reward": 0.0
+    },
+    {
+      "task_id": 270,
+      "split": "eval",
+      "seed": 0,
+      "task_manifest": {
+        "task_id": 270,
+        "goal_seed": 233,
+        "goal_sha256": "1e4e2f5b4253ee4d1eff053e2914ba75b52bc1498e44f4a0589ab2c7541397cf",
+        "instruction_sha256": "869aa7ac8853f5e6d95f6369084e7ef1e09eafc2a09f6faaac95dca1fda68c17",
+        "product_prices_sha256": "74e0f3450c674a2c9a3ef8a8973e33539d5ee34a4c562fab3988ea301af5aad1",
+        "assets_sha256": "d7b3302242f5fdf2066eeb92a1339a13a43b2daa7c777fc417bace54432c4956"
+      },
+      "policy_version": 0,
+      "task_score": 1.0,
+      "terminated": true,
+      "stop_reason": "terminal",
+      "success": true,
+      "reward": 1.0
+    },
+    {
+      "task_id": 271,
+      "split": "eval",
+      "seed": 0,
+      "task_manifest": {
+        "task_id": 271,
+        "goal_seed": 233,
+        "goal_sha256": "fffd9137212bb34b0d90779ffe7007e62b7f8c1abde4ffd3297ca9d97387db8a",
+        "instruction_sha256": "a84fed791ee3e8e1c03e4321bc2a0b5f3ae297b9cb70b3a3542002da9efe417c",
+        "product_prices_sha256": "74e0f3450c674a2c9a3ef8a8973e33539d5ee34a4c562fab3988ea301af5aad1",
+        "assets_sha256": "d7b3302242f5fdf2066eeb92a1339a13a43b2daa7c777fc417bace54432c4956"
+      },
+      "policy_version": 0,
+      "task_score": 1.0,
+      "terminated": true,
+      "stop_reason": "terminal",
+      "success": true,
+      "reward": 1.0
+    },
+    {
+      "task_id": 272,
+      "split": "eval",
+      "seed": 0,
+      "task_manifest": {
+        "task_id": 272,
+        "goal_seed": 233,
+        "goal_sha256": "af7fb79118d78ec9f0b51c529f79edf5e5f366f5b20b04d95d04b109ef22df3f",
+        "instruction_sha256": "5700891f5a70d6880f23a714cd3692bde4862c47d3df9eceb7a4015c81364dd2",
+        "product_prices_sha256": "74e0f3450c674a2c9a3ef8a8973e33539d5ee34a4c562fab3988ea301af5aad1",
+        "assets_sha256": "d7b3302242f5fdf2066eeb92a1339a13a43b2daa7c777fc417bace54432c4956"
+      },
+      "policy_version": 0,
+      "task_score": 0.8333333333333334,
+      "terminated": true,
+      "stop_reason": "terminal",
+      "success": false,
+      "reward": 0.0
+    },
+    {
+      "task_id": 273,
+      "split": "eval",
+      "seed": 0,
+      "task_manifest": {
+        "task_id": 273,
+        "goal_seed": 233,
+        "goal_sha256": "f80976d7fe850f5399d2ee7f33af57a87a9cbe8030b310c7e2ffea064dd19519",
+        "instruction_sha256": "d8caca81ea2547ae389514e96db06e6759c0da21cd7451df7b53670039d8b53e",
+        "product_prices_sha256": "74e0f3450c674a2c9a3ef8a8973e33539d5ee34a4c562fab3988ea301af5aad1",
+        "assets_sha256": "d7b3302242f5fdf2066eeb92a1339a13a43b2daa7c777fc417bace54432c4956"
+      },
+      "policy_version": 0,
+      "task_score": 0.6666666666666666,
+      "terminated": true,
+      "stop_reason": "terminal",
+      "success": false,
+      "reward": 0.0
+    },
+    {
+      "task_id": 274,
+      "split": "eval",
+      "seed": 0,
+      "task_manifest": {
+        "task_id": 274,
+        "goal_seed": 233,
+        "goal_sha256": "aed19b789e6239c7a972f61c2640dc312d1b2af04b7e1c4a017fb0ea25de0651",
+        "instruction_sha256": "ebf2f9bb59b24852a7802c64207fc219d4306cada36ed4ae2e24fb3ab45a8dd2",
+        "product_prices_sha256": "74e0f3450c674a2c9a3ef8a8973e33539d5ee34a4c562fab3988ea301af5aad1",
+        "assets_sha256": "d7b3302242f5fdf2066eeb92a1339a13a43b2daa7c777fc417bace54432c4956"
+      },
+      "policy_version": 0,
+      "task_score": 1.0,
+      "terminated": true,
+      "stop_reason": "terminal",
+      "success": true,
+      "reward": 1.0
+    },
+    {
+      "task_id": 275,
+      "split": "eval",
+      "seed": 0,
+      "task_manifest": {
+        "task_id": 275,
+        "goal_seed": 233,
+        "goal_sha256": "95b88872ff792806ff55954567410ea553713f2f940191811b5ef21929fcb726",
+        "instruction_sha256": "0900a8b0ad5c1d2dedcb6108fb041a4fc022abd12c322fe5cf39c45ec0d9c1b3",
+        "product_prices_sha256": "74e0f3450c674a2c9a3ef8a8973e33539d5ee34a4c562fab3988ea301af5aad1",
+        "assets_sha256": "d7b3302242f5fdf2066eeb92a1339a13a43b2daa7c777fc417bace54432c4956"
+      },
+      "policy_version": 0,
+      "task_score": 0.0,
+      "terminated": false,
+      "stop_reason": "max_steps",
+      "success": false,
+      "reward": 0.0
+    },
+    {
+      "task_id": 276,
+      "split": "eval",
+      "seed": 0,
+      "task_manifest": {
+        "task_id": 276,
+        "goal_seed": 233,
+        "goal_sha256": "11c92a7c0ab2a5e626910ccd34776ed42889a52fddce194a2df0d17ba395608d",
+        "instruction_sha256": "6019405ea5280993c05325f176d8560a08ceef84aaae79cc3ccb6f45af0de9af",
+        "product_prices_sha256": "74e0f3450c674a2c9a3ef8a8973e33539d5ee34a4c562fab3988ea301af5aad1",
+        "assets_sha256": "d7b3302242f5fdf2066eeb92a1339a13a43b2daa7c777fc417bace54432c4956"
+      },
+      "policy_version": 0,
+      "task_score": 1.0,
+      "terminated": true,
+      "stop_reason": "terminal",
+      "success": true,
+      "reward": 1.0
+    },
+    {
+      "task_id": 277,
+      "split": "eval",
+      "seed": 0,
+      "task_manifest": {
+        "task_id": 277,
+        "goal_seed": 233,
+        "goal_sha256": "cf11a9ab9a2d0405570903fb277e16e592ad7f7aa4260ec2241575136448350b",
+        "instruction_sha256": "4130e63deb3f932532820d6a87ce23ae936a941806e5bc13181ed0014a1e7916",
+        "product_prices_sha256": "74e0f3450c674a2c9a3ef8a8973e33539d5ee34a4c562fab3988ea301af5aad1",
+        "assets_sha256": "d7b3302242f5fdf2066eeb92a1339a13a43b2daa7c777fc417bace54432c4956"
+      },
+      "policy_version": 0,
+      "task_score": 0.0,
+      "terminated": false,
+      "stop_reason": "max_steps",
+      "success": false,
+      "reward": 0.0
+    },
+    {
+      "task_id": 278,
+      "split": "eval",
+      "seed": 0,
+      "task_manifest": {
+        "task_id": 278,
+        "goal_seed": 233,
+        "goal_sha256": "3780e7031ce6808637b69a33bc4899daf94aca00eab455462dab295e80804b5d",
+        "instruction_sha256": "5c62d743b770adf2cfa15a0da22e6edc488a8dd94fff0d63e32d7534b5302245",
+        "product_prices_sha256": "74e0f3450c674a2c9a3ef8a8973e33539d5ee34a4c562fab3988ea301af5aad1",
+        "assets_sha256": "d7b3302242f5fdf2066eeb92a1339a13a43b2daa7c777fc417bace54432c4956"
+      },
+      "policy_version": 0,
+      "task_score": 0.3333333333333333,
+      "terminated": true,
+      "stop_reason": "terminal",
+      "success": false,
+      "reward": 0.0
+    },
+    {
+      "task_id": 279,
+      "split": "eval",
+      "seed": 0,
+      "task_manifest": {
+        "task_id": 279,
+        "goal_seed": 233,
+        "goal_sha256": "bf0bfa0fd026bc8c8a54a8ff9502003dd18736322472d5d378d8f49aa3c425b4",
+        "instruction_sha256": "a5995a63f935c6703fcd4024d84f06460effe4911ee1397ac6835419e2696148",
+        "product_prices_sha256": "74e0f3450c674a2c9a3ef8a8973e33539d5ee34a4c562fab3988ea301af5aad1",
+        "assets_sha256": "d7b3302242f5fdf2066eeb92a1339a13a43b2daa7c777fc417bace54432c4956"
+      },
+      "policy_version": 0,
+      "task_score": 0.6666666666666666,
+      "terminated": true,
+      "stop_reason": "terminal",
+      "success": false,
+      "reward": 0.0
+    },
+    {
+      "task_id": 280,
+      "split": "eval",
+      "seed": 0,
+      "task_manifest": {
+        "task_id": 280,
+        "goal_seed": 233,
+        "goal_sha256": "2fd69fb7e49f3462542b84d6e1401b38588d6ba4de35137adea070f02dee2061",
+        "instruction_sha256": "c290e3763aabd09459968d777eda24990add14277faae946d7c5ab22980d2f26",
+        "product_prices_sha256": "74e0f3450c674a2c9a3ef8a8973e33539d5ee34a4c562fab3988ea301af5aad1",
+        "assets_sha256": "d7b3302242f5fdf2066eeb92a1339a13a43b2daa7c777fc417bace54432c4956"
+      },
+      "policy_version": 0,
+      "task_score": 1.0,
+      "terminated": true,
+      "stop_reason": "terminal",
+      "success": true,
+      "reward": 1.0
+    },
+    {
+      "task_id": 281,
+      "split": "eval",
+      "seed": 0,
+      "task_manifest": {
+        "task_id": 281,
+        "goal_seed": 233,
+        "goal_sha256": "adf403a987b20e4438de4dae48970f82143382a379e749678d3f4de9484dc01e",
+        "instruction_sha256": "49b674e41cd846ae03ca850a00770bc862eee68a9c0b79ff733b7a4df0ba5184",
+        "product_prices_sha256": "74e0f3450c674a2c9a3ef8a8973e33539d5ee34a4c562fab3988ea301af5aad1",
+        "assets_sha256": "d7b3302242f5fdf2066eeb92a1339a13a43b2daa7c777fc417bace54432c4956"
+      },
+      "policy_version": 0,
+      "task_score": 0.0,
+      "terminated": false,
+      "stop_reason": "max_steps",
+      "success": false,
+      "reward": 0.0
+    },
+    {
+      "task_id": 282,
+      "split": "eval",
+      "seed": 0,
+      "task_manifest": {
+        "task_id": 282,
+        "goal_seed": 233,
+        "goal_sha256": "fca61a590150d119b1228ec697ea5409ab0749c688145c13a9d4dfead46349b6",
+        "instruction_sha256": "5255c0e1a482eaf3d9a90f325ebcc3f05fd46f268720ae80b70f0a6896e598ec",
+        "product_prices_sha256": "74e0f3450c674a2c9a3ef8a8973e33539d5ee34a4c562fab3988ea301af5aad1",
+        "assets_sha256": "d7b3302242f5fdf2066eeb92a1339a13a43b2daa7c777fc417bace54432c4956"
+      },
+      "policy_version": 0,
+      "task_score": 0.3333333333333333,
+      "terminated": true,
+      "stop_reason": "terminal",
+      "success": false,
+      "reward": 0.0
+    },
+    {
+      "task_id": 283,
+      "split": "eval",
+      "seed": 0,
+      "task_manifest": {
+        "task_id": 283,
+        "goal_seed": 233,
+        "goal_sha256": "573ff0d02082778873ef6bf5d2c0091cdf6d87200bbc4fe08df9f5c4c584c4c1",
+        "instruction_sha256": "8bfb41028006968669e4bc7c6aadb7e2636c2b2a75f49e35ae9bb7dfb88f558b",
+        "product_prices_sha256": "74e0f3450c674a2c9a3ef8a8973e33539d5ee34a4c562fab3988ea301af5aad1",
+        "assets_sha256": "d7b3302242f5fdf2066eeb92a1339a13a43b2daa7c777fc417bace54432c4956"
+      },
+      "policy_version": 0,
+      "task_score": 0.0,
+      "terminated": false,
+      "stop_reason": "max_steps",
+      "success": false,
+      "reward": 0.0
+    },
+    {
+      "task_id": 284,
+      "split": "eval",
+      "seed": 0,
+      "task_manifest": {
+        "task_id": 284,
+        "goal_seed": 233,
+        "goal_sha256": "9bba74c186b3b660779fb4908787aa6eef43cdd1f45dd2801c93f28808d8ec28",
+        "instruction_sha256": "c2de1a22da9c072273ee5fa00f71543be98a20a8f89e61259dfceee4fb1d4620",
+        "product_prices_sha256": "74e0f3450c674a2c9a3ef8a8973e33539d5ee34a4c562fab3988ea301af5aad1",
+        "assets_sha256": "d7b3302242f5fdf2066eeb92a1339a13a43b2daa7c777fc417bace54432c4956"
+      },
+      "policy_version": 0,
+      "task_score": 1.0,
+      "terminated": true,
+      "stop_reason": "terminal",
+      "success": true,
+      "reward": 1.0
+    },
+    {
+      "task_id": 285,
+      "split": "eval",
+      "seed": 0,
+      "task_manifest": {
+        "task_id": 285,
+        "goal_seed": 233,
+        "goal_sha256": "69f66c402080ff6ccf593956243b110d3d6168a0397244531bb147ba2fca54c1",
+        "instruction_sha256": "e5d0bd227d6ad395654ad62b0705efcf72939267591192d693610e815112d9a1",
+        "product_prices_sha256": "74e0f3450c674a2c9a3ef8a8973e33539d5ee34a4c562fab3988ea301af5aad1",
+        "assets_sha256": "d7b3302242f5fdf2066eeb92a1339a13a43b2daa7c777fc417bace54432c4956"
+      },
+      "policy_version": 0,
+      "task_score": 0.4,
+      "terminated": true,
+      "stop_reason": "terminal",
+      "success": false,
+      "reward": 0.0
+    },
+    {
+      "task_id": 286,
+      "split": "eval",
+      "seed": 0,
+      "task_manifest": {
+        "task_id": 286,
+        "goal_seed": 233,
+        "goal_sha256": "376c172a12b8b3fa11f11a36a3b32665aa1a7159df7de8edcbaf2aff938f211e",
+        "instruction_sha256": "fb84e6a143ad0b602fa5a0b4da995881c85abf62f204f31e1926457c6ff42d54",
+        "product_prices_sha256": "74e0f3450c674a2c9a3ef8a8973e33539d5ee34a4c562fab3988ea301af5aad1",
+        "assets_sha256": "d7b3302242f5fdf2066eeb92a1339a13a43b2daa7c777fc417bace54432c4956"
+      },
+      "policy_version": 0,
+      "task_score": 0.0,
+      "terminated": false,
+      "stop_reason": "max_steps",
+      "success": false,
+      "reward": 0.0
+    },
+    {
+      "task_id": 287,
+      "split": "eval",
+      "seed": 0,
+      "task_manifest": {
+        "task_id": 287,
+        "goal_seed": 233,
+        "goal_sha256": "962c77369a30f0b2d07c3e1e08b02481059cda41c1f8beac5560d32ff42a5ce1",
+        "instruction_sha256": "fbdebe40d97d0c2ff4f8a720177a2ac3b8a2edd793440ced3079e314bd16ec63",
+        "product_prices_sha256": "74e0f3450c674a2c9a3ef8a8973e33539d5ee34a4c562fab3988ea301af5aad1",
+        "assets_sha256": "d7b3302242f5fdf2066eeb92a1339a13a43b2daa7c777fc417bace54432c4956"
+      },
+      "policy_version": 0,
+      "task_score": 0.4444444444444444,
+      "terminated": true,
+      "stop_reason": "terminal",
+      "success": false,
+      "reward": 0.0
+    }
+  ],
+  "interpretation": "Local fixed-goal protocol; not a reproduction of the reference scores.",
+  "metric_scales": {
+    "success_rate": "fraction in [0,1], terminal task score exactly1",
+    "mean_task_score": "mean environment reward in [0,1]; multiply by100 only for presentation",
+    "confidence_intervals": "95%; task-resampled, conditional on this single training run"
+  },
+  "elapsed_seconds": 605.2764940178022,
+  "total_wall_seconds": 753.7978653647006,
+  "runtime": {
+    "device": "cuda:0",
+    "gpu_name": "NVIDIA H200",
+    "max_memory_allocated_bytes": 21010902528,
+    "max_memory_reserved_bytes": 22139633664
+  },
+  "base_model_identity": {
+    "model.safetensors-00001-of-00004.safetensors": "db6f444b43d318c92f360a13a25561a6a65b10c0631b8ed305a426dbaa6c380e",
+    "model.safetensors-00002-of-00004.safetensors": "31c7d7e2dd5d207840b31cc59083c8f4c4718959149e0358c0364052bb9a0330",
+    "model.safetensors-00003-of-00004.safetensors": "7ec36ba3a4176a44c3c0876ad80c56a2f70c84bf008d82e9501df642f17dadec",
+    "model.safetensors-00004-of-00004.safetensors": "b62b0c4cd7e44edee103ee8f4fe225f246d5e768e07bfd5f25b63a8aa1fdd0c6",
+    "config.json": "d0883072e01861ed0b2d47be3c16c36a8e81c224c7ffaa310c6558fb3f932b05",
+    "tokenizer.json": "5f9e4d4901a92b997e463c1f46055088b6cca5ca61a6522d1b9f64c4bb81cb42",
+    "tokenizer_config.json": "316230d6a809701f4db5ea8f8fc862bc3a6f3229c937c174e674ff3ca0a64ac8"
+  },
+  "implementation_identity": {
+    "__init__.py": "5af7711008b3aaf3c688ee813b516bf30a1d5464ffe543272819ff22b5117407",
+    "__main__.py": "5630ff9348992b6aecdb10eeca7ca1168c59703e9e7fbd53d9db11d491d42ee0",
+    "core.py": "e1b32266b0d62aa2682427ae85d97be8f0515f82d4af7700df2a63325ce7576a",
+    "objective.py": "10e3c90f6a3423430dd9bf7a7b597d19867d224fb8e1efa16fd1c1ed496b819a",
+    "runtime.py": "f9e48052b69c0ce642cf4afcc104255f20d2823828ce857f4790f155c1519b17"
+  },
+  "adapter_identity": null
+}

@@ -221,7 +221,9 @@ def main(argv=None):
                 "schema": "coevolve_webshop_training_v1", "reference": REFERENCE,
                 "method": args.method, "protocol": protocol.as_dict(),
                 "training_backend": "SAO Solver reference-step GRPO"
-                if protocol.grpo_profile == "reference_step" else "legacy episode GRPO control",
+                if protocol.grpo_profile == "reference_step"
+                else "legacy successful-context distillation" if args.method == "success_sd"
+                else "legacy episode GRPO control",
                 "sao_stage": "solver", "engineer_updated": False,
                 "frozen_solver_harness_sha256": digest(protocol.solver_harness),
                 "base_model": str(args.model.resolve()), "assets": env.assets,

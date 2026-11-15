@@ -1,0 +1,24 @@
+{
+  "files": {
+    "control.json": "1e84a43a766e47c5047a14e48933c70fefe858c5ab81d391ac2336d207f54d31",
+    "initial.json": "e12c6aa2dede0f51daddff1e1e0730e2a388e200923a4ab10dc7ed61d9b69c15",
+    "initial_comparison.json": "e901286fddb553b9bd778024248103c025944546655513c8c6eab08d22c1b2e1",
+    "paired.json": "e36e439959663899b9bd2eaa566bf7982e7a59f7a208a1176b80784ddbc9e4c8",
+    "reference.json": "cadaa81f5f0be7ef64159b1f5e19591c291d992f6d20216fceeec226c6bcb7d5"
+  },
+  "original_reports": {
+    "initial": {
+      "path": "/mnt/3fs/xudong/coevolve/runs/webshop_sao_grpo_20261115/initial_eval32/REPORT.json",
+      "sha256": "83a25c04b48b63738482827fada1bc4aa00c385051cabdb98dbeeaafe28b363c"
+    },
+    "control": {
+      "path": "/mnt/3fs/xudong/coevolve/runs/webshop_sao_grpo_20261115/control_eval32/REPORT.json",
+      "sha256": "d39e5e892f6c4f2864a347a7307bfa14ddd1ae947e64d72342cbd8c5307a8790"
+    },
+    "reference": {
+      "path": "/mnt/3fs/xudong/coevolve/runs/webshop_sao_grpo_20261115/reference_eval32/REPORT.json",
+      "sha256": "a79611dc592e09ffab1d443cd6c725b7839e0771219781ed5d8544cd7e9b9297"
+    }
+  },
+  "projection": "Outcome/provenance only; original tokens and trajectories are not copied"
+}

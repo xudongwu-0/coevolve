@@ -2,6 +2,10 @@
 
 **基于 [WHALE](https://github.com/krafton-ai/WHALE) 的双模型改进：不仅训练 Solver，也训练负责修改可执行 harness 的 Engineer。先建立足够强的 SAO baseline，再验证 MA-SAO 的额外收益。**
 
+### 2026-11-15：WebShop SAO Solver 的无蒸馏GRPO子集
+
+新增显式可选的 [SAO WebShop GRPO后端](docs/WEBSHOP_SAO_GRPO.md)，对齐参考的无效动作处罚、跨动作同题组统计和token-mean更新，保留旧GRPO控制路径。两组各64个真实训练episode/8updates并在同一32题上重测：initial8/32、legacy6/32、reference7/32；新方法相对旧GRPO恢复部分score，但未超过initial，promotion gate未通过，未启动完整100步。详见 [结果与复算](docs/WEBSHOP_SAO_GRPO_RESULTS_20261115.md)。这不是已验证的45→66提升，也不修改以下历史ALFWorld/MA-SAO分数。
+
 **Agent 先读本节，再读 [项目状态](docs/PROJECT_STATE.md)、[算法与冻结协议](docs/MA_SAO.md) 和 [实验日志](docs/EXPERIMENT_LOG.md)。下面的2B RSFT/GRPO配置是历史原型，不是当前9B主线的启动入口。**
 
 ## DBBench / WebShop 源码与历史 97% checkpoint
